@@ -6,6 +6,12 @@ import {
   type EdgeProps,
 } from "@xyflow/react";
 
+const labelClassName =
+  "absolute pointer-events-auto rounded bg-card border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground";
+const labelStyle = (x: number, y: number): React.CSSProperties => ({
+  transform: `translate(-50%, -50%) translate(${x}px,${y}px)`,
+});
+
 function TypeEdgeComponent({
   id,
   sourceX,
@@ -32,18 +38,12 @@ function TypeEdgeComponent({
         id={id}
         path={edgePath}
         className={animated ? "animated" : ""}
-        style={{
-          stroke: animated ? "var(--primary)" : "var(--border)",
-          strokeWidth: animated ? 2 : 1,
-        }}
       />
       {label && (
         <EdgeLabelRenderer>
           <div
-            className="absolute pointer-events-auto rounded bg-card border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
-            style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            }}
+            className={labelClassName}
+            style={labelStyle(labelX, labelY)}
           >
             {label}
           </div>

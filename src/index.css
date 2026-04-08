@@ -130,7 +130,14 @@ body {
   100% { stroke-dashoffset: 0; }
 }
 
+.react-flow__edge-path {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
 .react-flow__edge-path.animated {
+  stroke: var(--primary);
+  stroke-width: 2;
   stroke-dasharray: 5 3;
   animation: flow-pulse 1s linear infinite;
 }
