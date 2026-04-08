@@ -126,6 +126,7 @@ export function NodeDetailSheet({
                     variant="destructive"
                     size="icon"
                     onClick={() => onDelete(layer.name)}
+                    aria-label="Delete layer"
                   >
                     <Trash2 size={14} />
                   </Button>
