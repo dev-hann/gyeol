@@ -36,11 +36,17 @@ pub struct TaskQueue {
     heap: Arc<Mutex<BinaryHeap<PrioritizedTask>>>,
 }
 
-impl TaskQueue {
-    pub fn new() -> Self {
+impl Default for TaskQueue {
+    fn default() -> Self {
         Self {
             heap: Arc::new(Mutex::new(BinaryHeap::new())),
         }
+    }
+}
+
+impl TaskQueue {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn push(&self, task: Task) {
@@ -73,10 +79,7 @@ impl TaskQueue {
     #[allow(dead_code)]
     pub fn drain_all(&self) -> Vec<Task> {
         let mut heap = self.heap.lock();
-        let mut tasks = Vec::new();
-        while let Some(p) = heap.pop() {
-            tasks.push(p.task);
-        }
-        tasks
+        let taken = std::mem::take(&mut *heap);
+        taken.into_iter().map(|p| p.task).collect()
     }
 }
