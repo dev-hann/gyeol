@@ -20,7 +20,7 @@ function LayerNodeComponent({ data, selected }: NodeProps) {
         role="button"
         aria-label={`${d.name} layer${d.enabled ? "" : " (disabled)"}`}
         className={cn(
-          "w-[240px] p-3 transition-all cursor-pointer",
+          "w-[240px] p-3 transition-all cursor-pointer hover:shadow-md",
           d.enabled ? "border-border" : "border-border opacity-50",
           selected && "ring-2 ring-ring",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

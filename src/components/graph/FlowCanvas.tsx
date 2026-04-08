@@ -14,7 +14,7 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { useAppStore } from "@/stores/appStore";
-import { layersToGraph } from "./graph-utils";
+import { layersToGraph, type LayerNodeData } from "./graph-utils";
 import { LayerNode } from "./LayerNode";
 import { TypeEdge } from "./TypeEdge";
 import { NodeDetailSheet } from "./NodeDetailSheet";
@@ -103,7 +103,23 @@ export function FlowCanvas() {
         />
         <MiniMap
           className={miniMapClassName}
-          nodeColor={() => "var(--primary)"}
+          nodeColor={(node) => {
+            const d = node.data as LayerNodeData | undefined;
+            if (!d) return "var(--primary)";
+            if (!d.enabled) return "var(--muted-foreground)";
+            if (d.runningTasks > 0) return "var(--info)";
+            return "var(--primary)";
+          }}
+          nodeStrokeColor={(node) => {
+            const d = node.data as LayerNodeData | undefined;
+            if (!d) return "var(--border)";
+            if (!d.enabled) return "var(--muted-foreground)";
+            if (d.runningTasks > 0) return "var(--info)";
+            return "var(--border)";
+          }}
+          nodeBorderRadius={6}
+          pannable
+          zoomable
           maskColor="rgba(0,0,0,0.7)"
         />
       </ReactFlow>
