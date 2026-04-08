@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use parking_lot::Mutex;
 use crate::engine::task::Task;
 
-type HandlerFn = Box<dyn Fn(&Task) + Send + Sync>;
+type HandlerFn = Arc<dyn Fn(&Task) + Send + Sync>;
 
 pub struct MessageBus {
     subscribers: Arc<Mutex<HashMap<String, Vec<HandlerFn>>>>,
@@ -17,16 +17,19 @@ impl MessageBus {
     }
 
     pub fn publish(&self, task: &Task) {
-        let subs = self.subscribers.lock();
-        if let Some(handlers) = subs.get(&task.task_type) {
-            for handler in handlers {
-                handler(task);
-            }
+        let specific = {
+            let subs = self.subscribers.lock();
+            subs.get(&task.task_type).cloned().unwrap_or_default()
+        };
+        let wildcard = {
+            let subs = self.subscribers.lock();
+            subs.get("*").cloned().unwrap_or_default()
+        };
+        for handler in &specific {
+            handler(task);
         }
-        if let Some(handlers) = subs.get("*") {
-            for handler in handlers {
-                handler(task);
-            }
+        for handler in &wildcard {
+            handler(task);
         }
     }
 
@@ -36,6 +39,6 @@ impl MessageBus {
             .lock()
             .entry(task_type.to_string())
             .or_default()
-            .push(Box::new(handler));
+            .push(Arc::new(handler));
     }
 }
