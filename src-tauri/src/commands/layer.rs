@@ -15,7 +15,7 @@ pub struct SaveLayerPayload {
 
 #[tauri::command]
 pub fn list_layers(state: State<'_, AppState>) -> Result<Vec<LayerDefinition>, String> {
-    state.store.list_layers().map_err(|e: rusqlite::Error| e.to_string())
+    state.store.list_layers().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -28,14 +28,14 @@ pub fn save_layer(payload: SaveLayerPayload, state: State<'_, AppState>) -> Resu
         order: payload.order.unwrap_or(0),
         enabled: payload.enabled.unwrap_or(true),
     };
-    state.store.save_layer(&layer).map_err(|e: rusqlite::Error| e.to_string())?;
+    state.store.save_layer(&layer).map_err(|e| e.to_string())?;
     state.layer_registry.register(layer);
     Ok(())
 }
 
 #[tauri::command]
 pub fn delete_layer(name: String, state: State<'_, AppState>) -> Result<(), String> {
-    state.store.delete_layer(&name).map_err(|e: rusqlite::Error| e.to_string())?;
+    state.store.delete_layer(&name).map_err(|e| e.to_string())?;
     state.layer_registry.remove(&name);
     Ok(())
 }

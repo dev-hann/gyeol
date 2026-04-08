@@ -26,12 +26,12 @@ pub fn create_task(payload: CreateTaskPayload, state: State<'_, AppState>) -> Re
 #[tauri::command]
 pub fn list_tasks(limit: Option<usize>, offset: Option<usize>, state: State<'_, AppState>) -> Result<Vec<Task>, String> {
     state.store.list_tasks(limit.unwrap_or(50), offset.unwrap_or(0))
-        .map_err(|e: rusqlite::Error| e.to_string())
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_task(id: String, state: State<'_, AppState>) -> Result<Option<Task>, String> {
-    state.store.get_task(&id).map_err(|e: rusqlite::Error| e.to_string())
+    state.store.get_task(&id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

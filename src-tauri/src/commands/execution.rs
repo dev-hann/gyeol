@@ -31,5 +31,5 @@ pub fn list_execution_logs(
 ) -> Result<Vec<ExecutionLog>, String> {
     state.store
         .list_execution_logs(task_id.as_deref(), limit.unwrap_or(100))
-        .map_err(|e: rusqlite::Error| e.to_string())
+        .map_err(|e| e.to_string())
 }

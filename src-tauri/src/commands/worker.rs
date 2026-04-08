@@ -16,7 +16,7 @@ pub struct SaveWorkerPayload {
 
 #[tauri::command]
 pub fn list_workers(state: State<'_, AppState>) -> Result<Vec<WorkerDefinition>, String> {
-    state.store.list_workers().map_err(|e: rusqlite::Error| e.to_string())
+    state.store.list_workers().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -30,15 +30,15 @@ pub fn save_worker(payload: SaveWorkerPayload, state: State<'_, AppState>) -> Re
         max_tokens: payload.max_tokens,
         enabled: payload.enabled.unwrap_or(true),
     };
-    state.store.save_worker(&worker).map_err(|e: rusqlite::Error| e.to_string())
+    state.store.save_worker(&worker).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn delete_worker(name: String, state: State<'_, AppState>) -> Result<(), String> {
-    state.store.delete_worker(&name).map_err(|e: rusqlite::Error| e.to_string())
+    state.store.delete_worker(&name).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_worker(name: String, state: State<'_, AppState>) -> Result<Option<WorkerDefinition>, String> {
-    state.store.get_worker(&name).map_err(|e: rusqlite::Error| e.to_string())
+    state.store.get_worker(&name).map_err(|e| e.to_string())
 }
