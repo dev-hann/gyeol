@@ -8,8 +8,6 @@ import {
 
 const labelClassName =
   "absolute pointer-events-auto rounded bg-card border border-border px-1.5 py-0.5 text-2xs text-muted-foreground";
-const labelTransform = (x: number, y: number) =>
-  `translate(-50%, -50%) translate(${x}px,${y}px)`;
 
 function TypeEdgeComponent({
   id,
@@ -42,7 +40,7 @@ function TypeEdgeComponent({
         <EdgeLabelRenderer>
           <div
             className={labelClassName}
-            style={{ transform: labelTransform(labelX, labelY) }}
+            style={{ left: labelX, top: labelY, transform: "translate(-50%, -50%)" }}
           >
             {label}
           </div>
