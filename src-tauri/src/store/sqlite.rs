@@ -306,13 +306,13 @@ impl SqliteStore {
             result
         };
 
-        match result {
-            Some(json) => {
+        result.map_or_else(
+            || Ok(ProviderSettings::default()),
+            |json| {
                 serde_json::from_str(&json)
                     .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
-            }
-            None => Ok(ProviderSettings::default()),
-        }
+            },
+        )
     }
 
     pub fn log_execution(&self, task_id: &str, worker_name: Option<&str>, status: &str, message: Option<&str>) -> SqlResult<()> {
@@ -329,39 +329,27 @@ impl SqliteStore {
 
     pub fn list_execution_logs(&self, task_id: Option<&str>, limit: usize) -> SqlResult<Vec<ExecutionLog>> {
         let conn = self.lock_conn()?;
-        let logs: Vec<ExecutionLog> = if let Some(tid) = task_id {
-            let mut stmt = conn.prepare(
-                "SELECT id, task_id, worker_name, status, message, created_at FROM execution_logs WHERE task_id = ?1 ORDER BY created_at DESC LIMIT ?2"
-            )?;
-            let logs: Vec<ExecutionLog> = stmt.query_map(params![tid, limit], |row| {
-                Ok(ExecutionLog {
-                    id: row.get(0)?,
-                    task_id: row.get(1)?,
-                    worker_name: row.get(2)?,
-                    status: row.get(3)?,
-                    message: row.get(4)?,
-                    created_at: row.get(5)?,
-                })
-            })?.filter_map(std::result::Result::ok).collect();
-            drop(stmt);
-            logs
-        } else {
-            let mut stmt = conn.prepare(
-                "SELECT id, task_id, worker_name, status, message, created_at FROM execution_logs ORDER BY created_at DESC LIMIT ?1"
-            )?;
-            let logs: Vec<ExecutionLog> = stmt.query_map(params![limit], |row| {
-                Ok(ExecutionLog {
-                    id: row.get(0)?,
-                    task_id: row.get(1)?,
-                    worker_name: row.get(2)?,
-                    status: row.get(3)?,
-                    message: row.get(4)?,
-                    created_at: row.get(5)?,
-                })
-            })?.filter_map(std::result::Result::ok).collect();
-            drop(stmt);
-            logs
+        let sql = match task_id {
+            Some(_) => "SELECT id, task_id, worker_name, status, message, created_at FROM execution_logs WHERE task_id = ?1 ORDER BY created_at DESC LIMIT ?2",
+            None => "SELECT id, task_id, worker_name, status, message, created_at FROM execution_logs ORDER BY created_at DESC LIMIT ?1",
         };
+        let params: Vec<Box<dyn rusqlite::types::ToSql>> = match task_id {
+            Some(tid) => vec![Box::new(tid.to_string()), Box::new(limit as i64)],
+            None => vec![Box::new(limit as i64)],
+        };
+        let refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(std::convert::AsRef::as_ref).collect();
+        let mut stmt = conn.prepare(sql)?;
+        let logs: Vec<ExecutionLog> = stmt.query_map(refs.as_slice(), |row| {
+            Ok(ExecutionLog {
+                id: row.get(0)?,
+                task_id: row.get(1)?,
+                worker_name: row.get(2)?,
+                status: row.get(3)?,
+                message: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })?.filter_map(std::result::Result::ok).collect();
+        drop(stmt);
         drop(conn);
         Ok(logs)
     }
@@ -385,7 +373,7 @@ fn row_to_task(row: &rusqlite::Row) -> SqlResult<Task> {
     Ok(Task {
         id: row.get(0)?,
         task_type: row.get(1)?,
-        payload: serde_json::from_str(&payload_str).unwrap_or(serde_json::Value::Null),
+        payload: serde_json::from_str(&payload_str).map_err(|e| rusqlite::Error::FromSqlConversionFailure(2, rusqlite::types::Type::Text, Box::new(e)))?,
         priority: match priority_str.as_str() {
             "high" => TaskPriority::High,
             "medium" => TaskPriority::Medium,
