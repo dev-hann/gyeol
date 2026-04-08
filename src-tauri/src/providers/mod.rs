@@ -35,7 +35,7 @@ impl Default for ProviderSettings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ProviderType {
     OpenAI,
     Anthropic,
@@ -45,9 +45,9 @@ pub enum ProviderType {
 impl fmt::Display for ProviderType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ProviderType::OpenAI => write!(f, "openai"),
-            ProviderType::Anthropic => write!(f, "anthropic"),
-            ProviderType::Ollama => write!(f, "ollama"),
+            Self::OpenAI => write!(f, "openai"),
+            Self::Anthropic => write!(f, "anthropic"),
+            Self::Ollama => write!(f, "ollama"),
         }
     }
 }
