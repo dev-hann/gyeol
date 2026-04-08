@@ -7,13 +7,15 @@ class OpenAIProvider implements LlmProvider {
   final String model;
   final double temperature;
   final int maxTokens;
+  final http.Client _client;
 
   OpenAIProvider({
     required this.apiKey,
     required this.model,
     required this.temperature,
     required this.maxTokens,
-  });
+    http.Client? client,
+  }) : _client = client ?? http.Client();
 
   @override
   Future<String> generate(String prompt) {
@@ -34,7 +36,7 @@ class OpenAIProvider implements LlmProvider {
       'max_tokens': maxTokens,
     });
 
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('https://api.openai.com/v1/chat/completions'),
       headers: {
         'Authorization': 'Bearer $apiKey',
