@@ -17,17 +17,6 @@ class DashboardPage extends ConsumerStatefulWidget {
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
   @override
-  void initState() {
-    super.initState();
-    _refresh();
-  }
-
-  void _refresh() {
-    ref.invalidate(tasksProvider);
-    ref.invalidate(queueSizeProvider);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksProvider);
     final queueSizeAsync = ref.watch(queueSizeProvider);
@@ -44,136 +33,139 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               description: 'Overview of your AI worker system',
             ),
             const SizedBox(height: 24),
-            tasksAsync.when(
-              data: (tasks) {
-                final queueSize = queueSizeAsync.valueOrNull ?? 0;
-                final pending = tasks
-                    .where((t) => t.status == TaskStatus.pending)
-                    .length;
-                final running = tasks
-                    .where((t) => t.status == TaskStatus.running)
-                    .length;
-                final done = tasks
-                    .where((t) => t.status == TaskStatus.done)
-                    .length;
-                final failed = tasks
-                    .where((t) => t.status == TaskStatus.failed)
-                    .length;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: StatCard(
-                            label: 'Queue',
-                            value: '$queueSize',
-                            icon: Icons.schedule,
-                            color: AppColors.info,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatCard(
-                            label: 'Pending',
-                            value: '$pending',
-                            icon: Icons.pending_actions,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatCard(
-                            label: 'Running',
-                            value: '$running',
-                            icon: Icons.play_circle_outline,
-                            color: AppColors.info,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatCard(
-                            label: 'Completed',
-                            value: '$done',
-                            icon: Icons.check_circle_outline,
-                            color: AppColors.success,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatCard(
-                            label: 'Failed',
-                            value: '$failed',
-                            icon: Icons.error_outline,
-                            color: AppColors.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    _buildRecentTasks(tasks),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentTasks(List<AppTask> tasks) {
-    return Expanded(
-      child: Card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Recent Tasks',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.foreground,
-                    ),
-                  ),
-                  Text(
-                    '${tasks.length} total',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
             Expanded(
-              child: tasks.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No tasks yet. Create a task or configure layers to get started.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
+              child: tasksAsync.when(
+                data: (tasks) {
+                  final queueSize = queueSizeAsync.valueOrNull ?? 0;
+                  final pending = tasks
+                      .where((t) => t.status == TaskStatus.pending)
+                      .length;
+                  final running = tasks
+                      .where((t) => t.status == TaskStatus.running)
+                      .length;
+                  final done = tasks
+                      .where((t) => t.status == TaskStatus.done)
+                      .length;
+                  final failed = tasks
+                      .where((t) => t.status == TaskStatus.failed)
+                      .length;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: StatCard(
+                              label: 'Queue',
+                              value: '$queueSize',
+                              icon: Icons.schedule,
+                              color: AppColors.info,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StatCard(
+                              label: 'Pending',
+                              value: '$pending',
+                              icon: Icons.pending_actions,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StatCard(
+                              label: 'Running',
+                              value: '$running',
+                              icon: Icons.play_circle_outline,
+                              color: AppColors.info,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StatCard(
+                              label: 'Completed',
+                              value: '$done',
+                              icon: Icons.check_circle_outline,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StatCard(
+                              label: 'Failed',
+                              value: '$failed',
+                              icon: Icons.error_outline,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  16,
+                                  16,
+                                  8,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Recent Tasks',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.foreground,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${tasks.length} total',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Divider(height: 1),
+                              Expanded(
+                                child: tasks.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'No tasks yet. Create a task or configure layers to get started.',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      )
+                                    : ListView.separated(
+                                        itemCount: tasks.take(20).length,
+                                        separatorBuilder: (_, __) =>
+                                            const Divider(height: 1),
+                                        itemBuilder: (context, index) =>
+                                            _TaskTile(task: tasks[index]),
+                                      ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    )
-                  : ListView.separated(
-                      itemCount: tasks.take(20).length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return _TaskTile(task: task);
-                      },
-                    ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+              ),
             ),
           ],
         ),

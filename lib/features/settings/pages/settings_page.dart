@@ -18,7 +18,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    ref.invalidate(settingsProvider);
   }
 
   @override

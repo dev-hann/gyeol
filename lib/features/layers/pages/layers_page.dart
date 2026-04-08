@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_flow_chart/flutter_flow_chart.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/features/layers/graph/graph_utils.dart';
+import 'package:gyeol/features/layers/graph/flow_canvas.dart';
+import 'package:gyeol/features/layers/graph/node_detail_panel.dart';
 import 'package:gyeol/shared/widgets/page_header.dart';
 import 'package:gyeol/shared/widgets/empty_state.dart';
 
@@ -14,59 +18,78 @@ class LayersPage extends ConsumerStatefulWidget {
 }
 
 class _LayersPageState extends ConsumerState<LayersPage> {
-  @override
-  void initState() {
-    super.initState();
-    ref.invalidate(layersProvider);
-  }
+  Dashboard<LayerGraphData>? _dashboard;
+  String? _selectedLayerName;
 
   @override
   Widget build(BuildContext context) {
     final layersAsync = ref.watch(layersProvider);
+    final tasksAsync = ref.watch(tasksProvider);
 
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            PageHeader(
-              icon: Icons.layers_outlined,
-              title: 'Layers',
-              description:
-                  'Manage processing layers (graph editor coming soon)',
-              action: OutlinedButton.icon(
-                onPressed: () => _showAddLayerDialog(context),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add Layer'),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
+          child: PageHeader(
+            icon: Icons.layers_outlined,
+            title: 'Layers',
+            description:
+                'Graph editor — click nodes to view details, drag to reposition',
+            action: OutlinedButton.icon(
+              onPressed: () => _showAddLayerDialog(context),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Add Layer'),
             ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: layersAsync.when(
-                data: (layers) {
-                  if (layers.isEmpty) {
-                    return const EmptyState(
-                      icon: Icons.layers_outlined,
-                      title: 'No layers yet',
-                      description:
-                          'Create your first layer to start building the workflow',
-                    );
-                  }
-                  return ListView.separated(
-                    itemCount: layers.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) =>
-                        _LayerCard(layer: layers[index]),
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        Expanded(
+          child: layersAsync.when(
+            data: (layers) {
+              final tasks = tasksAsync.valueOrNull ?? [];
+              return _buildGraph(layers, tasks);
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGraph(List<LayerDefinition> layers, List<AppTask> tasks) {
+    if (layers.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: EmptyState(
+          icon: Icons.layers_outlined,
+          title: 'No layers yet',
+          description: 'Create your first layer to start building the workflow',
+          action: ElevatedButton.icon(
+            onPressed: () => _showAddLayerDialog(context),
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Add Layer'),
+          ),
+        ),
+      );
+    }
+
+    _dashboard = buildDashboard(layers, tasks);
+
+    return Row(
+      children: [
+        Expanded(
+          child: FlowCanvas(
+            dashboard: _dashboard!,
+            onNodeTap: (name) => setState(() => _selectedLayerName = name),
+          ),
+        ),
+        if (_selectedLayerName != null)
+          NodeDetailPanel(
+            layerName: _selectedLayerName,
+            onClose: () => setState(() => _selectedLayerName = null),
+          ),
+      ],
     );
   }
 
@@ -153,125 +176,5 @@ class _LayersPageState extends ConsumerState<LayersPage> {
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
         .toList();
-  }
-}
-
-class _LayerCard extends ConsumerWidget {
-  final LayerDefinition layer;
-  const _LayerCard({required this.layer});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: layer.enabled ? AppColors.success : AppColors.textMuted,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    layer.name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.foreground,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      ...layer.inputTypes.map(
-                        (t) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.info.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            t,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.info,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4),
-                        child: Icon(
-                          Icons.arrow_forward,
-                          size: 12,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      ...layer.outputTypes.map(
-                        (t) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            t,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.success,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (layer.workerNames.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Workers: ${layer.workerNames.join(', ')}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Text(
-              'Order: ${layer.order}',
-              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-            ),
-            const SizedBox(width: 12),
-            IconButton(
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: AppColors.error,
-              ),
-              onPressed: () =>
-                  ref.read(layersProvider.notifier).deleteLayer(layer.name),
-              tooltip: 'Delete layer',
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

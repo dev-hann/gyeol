@@ -18,8 +18,6 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
   @override
   void initState() {
     super.initState();
-    ref.invalidate(workersProvider);
-    ref.invalidate(layersProvider);
   }
 
   @override

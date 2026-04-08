@@ -1,18 +1,18 @@
 ---
-description: Rust+TS 전체 코드베이스 분석. cargo check, clippy, tsc, eslint 실행 후 개선 후보 발굴.
+description: Flutter/Dart 전체 코드베이스 분석. flutter analyze, flutter test, 테스트 커버리지 기반 개선 후보 발굴.
 mode: subagent
 temperature: 0.1
 permission:
   edit: deny
   bash:
-    "cargo check*": allow
-    "cargo clippy*": allow
-    "pnpm build": allow
-    "pnpm lint": allow
-    "npx tsc*": allow
+    "flutter analyze*": allow
+    "flutter test*": allow
+    "dart format*": allow
+    "dart run build_runner*": allow
     "git diff*": allow
     "git status*": allow
     "rg *": allow
+    "find *": allow
     "*": deny
   webfetch: deny
 color: "#f59e0b"
@@ -25,56 +25,122 @@ color: "#f59e0b"
 ## 프로젝트 컨텍스트
 
 Gyeol — AI Multi-Layer Worker System
-- Rust 백엔드 (src-tauri/src/): engine, providers, store, commands
-- React 프론트엔드 (src/): pages, components, stores, types, lib
+- Flutter/Dart 프론트엔드+엔진 통합 (lib/)
+- Drift ORM (SQLite) 영속성 (lib/data/database/)
+- Riverpod 상태관리 (lib/data/providers/)
+- LLM Provider 인터페이스 (lib/providers/)
+- 엔진: Scheduler, TaskQueue, LayerRegistry, MessageBus (lib/engine/)
+
+## 프로젝트 구조
+
+```
+lib/
+├── core/theme/          # 앱 테마 (app_theme.dart)
+├── data/
+│   ├── database/        # Drift ORM 테이블 정의 + Database 클래스
+│   ├── models/          # AppTask, LayerDefinition, WorkerDefinition, ProviderSettings
+│   ├── repositories/    # AppRepository (DB 래퍼)
+│   └── providers/       # Riverpod Providers (상태관리)
+├── engine/
+│   ├── scheduler.dart   # Scheduler, LayerRegistry, MessageBus
+│   └── queue/           # TaskQueue (우선순위 큐)
+├── features/            # UI 페이지 (layers, dashboard, workers, monitoring, settings)
+│   ├── layers/          # 그래프 에디터 (FlowCanvas, LayerNode, GraphUtils)
+│   ├── dashboard/       # 대시보드
+│   ├── workers/         # 워커 관리
+│   ├── monitoring/      # 실행 모니터링
+│   └── settings/        # 설정
+├── providers/           # LLM Provider (OpenAI, Anthropic, Ollama)
+├── shared/widgets/      # 공통 위젯 (AppShell, StatusBadge, EmptyState, PageHeader)
+└── main.dart
+
+test/
+├── engine/              # 엔진 테스트
+├── data/                # 데이터 레이어 테스트
+├── providers/           # LLM Provider 테스트
+├── features/            # 위젯 테스트
+└── shared/              # 공통 위젯 테스트
+```
 
 ## 분석 절차
 
-### Step 1: Rust 백엔드 분석
+### Step 1: 정적 분석
 
 ```bash
-cd src-tauri && cargo check 2>&1 | tail -30
-cd src-tauri && cargo clippy 2>&1 | tail -30
+flutter analyze 2>&1
 ```
 
 수집 항목:
 - 컴파일 에러
 - unused imports
 - dead code warnings
-- clippy 경고 (unnecessary, complexity, style, correctness)
+- 타입 에러
+- lint 경고
 
-### Step 2: 프론트엔드 분석
+### Step 2: 포맷팅 검사
 
 ```bash
-pnpm build 2>&1 | tail -20
-pnpm lint 2>&1 | tail -20
+dart format --set-exit-if-changed lib/ test/ 2>&1
+```
+
+### Step 3: 테스트 실행
+
+```bash
+flutter test 2>&1
 ```
 
 수집 항목:
-- TypeScript 에러
-- ESLint 경고
-- unused imports/variables
-- React 관련 경고
+- 테스트 실패
+- 테스트 통과 수
+- 커버리지 추정
 
-### Step 3: 후보 분류
+### Step 4: 테스트 커버리지 분석
+
+lib/의 각 .dart 파일에 대해 test/에 대응하는 테스트 파일 존재 여부 확인:
+
+```bash
+# lib/ 파일 목록
+find lib/ -name '*.dart' -not -name '*.g.dart' | sort
+
+# test/ 파일 목록
+find test/ -name '*_test.dart' | sort
+```
+
+테스트 없는 모듈 식별:
+- lib/engine/scheduler.dart → test/engine/scheduler_test.dart
+- lib/engine/queue/task_queue.dart → test/engine/queue/task_queue_test.dart
+- lib/data/repositories/app_repository.dart → test/data/repositories/app_repository_test.dart
+- lib/data/providers/app_providers.dart → test/data/providers/app_providers_test.dart
+- lib/providers/openai_provider.dart → test/providers/openai_provider_test.dart
+- lib/providers/anthropic_provider.dart → test/providers/anthropic_provider_test.dart
+- lib/providers/ollama_provider.dart → test/providers/ollama_provider_test.dart
+- lib/data/models/app_models.dart → test/data/models/app_models_test.dart
+- lib/features/ 각 페이지 → test/features/ 각 위젯 테스트
+- lib/shared/widgets/ 각 위젯 → test/shared/widgets/ 각 위젯 테스트
+
+### Step 5: 후보 분류
 
 발견된 이슈를 우선순위별 분류:
 
-- **P0**: 컴파일 에러, 런타임 패닉 가능성, 타입 오류
-- **P1**: 누락된 에러 처리, unwrap 남용, any 타입, unsafe 미가공
-- **P2**: unused imports, dead code, clippy warnings, lint 에러
-- **P3**: 코드 스타일, 성능 개선, 접근성, UX
+- **P0**: 컴파일 에러, 런타임 예외 가능성, 타입 오류
+- **P1**: 테스트 없는 모듈 (TDD 최우선 — 테스트 작성 필요)
+- **P2**: 누락된 에러 처리, dynamic 타입 남용, 예외 미처리
+- **P3**: unused imports, dead code, analyze 경고, lint 에러
+- **P4**: 코드 스타일, 성능 개선, 포맷팅
 
 ## 출력 포맷
 
 ```
 [Analysis Report]
-Rust: {컴파일상태} | warnings: {N} | clippy: {N}
-Frontend: {빌드상태} | tsc errors: {N} | lint: {N}
+Analyze: {상태} | errors: {N} | warnings: {N}
+Tests: {상태} | passed: {N} | failed: {N}
+Coverage: {N}/{M} 모듈에 테스트 존재 | 미커버: {파일목록}
+Format: {상태}
 
 Candidates ({총수}개):
 1. [{P등급}] {파일경로}:{라인} — {이슈설명}
-2. [{P등급}] {파일경로}:{라인} — {이슈설명}
+2. [{P등급}] {파일경로} — 테스트 없음 (test/{대응경로}_test.dart 필요)
+3. [{P등급}] {파일경로}:{라인} — {이슈설명}
 ...
 
 Top recommendation: #{번호} ({이유})
@@ -87,3 +153,4 @@ Top recommendation: #{번호} ({이유})
 3. 후보는 구체적: 파일 경로 + 라인 + 이슈 설명
 4. 동일 파일의 여러 이슈는 별도 후보로 등록
 5. P0가 있으면 반드시 최우선 추천
+6. P1(테스트 없음)은 P0가 없을 때 최우선 — TDD 원칙

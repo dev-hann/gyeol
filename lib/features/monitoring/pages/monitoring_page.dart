@@ -19,12 +19,6 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
   @override
   void initState() {
     super.initState();
-    _refresh();
-  }
-
-  void _refresh() {
-    ref.invalidate(tasksProvider);
-    ref.invalidate(logsProvider);
   }
 
   @override

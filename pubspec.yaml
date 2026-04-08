@@ -22,6 +22,7 @@ dependencies:
   go_router: ^14.8.1
   google_fonts: ^6.2.1
   intl: ^0.20.2
+  flutter_flow_chart: ^4.1.1
 
 dev_dependencies:
   flutter_test:

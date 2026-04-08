@@ -1,0 +1,646 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gyeol/core/theme/app_theme.dart';
+import 'package:gyeol/data/models/app_models.dart';
+import 'package:gyeol/data/providers/app_providers.dart';
+
+class NodeDetailPanel extends ConsumerStatefulWidget {
+  final String? layerName;
+  final VoidCallback onClose;
+
+  const NodeDetailPanel({
+    super.key,
+    required this.layerName,
+    required this.onClose,
+  });
+
+  @override
+  ConsumerState<NodeDetailPanel> createState() => _NodeDetailPanelState();
+}
+
+class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
+  bool _editing = false;
+  late TextEditingController _inputCtl;
+  late TextEditingController _outputCtl;
+  late TextEditingController _orderCtl;
+  bool _enabled = true;
+
+  // Worker form
+  bool _showWorkerForm = false;
+  String? _editingWorkerName;
+  late TextEditingController _wNameCtl;
+  late TextEditingController _wModelCtl;
+  late TextEditingController _wTempCtl;
+  late TextEditingController _wTokensCtl;
+  late TextEditingController _wPromptCtl;
+  bool _wEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _inputCtl = TextEditingController();
+    _outputCtl = TextEditingController();
+    _orderCtl = TextEditingController();
+    _wNameCtl = TextEditingController();
+    _wModelCtl = TextEditingController();
+    _wTempCtl = TextEditingController(text: '0.7');
+    _wTokensCtl = TextEditingController(text: '4096');
+    _wPromptCtl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _inputCtl.dispose();
+    _outputCtl.dispose();
+    _orderCtl.dispose();
+    _wNameCtl.dispose();
+    _wModelCtl.dispose();
+    _wTempCtl.dispose();
+    _wTokensCtl.dispose();
+    _wPromptCtl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.layerName == null) return const SizedBox.shrink();
+
+    final layersAsync = ref.watch(layersProvider);
+    final workersAsync = ref.watch(workersProvider);
+
+    return layersAsync.when(
+      data: (layers) {
+        final layer = layers
+            .where((l) => l.name == widget.layerName)
+            .firstOrNull;
+        if (layer == null) return const SizedBox.shrink();
+
+        return workersAsync.when(
+          data: (workers) {
+            final layerWorkers = workers
+                .where((w) => w.layerName == layer.name)
+                .toList();
+            return _buildPanel(layer, layerWorkers);
+          },
+          loading: () => _buildLoading(),
+          error: (_, __) => _buildLoading(),
+        );
+      },
+      loading: () => _buildLoading(),
+      error: (_, __) => _buildLoading(),
+    );
+  }
+
+  Widget _buildLoading() {
+    return Container(
+      width: 400,
+      color: AppColors.card,
+      child: const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _buildPanel(
+    LayerDefinition layer,
+    List<WorkerDefinition> layerWorkers,
+  ) {
+    if (!_editing) {
+      _inputCtl.text = layer.inputTypes.join(', ');
+      _outputCtl.text = layer.outputTypes.join(', ');
+      _orderCtl.text = layer.order.toString();
+      _enabled = layer.enabled;
+    }
+
+    return Container(
+      width: 400,
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        border: Border(left: BorderSide(color: AppColors.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(layer),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (!_editing) _buildViewMode(layer) else _buildEditMode(),
+                const SizedBox(height: 20),
+                _buildWorkerSection(layerWorkers),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(LayerDefinition layer) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: layer.enabled ? AppColors.success : AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              layer.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.foreground,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: widget.onClose,
+            color: AppColors.textSecondary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewMode(LayerDefinition layer) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTypeRow('Input Types', layer.inputTypes, AppColors.info),
+        const SizedBox(height: 12),
+        _buildTypeRow('Output Types', layer.outputTypes, AppColors.success),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Text(
+              'Enabled',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: (layer.enabled ? AppColors.success : AppColors.textMuted)
+                    .withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                layer.enabled ? 'Active' : 'Disabled',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: layer.enabled
+                      ? AppColors.success
+                      : AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => setState(() => _editing = true),
+                icon: const Icon(Icons.edit, size: 14),
+                label: const Text('Edit'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(
+                Icons.delete_outline,
+                size: 18,
+                color: AppColors.error,
+              ),
+              onPressed: () {
+                ref.read(layersProvider.notifier).deleteLayer(layer.name);
+                widget.onClose();
+              },
+              tooltip: 'Delete layer',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditMode() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _inputCtl,
+          decoration: const InputDecoration(
+            labelText: 'Input Types (comma-separated)',
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _outputCtl,
+          decoration: const InputDecoration(
+            labelText: 'Output Types (comma-separated)',
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _orderCtl,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Order', isDense: true),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Switch(
+              value: _enabled,
+              onChanged: (v) => setState(() => _enabled = v),
+            ),
+            const Text(
+              'Enabled',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => setState(() => _editing = false),
+                child: const Text('Cancel'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _saveLayer,
+                child: const Text('Save'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTypeRow(String label, List<String> types, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+        ),
+        const SizedBox(height: 4),
+        if (types.isEmpty)
+          const Text(
+            'None',
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+          )
+        else
+          Wrap(
+            spacing: 4,
+            runSpacing: 2,
+            children: types
+                .map(
+                  (t) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      t,
+                      style: TextStyle(fontSize: 10, color: color),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildWorkerSection(List<WorkerDefinition> layerWorkers) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.memory,
+                  size: 14,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Workers (${layerWorkers.length})',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.foreground,
+                  ),
+                ),
+              ],
+            ),
+            TextButton.icon(
+              onPressed: () {
+                _editingWorkerName = null;
+                _wNameCtl.clear();
+                _wModelCtl.clear();
+                _wTempCtl.text = '0.7';
+                _wTokensCtl.text = '4096';
+                _wPromptCtl.clear();
+                _wEnabled = true;
+                setState(() => _showWorkerForm = true);
+              },
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Add'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_showWorkerForm) _buildWorkerForm(),
+        ...layerWorkers.map((w) => _buildWorkerCard(w)),
+      ],
+    );
+  }
+
+  Widget _buildWorkerCard(WorkerDefinition worker) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: worker.enabled ? AppColors.success : AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        worker.name,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.foreground,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      if (worker.model != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.info.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            worker.model!,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: AppColors.info,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    worker.systemPrompt.length > 80
+                        ? '${worker.systemPrompt.substring(0, 80)}...'
+                        : worker.systemPrompt,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textMuted,
+                      fontFamily: 'monospace',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit, size: 14),
+              onPressed: () {
+                _editingWorkerName = worker.name;
+                _wNameCtl.text = worker.name;
+                _wModelCtl.text = worker.model ?? '';
+                _wTempCtl.text = (worker.temperature ?? 0.7).toString();
+                _wTokensCtl.text = (worker.maxTokens ?? 4096).toString();
+                _wPromptCtl.text = worker.systemPrompt;
+                _wEnabled = worker.enabled;
+                setState(() => _showWorkerForm = true);
+              },
+              color: AppColors.textSecondary,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              padding: EdgeInsets.zero,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 14),
+              onPressed: () =>
+                  ref.read(workersProvider.notifier).deleteWorker(worker.name),
+              color: AppColors.error,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              padding: EdgeInsets.zero,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkerForm() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        color: AppColors.tertiary,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _editingWorkerName != null
+                ? 'Edit: $_editingWorkerName'
+                : 'New Worker',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _wNameCtl,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    isDense: true,
+                  ),
+                  enabled: _editingWorkerName == null,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _wModelCtl,
+                  decoration: const InputDecoration(
+                    labelText: 'Model',
+                    isDense: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _wTempCtl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Temperature',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _wTokensCtl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Max Tokens',
+                    isDense: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _wPromptCtl,
+            decoration: const InputDecoration(
+              labelText: 'System Prompt',
+              isDense: true,
+              alignLabelWithHint: true,
+            ),
+            maxLines: 4,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+          Row(
+            children: [
+              Switch(
+                value: _wEnabled,
+                onChanged: (v) => setState(() => _wEnabled = v),
+              ),
+              const Text(
+                'Enabled',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => setState(() => _showWorkerForm = false),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _saveWorker,
+                  child: Text(_editingWorkerName != null ? 'Update' : 'Create'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<String> _splitCSV(String input) {
+    return input
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  void _saveLayer() {
+    if (widget.layerName == null) return;
+    final layer = LayerDefinition(
+      name: widget.layerName!,
+      inputTypes: _splitCSV(_inputCtl.text),
+      outputTypes: _splitCSV(_outputCtl.text),
+      workerNames: [],
+      order: int.tryParse(_orderCtl.text) ?? 0,
+      enabled: _enabled,
+    );
+    ref.read(layersProvider.notifier).saveLayer(layer);
+    setState(() => _editing = false);
+  }
+
+  void _saveWorker() {
+    if (_wNameCtl.text.isEmpty || widget.layerName == null) return;
+    final worker = WorkerDefinition(
+      name: _wNameCtl.text,
+      layerName: widget.layerName!,
+      systemPrompt: _wPromptCtl.text,
+      model: _wModelCtl.text.isEmpty ? null : _wModelCtl.text,
+      temperature: double.tryParse(_wTempCtl.text) ?? 0.7,
+      maxTokens: int.tryParse(_wTokensCtl.text) ?? 4096,
+      enabled: _wEnabled,
+    );
+    ref.read(workersProvider.notifier).saveWorker(worker);
+    setState(() {
+      _showWorkerForm = false;
+      _editingWorkerName = null;
+    });
+  }
+}
