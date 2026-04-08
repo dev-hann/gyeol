@@ -69,7 +69,4 @@ impl LlmProvider for OpenAIProvider {
             .ok_or_else(|| LlmError::Api("No content in response".to_string()))
     }
 
-    fn provider_name(&self) -> &str {
-        "openai"
-    }
 }

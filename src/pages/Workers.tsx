@@ -227,7 +227,7 @@ export function WorkersPage() {
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(worker)}>
                     Edit
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-error hover:text-error" onClick={() => handleDelete(worker.name)}>
+                  <Button variant="ghost" size="icon" className="text-error hover:text-error" onClick={() => handleDelete(worker.name)} aria-label="Delete worker">
                     <Trash2 size={14} />
                   </Button>
                 </div>

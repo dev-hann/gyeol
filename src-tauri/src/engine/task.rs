@@ -25,19 +25,19 @@ pub enum TaskPriority {
 }
 
 impl TaskPriority {
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            TaskPriority::Low => "low",
-            TaskPriority::Medium => "medium",
-            TaskPriority::High => "high",
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
         }
     }
 
-    pub fn priority_value(&self) -> u8 {
+    pub const fn priority_value(&self) -> u8 {
         match self {
-            TaskPriority::Low => 0,
-            TaskPriority::Medium => 1,
-            TaskPriority::High => 2,
+            Self::Low => 0,
+            Self::Medium => 1,
+            Self::High => 2,
         }
     }
 }
@@ -51,12 +51,12 @@ pub enum TaskStatus {
 }
 
 impl TaskStatus {
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
-            TaskStatus::Pending => "pending",
-            TaskStatus::Running => "running",
-            TaskStatus::Done => "done",
-            TaskStatus::Failed => "failed",
+            Self::Pending => "pending",
+            Self::Running => "running",
+            Self::Done => "done",
+            Self::Failed => "failed",
         }
     }
 }

@@ -18,7 +18,10 @@ pub fn run() {
     std::fs::create_dir_all(&app_data_dir).ok();
 
     let db_path = std::path::Path::new(&app_data_dir).join("gyeol.db");
-    let store = Arc::new(SqliteStore::new(&db_path).expect("Failed to open database"));
+    let store = Arc::new(SqliteStore::new(&db_path).unwrap_or_else(|e| {
+        eprintln!("Failed to open database at {}: {e}", db_path.display());
+        std::process::exit(1);
+    }));
 
     let queue = Arc::new(TaskQueue::new());
     let layer_registry = Arc::new(LayerRegistry::new());
@@ -72,5 +75,5 @@ pub fn run() {
 
 fn dirs_data_dir() -> String {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    format!("{}/.local/share/gyeol", home)
+    format!("{home}/.local/share/gyeol")
 }

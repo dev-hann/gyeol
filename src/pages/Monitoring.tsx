@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { useAppStore } from "../stores/appStore";
-import { CheckCircle2, XCircle, Loader2, Clock } from "lucide-react";
-import { Badge } from "../components/ui/badge";
+import { useAppStore } from "@/stores/appStore";
+import { CheckCircle2, XCircle, Loader2, Clock, Activity } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/app/PageHeader";
 
 export function MonitoringPage() {
   const { tasks, logs, fetchTasks, fetchLogs } = useAppStore();
@@ -31,14 +32,11 @@ export function MonitoringPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">
-          Real-time Monitoring
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Live view of task execution and worker activity
-        </p>
-      </div>
+      <PageHeader
+        icon={Activity}
+        title="Real-time Monitoring"
+        description="Live view of task execution and worker activity"
+      />
 
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-card border border-border rounded-lg">
@@ -60,7 +58,7 @@ export function MonitoringPage() {
                     </span>
                   </div>
                   <div className="ml-6 mt-1 text-xs text-muted-foreground">
-                    {task.layer_name} / {task.worker_name || "unassigned"} |{" "}
+                    {task.layer_name || "N/A"} / {task.worker_name || "unassigned"} |{" "}
                     Depth: {task.depth} | Retry: {task.retry_count}/
                     {task.max_retries}
                   </div>

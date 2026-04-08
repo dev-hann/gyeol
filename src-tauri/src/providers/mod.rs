@@ -66,7 +66,6 @@ pub enum LlmError {
 pub trait LlmProvider: Send + Sync {
     async fn generate(&self, prompt: &str) -> Result<String, LlmError>;
     async fn generate_with_system(&self, system: &str, user: &str) -> Result<String, LlmError>;
-    fn provider_name(&self) -> &str;
 }
 
 pub fn create_provider(settings: &ProviderSettings) -> Box<dyn LlmProvider> {

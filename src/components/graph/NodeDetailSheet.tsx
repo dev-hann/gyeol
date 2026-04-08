@@ -135,24 +135,27 @@ export function NodeDetailSheet({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <Label className="mb-1 block">Input Types (comma-separated)</Label>
+                  <Label htmlFor="edit-input-types" className="mb-1 block">Input Types (comma-separated)</Label>
                   <Input
+                    id="edit-input-types"
                     value={current.input_types}
                     onChange={(e) => setForm({ ...current, input_types: e.target.value })}
                     placeholder="issue, question"
                   />
                 </div>
                 <div>
-                  <Label className="mb-1 block">Output Types (comma-separated)</Label>
+                  <Label htmlFor="edit-output-types" className="mb-1 block">Output Types (comma-separated)</Label>
                   <Input
+                    id="edit-output-types"
                     value={current.output_types}
                     onChange={(e) => setForm({ ...current, output_types: e.target.value })}
                     placeholder="plan, analysis"
                   />
                 </div>
                 <div>
-                  <Label className="mb-1 block">Order</Label>
+                  <Label htmlFor="edit-order" className="mb-1 block">Order</Label>
                   <Input
+                    id="edit-order"
                     type="number"
                     value={current.order}
                     onChange={(e) => setForm({ ...current, order: parseInt(e.target.value) || 0 })}
@@ -160,10 +163,11 @@ export function NodeDetailSheet({
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch
+                    id="edit-enabled"
                     checked={current.enabled}
                     onCheckedChange={(checked) => setForm({ ...current, enabled: checked })}
                   />
-                  <Label>Enabled</Label>
+                  <Label htmlFor="edit-enabled">Enabled</Label>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" className="flex-1" onClick={() => { setEditing(false); setForm(null); }}>

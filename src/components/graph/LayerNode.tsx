@@ -16,10 +16,14 @@ function LayerNodeComponent({ data, selected }: NodeProps) {
         className="!w-3 !h-3 !bg-muted-foreground !border-2 !border-card"
       />
       <Card
+        tabIndex={0}
+        role="button"
+        aria-label={`${d.name} layer${d.enabled ? "" : " (disabled)"}`}
         className={cn(
           "w-[240px] p-3 transition-all cursor-pointer",
           d.enabled ? "border-border" : "border-border opacity-50",
           selected && "ring-2 ring-ring",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           d.runningTasks > 0 && "node-running"
         )}
       >

@@ -56,6 +56,7 @@ impl TaskQueue {
         self.heap.lock().pop().map(|p| p.task)
     }
 
+    #[allow(dead_code)]
     pub fn peek(&self) -> Option<Task> {
         self.heap.lock().peek().map(|p| p.task.clone())
     }
@@ -64,10 +65,12 @@ impl TaskQueue {
         self.heap.lock().len()
     }
 
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.heap.lock().is_empty()
     }
 
+    #[allow(dead_code)]
     pub fn drain_all(&self) -> Vec<Task> {
         let mut heap = self.heap.lock();
         let mut tasks = Vec::new();

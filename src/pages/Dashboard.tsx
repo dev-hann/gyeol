@@ -58,7 +58,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-5 gap-4">
         {stats.map((stat) => (
-          <Card key={stat.label}>
+          <Card key={stat.label} className="transition-shadow hover:shadow-md">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">

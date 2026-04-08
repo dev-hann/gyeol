@@ -11,12 +11,14 @@ pub async fn run_scheduler(state: State<'_, AppState>) -> Result<Vec<WorkerResul
             .as_ref()
             .and_then(|m| m.get("worker"))
             .and_then(|v| v.as_str());
-        let _ = state.store.log_execution(
+        if let Err(e) = state.store.log_execution(
             "scheduler",
             worker_name,
             if result.success { "success" } else { "failed" },
             result.error.as_deref(),
-        );
+        ) {
+            log::warn!("Failed to log execution: {e}");
+        }
     }
     Ok(results)
 }
