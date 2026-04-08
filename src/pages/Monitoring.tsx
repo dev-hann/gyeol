@@ -96,7 +96,7 @@ export function MonitoringPage() {
                     {log.message}
                   </div>
                 )}
-                <div className="ml-6 mt-0.5 text-[10px] text-muted-foreground">
+                <div className="ml-6 mt-0.5 text-2xs text-muted-foreground">
                   {new Date(log.created_at).toLocaleTimeString()}
                 </div>
               </div>

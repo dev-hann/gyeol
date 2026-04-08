@@ -107,7 +107,7 @@ export function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground font-mono">
+              <div className="text-2xs text-muted-foreground font-mono">
                 {task.id.slice(0, 8)}
               </div>
             </div>
