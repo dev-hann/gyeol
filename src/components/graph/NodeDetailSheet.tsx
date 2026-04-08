@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, Save, Cpu } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { LayerDefinition, WorkerDefinition } from "@/types";
 
 interface NodeDetailSheetProps {
@@ -68,7 +69,7 @@ export function NodeDetailSheet({
       <SheetContent side="right" className="w-[380px] sm:max-w-[380px] p-0">
         <SheetHeader className="p-6 pb-4">
           <div className="flex items-center gap-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${layer.enabled ? "bg-success" : "bg-muted-foreground"}`} />
+            <div className={cn("w-2.5 h-2.5 rounded-full", layer.enabled ? "bg-success" : "bg-muted-foreground")} />
             <SheetTitle>{layer.name}</SheetTitle>
           </div>
           <SheetDescription>Layer configuration and connected workers</SheetDescription>

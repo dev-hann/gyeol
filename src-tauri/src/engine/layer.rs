@@ -18,9 +18,9 @@ impl LayerDefinition {
     pub fn new(name: &str, input_types: Vec<&str>, output_types: Vec<&str>, worker_names: Vec<&str>, order: u32) -> Self {
         Self {
             name: name.to_string(),
-            input_types: input_types.into_iter().map(|s| s.to_string()).collect(),
-            output_types: output_types.into_iter().map(|s| s.to_string()).collect(),
-            worker_names: worker_names.into_iter().map(|s| s.to_string()).collect(),
+            input_types: input_types.into_iter().map(ToString::to_string).collect(),
+            output_types: output_types.into_iter().map(ToString::to_string).collect(),
+            worker_names: worker_names.into_iter().map(ToString::to_string).collect(),
             order,
             enabled: true,
         }
@@ -48,19 +48,24 @@ impl LayerRegistry {
     }
 
     pub fn find_by_input_type(&self, task_type: &str) -> Vec<LayerDefinition> {
-        let layers = self.layers.lock();
-        let mut matched: Vec<LayerDefinition> = layers
-            .values()
-            .filter(|l| l.enabled && l.input_types.contains(&task_type.to_string()))
-            .cloned()
-            .collect();
+        let mut matched: Vec<LayerDefinition> = {
+            let layers = self.layers.lock();
+            layers
+                .values()
+                .filter(|l| l.enabled && l.input_types.iter().any(|t| t == task_type))
+                .cloned()
+                .collect()
+        };
         matched.sort_by_key(|l| l.order);
         matched
     }
 
     #[allow(dead_code)]
     pub fn list(&self) -> Vec<LayerDefinition> {
-        let mut layers: Vec<LayerDefinition> = self.layers.lock().values().cloned().collect();
+        let mut layers: Vec<LayerDefinition> = {
+            let guard = self.layers.lock();
+            guard.values().cloned().collect()
+        };
         layers.sort_by_key(|l| l.order);
         layers
     }

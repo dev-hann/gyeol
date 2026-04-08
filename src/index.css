@@ -64,6 +64,7 @@
   --border: #2e2e33;
   --input: #2e2e33;
   --ring: #6d5acf;
+  --primary-rgb: 109, 90, 207;
   --sidebar-background: var(--bg-secondary);
   --sidebar-foreground: var(--text-primary);
   --sidebar-primary: #6d5acf;
@@ -135,8 +136,8 @@ body {
 }
 
 @keyframes node-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(109, 90, 207, 0); }
-  50% { box-shadow: 0 0 12px 2px rgba(109, 90, 207, 0.4); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0); }
+  50% { box-shadow: 0 0 12px 2px rgba(var(--primary-rgb), 0.4); }
 }
 
 .node-running {

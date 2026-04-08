@@ -11,7 +11,7 @@ pub struct DefaultEvaluator {
 }
 
 impl DefaultEvaluator {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             passing_score: 0.7,
         }
