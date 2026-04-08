@@ -26,7 +26,7 @@ export function layersToGraph(
   const runningCounts: Record<string, number> = {};
   for (const t of tasks) {
     if (t.status === "Running" && t.layer_name) {
-      runningCounts[t.layer_name] = (runningCounts[t.layer_name] || 0) + 1;
+      runningCounts[t.layer_name] = (runningCounts[t.layer_name] ?? 0) + 1;
     }
   }
 
@@ -44,10 +44,12 @@ export function layersToGraph(
         inputTypes: layer.input_types,
         outputTypes: layer.output_types,
         order: layer.order,
-        runningTasks: runningCounts[layer.name] || 0,
+        runningTasks: runningCounts[layer.name] ?? 0,
       },
     };
   });
+
+  const inputTypeSets = new Map(layers.map((l) => [l.name, new Set(l.input_types)]));
 
   const edges: Edge[] = [];
   for (let i = 0; i < layers.length; i++) {
@@ -55,7 +57,8 @@ export function layersToGraph(
       if (i === j) continue;
       const source = layers[i];
       const target = layers[j];
-      const overlap = source.output_types.filter((t) => target.input_types.includes(t));
+      const targetInputs = inputTypeSets.get(target.name)!;
+      const overlap = source.output_types.filter((t) => targetInputs.has(t));
       if (overlap.length > 0) {
         const id = `edge-${source.name}-${target.name}`;
         const isRunning = tasks.some(
