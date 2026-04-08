@@ -39,8 +39,8 @@ function TypeEdgeComponent({
       {label && (
         <EdgeLabelRenderer>
           <div
-            className={labelClassName}
-            style={{ left: labelX, top: labelY, transform: "translate(-50%, -50%)" }}
+            className={`${labelClassName} edge-label-center`}
+            style={{ left: labelX, top: labelY }}
           >
             {label}
           </div>

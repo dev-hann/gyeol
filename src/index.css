@@ -168,3 +168,7 @@ body {
 .react-flow__handle-source {
   background-color: var(--primary);
 }
+
+.edge-label-center {
+  translate: -50% -50%;
+}
