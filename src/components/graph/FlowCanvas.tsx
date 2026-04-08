@@ -120,7 +120,7 @@ export function FlowCanvas() {
           nodeBorderRadius={6}
           pannable
           zoomable
-          maskColor="rgba(0,0,0,0.7)"
+          maskColor="var(--minimap-mask)"
         />
       </ReactFlow>
 
