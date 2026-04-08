@@ -153,3 +153,18 @@ body {
 .node-running {
   animation: node-glow 1.5s ease-in-out infinite;
 }
+
+.react-flow__handle {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-width: 2px;
+  border-color: var(--card);
+}
+
+.react-flow__handle-target {
+  background-color: var(--muted-foreground);
+}
+
+.react-flow__handle-source {
+  background-color: var(--primary);
+}

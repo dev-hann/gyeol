@@ -12,7 +12,6 @@ function LayerNodeComponent({ data, selected }: NodeProps<Node<LayerNodeData>>) 
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-3 !h-3 !bg-muted-foreground !border-2 !border-card"
       />
       <Card
         tabIndex={0}
@@ -64,7 +63,6 @@ function LayerNodeComponent({ data, selected }: NodeProps<Node<LayerNodeData>>) 
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-3 !h-3 !bg-primary !border-2 !border-card"
       />
     </>
   );
