@@ -20,6 +20,7 @@ impl SqliteStore {
         Ok(store)
     }
 
+    #[allow(dead_code)]
     pub fn new_in_memory() -> SqlResult<Self> {
         let conn = Connection::open_in_memory()?;
         let store = Self {
@@ -132,6 +133,7 @@ impl SqliteStore {
         Ok(tasks)
     }
 
+    #[allow(dead_code)]
     pub fn update_task_status(&self, id: &str, status: &str) -> SqlResult<()> {
         let conn = self.conn.lock().unwrap();
         let now = chrono::Utc::now().timestamp_millis();

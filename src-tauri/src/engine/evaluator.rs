@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::engine::task::{Task, EvaluationResult};
 
 pub trait Evaluator: Send + Sync {

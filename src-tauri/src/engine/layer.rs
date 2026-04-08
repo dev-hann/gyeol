@@ -14,6 +14,7 @@ pub struct LayerDefinition {
 }
 
 impl LayerDefinition {
+    #[allow(dead_code)]
     pub fn new(name: &str, input_types: Vec<&str>, output_types: Vec<&str>, worker_names: Vec<&str>, order: u32) -> Self {
         Self {
             name: name.to_string(),
@@ -41,6 +42,7 @@ impl LayerRegistry {
         self.layers.lock().insert(layer.name.clone(), layer);
     }
 
+    #[allow(dead_code)]
     pub fn get(&self, name: &str) -> Option<LayerDefinition> {
         self.layers.lock().get(name).cloned()
     }
@@ -56,6 +58,7 @@ impl LayerRegistry {
         matched
     }
 
+    #[allow(dead_code)]
     pub fn list(&self) -> Vec<LayerDefinition> {
         let mut layers: Vec<LayerDefinition> = self.layers.lock().values().cloned().collect();
         layers.sort_by_key(|l| l.order);
@@ -66,6 +69,7 @@ impl LayerRegistry {
         self.layers.lock().remove(name).is_some()
     }
 
+    #[allow(dead_code)]
     pub fn update(&self, layer: LayerDefinition) {
         self.layers.lock().insert(layer.name.clone(), layer);
     }

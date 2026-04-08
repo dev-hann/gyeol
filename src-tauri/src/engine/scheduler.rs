@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use parking_lot::Mutex;
 use tokio::task::JoinSet;
 use crate::engine::task::{Task, TaskStatus, WorkerResult};
 use crate::engine::queue::TaskQueue;
@@ -15,7 +14,6 @@ pub struct Scheduler {
     layer_registry: Arc<LayerRegistry>,
     message_bus: Arc<MessageBus>,
     store: Arc<SqliteStore>,
-    running: Arc<Mutex<bool>>,
     max_concurrent: usize,
 }
 
@@ -31,7 +29,6 @@ impl Scheduler {
             layer_registry,
             message_bus,
             store,
-            running: Arc::new(Mutex::new(false)),
             max_concurrent: 4,
         }
     }
@@ -107,14 +104,6 @@ impl Scheduler {
 
     pub fn queue_len(&self) -> usize {
         self.queue.len()
-    }
-
-    pub fn is_running(&self) -> bool {
-        *self.running.lock()
-    }
-
-    pub fn set_running(&self, val: bool) {
-        *self.running.lock() = val;
     }
 }
 

@@ -7,15 +7,16 @@ use tauri::State;
 pub async fn run_scheduler(state: State<'_, AppState>) -> Result<Vec<WorkerResult>, String> {
     let results = state.scheduler.run_once().await;
     for result in &results {
-        if let Some(meta) = &result.metadata {
-            let worker_name = meta.get("worker").and_then(|v: &serde_json::Value| v.as_str());
-            let _ = state.store.log_execution(
-                "scheduler",
-                worker_name,
-                if result.success { "success" } else { "failed" },
-                result.error.as_deref(),
-            );
-        }
+        let worker_name = result.metadata
+            .as_ref()
+            .and_then(|m| m.get("worker"))
+            .and_then(|v| v.as_str());
+        let _ = state.store.log_execution(
+            "scheduler",
+            worker_name,
+            if result.success { "success" } else { "failed" },
+            result.error.as_deref(),
+        );
     }
     Ok(results)
 }
