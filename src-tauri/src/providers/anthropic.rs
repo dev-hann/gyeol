@@ -56,7 +56,7 @@ impl LlmProvider for AnthropicProvider {
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            return Err(LlmError::Api(format!("{}: {}", status, text)));
+            return Err(LlmError::Api(format!("{status}: {text}")));
         }
 
         let data: serde_json::Value = response
@@ -66,7 +66,7 @@ impl LlmProvider for AnthropicProvider {
 
         data["content"][0]["text"]
             .as_str()
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .ok_or_else(|| LlmError::Api("No content in response".to_string()))
     }
 
