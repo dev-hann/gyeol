@@ -14,6 +14,7 @@ pub struct WorkerDefinition {
 }
 
 impl WorkerDefinition {
+    #[allow(dead_code)]
     pub fn new(name: &str, layer_name: &str, system_prompt: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -27,12 +28,14 @@ impl WorkerDefinition {
     }
 }
 
+#[allow(dead_code)]
 #[async_trait]
 pub trait WorkerHandler: Send + Sync {
     async fn handle(&self, task: &Task, context: &WorkerContext) -> WorkerResult;
     fn name(&self) -> &str;
 }
 
+#[allow(dead_code)]
 pub struct WorkerContext {
     pub state_store: crate::store::sqlite::SqliteStore,
     pub message_bus: crate::engine::message_bus::MessageBus,
