@@ -40,12 +40,10 @@ function TypeEdgeComponent({
       {label && (
         <EdgeLabelRenderer>
           <div
+            className="absolute pointer-events-auto rounded bg-card border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
             style={{
-              position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: "all",
             }}
-            className="rounded bg-card border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
           >
             {label}
           </div>
