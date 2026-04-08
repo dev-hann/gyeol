@@ -1,7 +1,7 @@
 use std::collections::BinaryHeap;
 use std::sync::Arc;
 use parking_lot::Mutex;
-use crate::engine::task::{Task, TaskPriority};
+use crate::engine::task::Task;
 
 #[derive(Debug)]
 struct PrioritizedTask {

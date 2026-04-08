@@ -30,11 +30,12 @@ impl MessageBus {
         }
     }
 
+    #[allow(dead_code)]
     pub fn subscribe(&self, task_type: &str, handler: impl Fn(&Task) + Send + Sync + 'static) {
         self.subscribers
             .lock()
             .entry(task_type.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(Box::new(handler));
     }
 }

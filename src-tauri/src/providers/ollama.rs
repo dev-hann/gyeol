@@ -49,23 +49,23 @@ impl LlmProvider for OllamaProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| LlmError::NetworkError(e.to_string()))?;
+            .map_err(|e| LlmError::Network(e.to_string()))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            return Err(LlmError::ApiError(format!("{}: {}", status, text)));
+            return Err(LlmError::Api(format!("{}: {}", status, text)));
         }
 
         let data: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| LlmError::ApiError(e.to_string()))?;
+            .map_err(|e| LlmError::Api(e.to_string()))?;
 
         data["message"]["content"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or_else(|| LlmError::ApiError("No content in response".to_string()))
+            .ok_or_else(|| LlmError::Api("No content in response".to_string()))
     }
 
     fn provider_name(&self) -> &str {

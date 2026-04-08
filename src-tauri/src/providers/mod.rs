@@ -55,11 +55,11 @@ impl fmt::Display for ProviderType {
 #[derive(Debug, thiserror::Error)]
 pub enum LlmError {
     #[error("API error: {0}")]
-    ApiError(String),
+    Api(String),
     #[error("Network error: {0}")]
-    NetworkError(String),
+    Network(String),
     #[error("Configuration error: {0}")]
-    ConfigError(String),
+    Config(String),
 }
 
 #[async_trait]

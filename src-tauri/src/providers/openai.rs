@@ -30,7 +30,7 @@ impl LlmProvider for OpenAIProvider {
 
     async fn generate_with_system(&self, system: &str, user: &str) -> Result<String, LlmError> {
         if self.api_key.is_empty() {
-            return Err(LlmError::ConfigError("OpenAI API key not set".to_string()));
+            return Err(LlmError::Config("OpenAI API key not set".to_string()));
         }
 
         let body = json!({
@@ -50,23 +50,23 @@ impl LlmProvider for OpenAIProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|e| LlmError::NetworkError(e.to_string()))?;
+            .map_err(|e| LlmError::Network(e.to_string()))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            return Err(LlmError::ApiError(format!("{}: {}", status, text)));
+            return Err(LlmError::Api(format!("{}: {}", status, text)));
         }
 
         let data: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| LlmError::ApiError(e.to_string()))?;
+            .map_err(|e| LlmError::Api(e.to_string()))?;
 
         data["choices"][0]["message"]["content"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or_else(|| LlmError::ApiError("No content in response".to_string()))
+            .ok_or_else(|| LlmError::Api("No content in response".to_string()))
     }
 
     fn provider_name(&self) -> &str {
