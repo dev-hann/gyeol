@@ -17,13 +17,12 @@ impl MessageBus {
     }
 
     pub fn publish(&self, task: &Task) {
-        let specific = {
+        let (specific, wildcard) = {
             let subs = self.subscribers.lock();
-            subs.get(&task.task_type).cloned().unwrap_or_default()
-        };
-        let wildcard = {
-            let subs = self.subscribers.lock();
-            subs.get("*").cloned().unwrap_or_default()
+            (
+                subs.get(&task.task_type).cloned().unwrap_or_default(),
+                subs.get("*").cloned().unwrap_or_default(),
+            )
         };
         for handler in &specific {
             handler(task);

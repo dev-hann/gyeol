@@ -111,7 +111,7 @@ export function WorkersPage() {
             <h3 className="text-sm font-medium text-foreground">
               {isNew ? "New Worker" : `Edit: ${editing.name}`}
             </h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <Label className="mb-1 block">Name</Label>
                 <Input

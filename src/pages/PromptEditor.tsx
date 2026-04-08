@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAppStore } from "../stores/appStore";
+import { useAppStore } from "@/stores/appStore";
 import { Save, RotateCcw, Code2 } from "lucide-react";
 import { PageHeader } from "@/components/app/PageHeader";
 import { Button } from "@/components/ui/button";

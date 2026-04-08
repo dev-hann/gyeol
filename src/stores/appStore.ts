@@ -5,8 +5,8 @@ import type {
   WorkerDefinition,
   ExecutionLog,
   ProviderSettings,
-} from "../types";
-import * as api from "../lib/api";
+} from "@/types";
+import * as api from "@/lib/api";
 
 interface AppState {
   tasks: Task[];

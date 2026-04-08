@@ -38,7 +38,7 @@ export function MonitoringPage() {
         description="Live view of task execution and worker activity"
       />
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="bg-card border border-border rounded-lg">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-medium">Active Tasks</h3>

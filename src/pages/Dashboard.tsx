@@ -56,7 +56,7 @@ export function DashboardPage() {
         description="Overview of your AI worker system"
       />
 
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
         {stats.map((stat) => (
           <Card key={stat.label} className="transition-shadow hover:shadow-md">
             <CardContent className="p-4">

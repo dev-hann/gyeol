@@ -6,7 +6,7 @@ import type {
   ProviderSettings,
   WorkerResult,
   ExecutionLog,
-} from "../types";
+} from "@/types";
 
 export async function createTask(
   taskType: string,

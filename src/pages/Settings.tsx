@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAppStore } from "../stores/appStore";
+import { useAppStore } from "@/stores/appStore";
 import { Save, Settings } from "lucide-react";
-import type { ProviderSettings } from "../types";
+import type { ProviderSettings } from "@/types";
 import { PageHeader } from "@/components/app/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
