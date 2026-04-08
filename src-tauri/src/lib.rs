@@ -13,6 +13,7 @@ use engine::message_bus::MessageBus;
 use engine::scheduler::Scheduler;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[allow(clippy::missing_panics_doc)]
 pub fn run() {
     let app_data_dir = dirs_data_dir();
     std::fs::create_dir_all(&app_data_dir).ok();
