@@ -1,25 +1,41 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
-import { DashboardPage } from "./pages/Dashboard";
-import { MonitoringPage } from "./pages/Monitoring";
-import { LayersPage } from "./pages/Layers";
-import { WorkersPage } from "./pages/Workers";
-import { PromptEditorPage } from "./pages/PromptEditor";
-import { SettingsPage } from "./pages/Settings";
+
+const DashboardPage = lazy(() =>
+  import("./pages/Dashboard").then((m) => ({ default: m.DashboardPage }))
+);
+const MonitoringPage = lazy(() =>
+  import("./pages/Monitoring").then((m) => ({ default: m.MonitoringPage }))
+);
+const LayersPage = lazy(() =>
+  import("./pages/Layers").then((m) => ({ default: m.LayersPage }))
+);
+const WorkersPage = lazy(() =>
+  import("./pages/Workers").then((m) => ({ default: m.WorkersPage }))
+);
+const PromptEditorPage = lazy(() =>
+  import("./pages/PromptEditor").then((m) => ({ default: m.PromptEditorPage }))
+);
+const SettingsPage = lazy(() =>
+  import("./pages/Settings").then((m) => ({ default: m.SettingsPage }))
+);
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/monitoring" element={<MonitoringPage />} />
-          <Route path="/layers" element={<LayersPage />} />
-          <Route path="/workers" element={<WorkersPage />} />
-          <Route path="/editor" element={<PromptEditorPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
+      <Suspense>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/monitoring" element={<MonitoringPage />} />
+            <Route path="/layers" element={<LayersPage />} />
+            <Route path="/workers" element={<WorkersPage />} />
+            <Route path="/editor" element={<PromptEditorPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

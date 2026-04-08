@@ -64,12 +64,6 @@ export async function deleteWorker(name: string): Promise<void> {
   return invoke("delete_worker", { name });
 }
 
-export async function getWorker(
-  name: string
-): Promise<WorkerDefinition | null> {
-  return invoke<WorkerDefinition | null>("get_worker", { name });
-}
-
 export async function runScheduler(): Promise<WorkerResult[]> {
   return invoke<WorkerResult[]>("run_scheduler");
 }

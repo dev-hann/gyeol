@@ -1,7 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAppStore } from "../stores/appStore";
-import { Save } from "lucide-react";
+import { Save, Settings } from "lucide-react";
 import type { ProviderSettings } from "../types";
+import { PageHeader } from "@/components/app/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function SettingsPage() {
   const { settings, fetchSettings, saveSettings } = useAppStore();
@@ -15,8 +29,23 @@ export function SettingsPage() {
 
   if (!currentForm) {
     return (
-      <div className="p-6">
-        <div className="text-sm text-[var(--text-muted)]">Loading...</div>
+      <div className="p-6 space-y-6 max-w-2xl">
+        <PageHeader
+          icon={Settings}
+          title="Settings"
+          description="Configure AI provider and system settings"
+        />
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-4 w-24" />
+            <div className="grid grid-cols-2 gap-4">
+              <Skeleton className="h-9" />
+              <Skeleton className="h-9" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -28,187 +57,142 @@ export function SettingsPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Settings</h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
-            Configure AI provider and system settings
-          </p>
-        </div>
-        <button
-          onClick={handleSave}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm rounded-md transition-colors"
-        >
-          <Save size={14} />
-          Save Settings
-        </button>
-      </div>
+      <PageHeader
+        icon={Settings}
+        title="Settings"
+        description="Configure AI provider and system settings"
+        action={
+          <Button size="sm" onClick={handleSave}>
+            <Save size={14} />
+            Save Settings
+          </Button>
+        }
+      />
 
-      <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg p-4 space-y-4">
-        <h3 className="text-sm font-medium border-b border-[var(--border)] pb-2">
-          AI Provider
-        </h3>
-        <div>
-          <label className="block text-xs text-[var(--text-muted)] mb-1">
-            Active Provider
-          </label>
-          <select
-            value={currentForm.provider}
-            onChange={(e) =>
-              setForm({
-                ...currentForm,
-                provider: e.target.value as ProviderSettings["provider"],
-              })
-            }
-            className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
-          >
-            <option value="OpenAI">OpenAI</option>
-            <option value="Anthropic">Anthropic</option>
-            <option value="Ollama">Ollama (Local)</option>
-          </select>
-        </div>
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <h3 className="text-sm font-medium text-foreground pb-2 border-b border-border">
+            AI Provider
+          </h3>
+          <div>
+            <Label className="mb-1 block">Active Provider</Label>
+            <Select
+              value={currentForm.provider}
+              onValueChange={(v) =>
+                setForm({ ...currentForm, provider: v as ProviderSettings["provider"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="OpenAI">OpenAI</SelectItem>
+                <SelectItem value="Anthropic">Anthropic</SelectItem>
+                <SelectItem value="Ollama">Ollama (Local)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium border-b border-[var(--border)] pb-2">
+          <Separator />
+
+          <h3 className="text-sm font-medium text-foreground pb-2 border-b border-border">
             OpenAI
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                API Key
-              </label>
-              <input
+              <Label className="mb-1 block">API Key</Label>
+              <Input
                 type="password"
                 value={currentForm.openai_api_key}
-                onChange={(e) =>
-                  setForm({ ...currentForm, openai_api_key: e.target.value })
-                }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
+                onChange={(e) => setForm({ ...currentForm, openai_api_key: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                Model
-              </label>
-              <input
+              <Label className="mb-1 block">Model</Label>
+              <Input
                 value={currentForm.openai_model}
-                onChange={(e) =>
-                  setForm({ ...currentForm, openai_model: e.target.value })
-                }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
+                onChange={(e) => setForm({ ...currentForm, openai_model: e.target.value })}
               />
             </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium border-b border-[var(--border)] pb-2">
+          <Separator />
+
+          <h3 className="text-sm font-medium text-foreground pb-2 border-b border-border">
             Anthropic
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                API Key
-              </label>
-              <input
+              <Label className="mb-1 block">API Key</Label>
+              <Input
                 type="password"
                 value={currentForm.anthropic_api_key}
-                onChange={(e) =>
-                  setForm({ ...currentForm, anthropic_api_key: e.target.value })
-                }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
+                onChange={(e) => setForm({ ...currentForm, anthropic_api_key: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                Model
-              </label>
-              <input
+              <Label className="mb-1 block">Model</Label>
+              <Input
                 value={currentForm.anthropic_model}
-                onChange={(e) =>
-                  setForm({ ...currentForm, anthropic_model: e.target.value })
-                }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
+                onChange={(e) => setForm({ ...currentForm, anthropic_model: e.target.value })}
               />
             </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium border-b border-[var(--border)] pb-2">
+          <Separator />
+
+          <h3 className="text-sm font-medium text-foreground pb-2 border-b border-border">
             Ollama (Local)
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                Base URL
-              </label>
-              <input
+              <Label className="mb-1 block">Base URL</Label>
+              <Input
                 value={currentForm.ollama_base_url}
-                onChange={(e) =>
-                  setForm({ ...currentForm, ollama_base_url: e.target.value })
-                }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
+                onChange={(e) => setForm({ ...currentForm, ollama_base_url: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                Model
-              </label>
-              <input
+              <Label className="mb-1 block">Model</Label>
+              <Input
                 value={currentForm.ollama_model}
-                onChange={(e) =>
-                  setForm({ ...currentForm, ollama_model: e.target.value })
-                }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
+                onChange={(e) => setForm({ ...currentForm, ollama_model: e.target.value })}
               />
             </div>
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium border-b border-[var(--border)] pb-2">
+          <Separator />
+
+          <h3 className="text-sm font-medium text-foreground pb-2 border-b border-border">
             Defaults
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                Default Temperature
-              </label>
-              <input
+              <Label className="mb-1 block">Default Temperature</Label>
+              <Input
                 type="number"
                 step="0.1"
                 min="0"
                 max="2"
                 value={currentForm.default_temperature}
                 onChange={(e) =>
-                  setForm({
-                    ...currentForm,
-                    default_temperature: parseFloat(e.target.value) || 0,
-                  })
+                  setForm({ ...currentForm, default_temperature: parseFloat(e.target.value) || 0 })
                 }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
               />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1">
-                Default Max Tokens
-              </label>
-              <input
+              <Label className="mb-1 block">Default Max Tokens</Label>
+              <Input
                 type="number"
                 value={currentForm.default_max_tokens}
                 onChange={(e) =>
-                  setForm({
-                    ...currentForm,
-                    default_max_tokens: parseInt(e.target.value) || 0,
-                  })
+                  setForm({ ...currentForm, default_max_tokens: parseInt(e.target.value) || 0 })
                 }
-                className="w-full px-3 py-1.5 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-md text-sm text-[var(--text-primary)]"
               />
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
