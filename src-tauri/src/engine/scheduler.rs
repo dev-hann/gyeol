@@ -18,7 +18,7 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    pub fn new(
+    pub const fn new(
         queue: Arc<TaskQueue>,
         layer_registry: Arc<LayerRegistry>,
         message_bus: Arc<MessageBus>,
@@ -45,19 +45,18 @@ impl Scheduler {
         let mut taken = 0;
 
         while taken < self.max_concurrent {
-            let task = match self.queue.pop() {
-                Some(t) => t,
-                None => break,
+            let Some(task) = self.queue.pop() else {
+                break;
             };
 
             if task.depth > MAX_EXECUTION_DEPTH {
-                log::warn!("Task {} exceeded max depth", task.id);
+                log::warn!("Task {task_id} exceeded max depth", task_id = task.id);
                 continue;
             }
 
             let layers = self.layer_registry.find_by_input_type(&task.task_type);
             if layers.is_empty() {
-                log::warn!("No layer found for task type: {}", task.task_type);
+                log::warn!("No layer found for task type: {task_type}", task_type = task.task_type);
                 continue;
             }
 
@@ -94,7 +93,7 @@ impl Scheduler {
                     results.push(worker_result);
                 }
                 Err(e) => {
-                    log::error!("Worker task panicked: {}", e);
+                    log::error!("Worker task panicked: {e}");
                 }
             }
         }
@@ -114,7 +113,7 @@ async fn execute_worker(task: &Task, worker_name: &str, store: &SqliteStore) -> 
             return WorkerResult {
                 success: false,
                 output_tasks: vec![],
-                error: Some(format!("Worker '{}' not found", worker_name)),
+                error: Some(format!("Worker '{worker_name}' not found")),
                 metadata: None,
             };
         }
@@ -122,16 +121,16 @@ async fn execute_worker(task: &Task, worker_name: &str, store: &SqliteStore) -> 
             return WorkerResult {
                 success: false,
                 output_tasks: vec![],
-                error: Some(format!("DB error: {}", e)),
+                error: Some(format!("DB error: {e}")),
                 metadata: None,
             };
         }
     };
 
-    let provider = match store.get_settings() {
-        Ok(settings) => crate::providers::create_provider(&settings),
-        Err(_) => crate::providers::create_provider(&crate::providers::ProviderSettings::default()),
-    };
+    let provider = store.get_settings().map_or_else(
+        |_| crate::providers::create_provider(&crate::providers::ProviderSettings::default()),
+        |settings| crate::providers::create_provider(&settings),
+    );
 
     let prompt = format!(
         "{}\n\nTask: {}\nPayload: {}",
