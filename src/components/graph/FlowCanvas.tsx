@@ -26,6 +26,22 @@ const defaultEdgeOptions = {
   type: "typeEdge",
 };
 
+type NodeState = "default" | "disabled" | "running";
+
+const minimapColors: Record<NodeState, { fill: string; stroke: string }> = {
+  default: { fill: "var(--primary)", stroke: "var(--border)" },
+  disabled: { fill: "var(--muted-foreground)", stroke: "var(--muted-foreground)" },
+  running: { fill: "var(--info)", stroke: "var(--info)" },
+};
+
+const getNodeState = (data: unknown): NodeState => {
+  const d = data as LayerNodeData | undefined;
+  if (!d || d.enabled === undefined) return "default";
+  if (!d.enabled) return "disabled";
+  if (d.runningTasks > 0) return "running";
+  return "default";
+};
+
 const panelBase = "!bg-card !border-border !rounded-md";
 const controlClassName = `${panelBase} [&>button]:!bg-card [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-accent`;
 const miniMapClassName = panelBase;
@@ -103,20 +119,8 @@ export function FlowCanvas() {
         />
         <MiniMap
           className={miniMapClassName}
-          nodeColor={(node) => {
-            const d = node.data as LayerNodeData | undefined;
-            if (!d) return "var(--primary)";
-            if (!d.enabled) return "var(--muted-foreground)";
-            if (d.runningTasks > 0) return "var(--info)";
-            return "var(--primary)";
-          }}
-          nodeStrokeColor={(node) => {
-            const d = node.data as LayerNodeData | undefined;
-            if (!d) return "var(--border)";
-            if (!d.enabled) return "var(--muted-foreground)";
-            if (d.runningTasks > 0) return "var(--info)";
-            return "var(--border)";
-          }}
+          nodeColor={(node) => minimapColors[getNodeState(node.data)].fill}
+          nodeStrokeColor={(node) => minimapColors[getNodeState(node.data)].stroke}
           nodeBorderRadius={6}
           pannable
           zoomable

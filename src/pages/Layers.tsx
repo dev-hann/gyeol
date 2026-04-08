@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Layers, Plus } from "lucide-react";
 import { useAppStore } from "@/stores/appStore";
 import { FlowCanvas } from "@/components/graph/FlowCanvas";
+import { splitCSV } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -43,9 +44,9 @@ export function LayersPage() {
     if (!form.name) return;
     await saveLayer({
       name: form.name,
-      input_types: form.input_types.split(",").map((s) => s.trim()).filter(Boolean),
-      output_types: form.output_types.split(",").map((s) => s.trim()).filter(Boolean),
-      worker_names: form.worker_names.split(",").map((s) => s.trim()).filter(Boolean),
+      input_types: splitCSV(form.input_types),
+      output_types: splitCSV(form.output_types),
+      worker_names: splitCSV(form.worker_names),
       order: form.order,
       enabled: form.enabled,
     });

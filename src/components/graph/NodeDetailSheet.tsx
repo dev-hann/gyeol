@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, Save, Cpu } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, splitCSV } from "@/lib/utils";
 import type { LayerDefinition, WorkerDefinition } from "@/types";
 
 interface NodeDetailSheetProps {
@@ -54,8 +54,8 @@ export function NodeDetailSheet({
   const handleSave = async () => {
     await onSave({
       name: layer.name,
-      input_types: current.input_types.split(",").map((s) => s.trim()).filter(Boolean),
-      output_types: current.output_types.split(",").map((s) => s.trim()).filter(Boolean),
+      input_types: splitCSV(current.input_types),
+      output_types: splitCSV(current.output_types),
       worker_names: layer.worker_names,
       order: current.order,
       enabled: current.enabled,

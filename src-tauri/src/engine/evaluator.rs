@@ -1,16 +1,17 @@
-#![allow(dead_code)]
-
 use crate::engine::task::{Task, EvaluationResult};
 
+#[allow(dead_code)]
 pub trait Evaluator: Send + Sync {
     fn evaluate(&self, task: &Task, result: &str) -> EvaluationResult;
 }
 
+#[allow(dead_code)]
 pub struct DefaultEvaluator {
     pub passing_score: f64,
 }
 
 impl DefaultEvaluator {
+    #[allow(dead_code)]
     pub const fn new() -> Self {
         Self {
             passing_score: 0.7,

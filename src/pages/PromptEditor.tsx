@@ -43,9 +43,7 @@ export function PromptEditorPage() {
     });
   };
 
-  const hasChanges = () => {
-    return worker && prompt !== worker.system_prompt;
-  };
+  const hasChanges = worker != null && prompt !== worker.system_prompt;
 
   return (
     <div className="p-6 space-y-6 h-full flex flex-col">
@@ -71,15 +69,15 @@ export function PromptEditorPage() {
 
         {selectedWorker && (
           <div className="flex items-center gap-2">
-            <Button size="sm" disabled={!hasChanges()} onClick={handleSave}>
+            <Button size="sm" disabled={!hasChanges} onClick={handleSave}>
               <Save size={14} />
               Save
             </Button>
-            <Button variant="ghost" size="sm" disabled={!hasChanges()} onClick={handleReset}>
+            <Button variant="ghost" size="sm" disabled={!hasChanges} onClick={handleReset}>
               <RotateCcw size={14} />
               Reset
             </Button>
-            {hasChanges() && (
+            {hasChanges && (
               <Badge variant="warning">Unsaved changes</Badge>
             )}
           </div>
