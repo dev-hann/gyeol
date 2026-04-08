@@ -1,24 +1,24 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+*.lock
+!pubspec.lock
 
-node_modules
-dist
-dist-ssr
-*.local
+# Coverage
+coverage/
 
-# Editor directories and files
+# IDE
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.DS_Store
+
+# Logs
+*.log

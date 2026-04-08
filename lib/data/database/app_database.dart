@@ -1,0 +1,62 @@
+import 'package:drift/drift.dart';
+
+class Tasks extends Table {
+  TextColumn get id => text()();
+  TextColumn get taskType => text()();
+  TextColumn get payload => text()();
+  TextColumn get priority => text()();
+  TextColumn get status => text()();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  IntColumn get maxRetries => integer().withDefault(const Constant(3))();
+  IntColumn get depth => integer().withDefault(const Constant(0))();
+  TextColumn get parentTaskId => text().nullable()();
+  TextColumn get layerName => text().nullable()();
+  TextColumn get workerName => text().nullable()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class Layers extends Table {
+  TextColumn get name => text()();
+  TextColumn get inputTypes => text()();
+  TextColumn get outputTypes => text()();
+  TextColumn get workerNames => text()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  BoolColumn get enabled => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {name};
+}
+
+class Workers extends Table {
+  TextColumn get name => text()();
+  TextColumn get layerName => text()();
+  TextColumn get systemPrompt => text()();
+  TextColumn get model => text().nullable()();
+  RealColumn get temperature => real().nullable()();
+  IntColumn get maxTokens => integer().nullable()();
+  BoolColumn get enabled => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {name};
+}
+
+class Settings extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+class ExecutionLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get taskId => text()();
+  TextColumn get workerName => text().nullable()();
+  TextColumn get status => text()();
+  TextColumn get message => text().nullable()();
+  IntColumn get createdAt => integer()();
+}
