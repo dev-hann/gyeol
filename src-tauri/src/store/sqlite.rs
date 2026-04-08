@@ -129,7 +129,7 @@ impl SqliteStore {
         )?;
         let tasks = stmt.query_map(params![limit, offset], |row| {
             Ok(row_to_task(row))
-        })?.filter_map(|t| t.ok()).collect();
+        })?.filter_map(std::result::Result::ok).collect();
         Ok(tasks)
     }
 
@@ -155,7 +155,7 @@ impl SqliteStore {
                 serde_json::to_string(&layer.output_types).unwrap(),
                 serde_json::to_string(&layer.worker_names).unwrap(),
                 layer.order,
-                layer.enabled as i32,
+                i32::from(layer.enabled),
             ],
         )?;
         Ok(())
@@ -175,7 +175,7 @@ impl SqliteStore {
                 order: row.get(4)?,
                 enabled: row.get::<_, i32>(5)? != 0,
             })
-        })?.filter_map(|l| l.ok()).collect();
+        })?.filter_map(std::result::Result::ok).collect();
         Ok(layers)
     }
 
@@ -197,7 +197,7 @@ impl SqliteStore {
                 worker.model,
                 worker.temperature,
                 worker.max_tokens,
-                worker.enabled as i32,
+                i32::from(worker.enabled),
             ],
         )?;
         Ok(())
@@ -237,7 +237,7 @@ impl SqliteStore {
                 max_tokens: row.get(5)?,
                 enabled: row.get::<_, i32>(6)? != 0,
             })
-        })?.filter_map(|w| w.ok()).collect();
+        })?.filter_map(std::result::Result::ok).collect();
         Ok(workers)
     }
 
@@ -300,7 +300,7 @@ impl SqliteStore {
                     created_at: row.get(5)?,
                 })
             })?;
-            rows.filter_map(|l| l.ok()).collect()
+            rows.filter_map(std::result::Result::ok).collect()
         } else {
             let mut stmt = conn.prepare(
                 "SELECT id, task_id, worker_name, status, message, created_at FROM execution_logs ORDER BY created_at DESC LIMIT ?1"
@@ -315,7 +315,7 @@ impl SqliteStore {
                     created_at: row.get(5)?,
                 })
             })?;
-            rows.filter_map(|l| l.ok()).collect()
+            rows.filter_map(std::result::Result::ok).collect()
         };
         Ok(logs)
     }
@@ -346,7 +346,6 @@ fn row_to_task(row: &rusqlite::Row) -> Task {
             _ => TaskPriority::Low,
         },
         status: match status_str.as_str() {
-            "pending" => TaskStatus::Pending,
             "running" => TaskStatus::Running,
             "done" => TaskStatus::Done,
             "failed" => TaskStatus::Failed,
