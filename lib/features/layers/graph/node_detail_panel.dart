@@ -48,6 +48,24 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   }
 
   @override
+  void didUpdateWidget(covariant NodeDetailPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.layerName != widget.layerName) {
+      _editing = false;
+      _showWorkerForm = false;
+      _editingWorkerName = null;
+    }
+  }
+
+  void _syncControllersFromLayer(LayerDefinition layer) {
+    if (_editing) return;
+    _inputCtl.text = layer.inputTypes.join(', ');
+    _outputCtl.text = layer.outputTypes.join(', ');
+    _orderCtl.text = layer.order.toString();
+    _enabled = layer.enabled;
+  }
+
+  @override
   void dispose() {
     _inputCtl.dispose();
     _outputCtl.dispose();
@@ -102,12 +120,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
     LayerDefinition layer,
     List<WorkerDefinition> layerWorkers,
   ) {
-    if (!_editing) {
-      _inputCtl.text = layer.inputTypes.join(', ');
-      _outputCtl.text = layer.outputTypes.join(', ');
-      _orderCtl.text = layer.order.toString();
-      _enabled = layer.enabled;
-    }
+    _syncControllersFromLayer(layer);
 
     return Container(
       width: 400,

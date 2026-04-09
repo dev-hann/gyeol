@@ -156,6 +156,35 @@ void main() {
       expect(find.text('No logs yet'), findsOneWidget);
     });
 
+    testWidgets('shows CircularProgressIndicator for running tasks', (
+      tester,
+    ) async {
+      await pumpMonitoringPage(tester);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('shows schedule icon for pending tasks', (tester) async {
+      await pumpMonitoringPage(tester);
+      expect(find.byIcon(Icons.schedule), findsOneWidget);
+    });
+
+    testWidgets('shows task depth and retry count in detail line', (
+      tester,
+    ) async {
+      await pumpMonitoringPage(tester);
+      expect(find.textContaining('Depth: 1'), findsOneWidget);
+      expect(find.textContaining('Depth: 2'), findsOneWidget);
+      expect(find.textContaining('Retry: 0/3'), findsOneWidget);
+      expect(find.textContaining('Retry: 1/3'), findsOneWidget);
+    });
+
+    testWidgets('shows unassigned worker label when workerName is null', (
+      tester,
+    ) async {
+      await pumpMonitoringPage(tester);
+      expect(find.textContaining('unassigned'), findsOneWidget);
+    });
+
     testWidgets('shows error on tasks provider error', (tester) async {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;

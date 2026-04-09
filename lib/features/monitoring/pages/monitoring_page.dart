@@ -17,11 +17,6 @@ class MonitoringPage extends ConsumerStatefulWidget {
 
 class _MonitoringPageState extends ConsumerState<MonitoringPage> {
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksProvider);
     final logsAsync = ref.watch(logsProvider);

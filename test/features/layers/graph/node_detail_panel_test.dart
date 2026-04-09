@@ -274,6 +274,113 @@ void main() {
     });
   });
 
+  group('NodeDetailPanel — didUpdateWidget syncs controllers', () {
+    testWidgets('updates input types text when layerName changes', (
+      tester,
+    ) async {
+      final layers = [
+        const LayerDefinition(
+          name: 'A',
+          inputTypes: ['alpha'],
+          outputTypes: ['a-out'],
+          workerNames: [],
+        ),
+        const LayerDefinition(
+          name: 'B',
+          inputTypes: ['beta'],
+          outputTypes: ['b-out'],
+          workerNames: [],
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            layersProvider.overrideWith(() => _FakeLayersNotifier(layers)),
+            workersProvider.overrideWith(() => _FakeWorkersNotifier([])),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: NodeDetailPanel(layerName: 'A', onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('alpha'), findsOneWidget);
+      expect(find.text('beta'), findsNothing);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            layersProvider.overrideWith(() => _FakeLayersNotifier(layers)),
+            workersProvider.overrideWith(() => _FakeWorkersNotifier([])),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: NodeDetailPanel(layerName: 'B', onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('beta'), findsOneWidget);
+      expect(find.text('alpha'), findsNothing);
+    });
+
+    testWidgets('updates enabled status when switching layers', (tester) async {
+      final layers = [
+        const LayerDefinition(
+          name: 'On',
+          inputTypes: ['x'],
+          outputTypes: [],
+          workerNames: [],
+        ),
+        const LayerDefinition(
+          name: 'Off',
+          inputTypes: ['x'],
+          outputTypes: [],
+          workerNames: [],
+          enabled: false,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            layersProvider.overrideWith(() => _FakeLayersNotifier(layers)),
+            workersProvider.overrideWith(() => _FakeWorkersNotifier([])),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: NodeDetailPanel(layerName: 'On', onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Active'), findsOneWidget);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            layersProvider.overrideWith(() => _FakeLayersNotifier(layers)),
+            workersProvider.overrideWith(() => _FakeWorkersNotifier([])),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: NodeDetailPanel(layerName: 'Off', onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Disabled'), findsOneWidget);
+    });
+  });
+
   group('NodeDetailPanel — empty types', () {
     testWidgets('shows None for empty input types', (tester) async {
       await pumpPanel(
