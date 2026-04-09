@@ -134,7 +134,9 @@ class Scheduler {
     final provider = _createProvider(settings);
 
     final prompt =
-        '${workerDef.systemPrompt}\n\nTask: ${task.taskType}\nPayload: ${task.payload}';
+        '${workerDef.systemPrompt}\n\n'
+        'Task: ${task.taskType}\n'
+        'Payload: ${task.payload}';
 
     try {
       final response = await provider.generate(prompt);
@@ -155,7 +157,7 @@ class Scheduler {
         outputTasks: [outputTask],
         metadata: {'worker': workerName},
       );
-    } catch (e) {
+    } on Object catch (e) {
       await _repo.logExecution(
         taskId: task.id,
         workerName: workerName,
