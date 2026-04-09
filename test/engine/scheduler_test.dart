@@ -1,5 +1,9 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
+import 'package:gyeol/data/repositories/app_repository.dart';
+import 'package:gyeol/engine/queue/task_queue.dart';
 import 'package:gyeol/engine/scheduler.dart';
 
 void main() {
@@ -269,6 +273,135 @@ void main() {
 
       expect(received1, hasLength(1));
       expect(received2, hasLength(1));
+    });
+  });
+
+  // ── Scheduler ──
+
+  group('Scheduler submit', () {
+    late Scheduler scheduler;
+    late AppDatabase db;
+
+    setUp(() {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      scheduler = Scheduler(
+        queue: TaskQueue(),
+        layerRegistry: LayerRegistry(),
+        messageBus: MessageBus(),
+        repo: AppRepository(db),
+      );
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('returns task id and increments queueLength', () {
+      final task = AppTask.create('text', {'k': 'v'}, TaskPriority.high);
+      final id = scheduler.submit(task);
+      expect(id, task.id);
+      expect(scheduler.queueLength, 1);
+    });
+
+    test('accepts multiple tasks', () {
+      scheduler
+        ..submit(AppTask.create('a', null, TaskPriority.low))
+        ..submit(AppTask.create('b', null, TaskPriority.high))
+        ..submit(AppTask.create('c', null, TaskPriority.medium));
+      expect(scheduler.queueLength, 3);
+    });
+  });
+
+  group('Scheduler runOnce', () {
+    late Scheduler scheduler;
+    late TaskQueue queue;
+    late LayerRegistry registry;
+    late MessageBus bus;
+    late AppDatabase db;
+
+    setUp(() {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      queue = TaskQueue();
+      registry = LayerRegistry();
+      bus = MessageBus();
+      scheduler = Scheduler(
+        queue: queue,
+        layerRegistry: registry,
+        messageBus: bus,
+        repo: AppRepository(db),
+      );
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('returns empty when queue is empty', () async {
+      final results = await scheduler.runOnce();
+      expect(results, isEmpty);
+    });
+
+    test('skips task with no matching layer and drains it', () async {
+      scheduler.submit(AppTask.create('unknown_type', null, TaskPriority.high));
+      final results = await scheduler.runOnce();
+      expect(results, isEmpty);
+      expect(scheduler.queueLength, 0);
+    });
+
+    test('skips task when depth exceeds maxExecutionDepth', () async {
+      registry.register(
+        const LayerDefinition(
+          name: 'deep',
+          inputTypes: ['deep'],
+          outputTypes: [],
+          workerNames: ['w1'],
+        ),
+      );
+      final task = AppTask.create(
+        'deep',
+        null,
+        TaskPriority.high,
+      ).copyWith(depth: 11);
+      scheduler.submit(task);
+      final results = await scheduler.runOnce();
+      expect(results, isEmpty);
+      expect(scheduler.queueLength, 0);
+    });
+
+    test('skips task when all matching layers are disabled', () async {
+      registry.register(
+        const LayerDefinition(
+          name: 'off',
+          inputTypes: ['text'],
+          outputTypes: [],
+          workerNames: ['w1'],
+          enabled: false,
+        ),
+      );
+      scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+      final results = await scheduler.runOnce();
+      expect(results, isEmpty);
+    });
+
+    test('returns failed result when worker not found', () async {
+      registry.register(
+        const LayerDefinition(
+          name: 'L',
+          inputTypes: ['text'],
+          outputTypes: [],
+          workerNames: ['missing_worker'],
+        ),
+      );
+
+      scheduler.submit(
+        AppTask.create('text', {'data': 'x'}, TaskPriority.high),
+      );
+
+      final results = await scheduler.runOnce();
+      expect(results, hasLength(1));
+      expect(results.first.success, false);
+      expect(results.first.error, contains('missing_worker'));
+      expect(scheduler.queueLength, 0);
     });
   });
 }
