@@ -173,8 +173,9 @@ final runSchedulerProvider = FutureProvider.family<List<WorkerResult>, void>((
 ) async {
   final scheduler = ref.read(schedulerProvider);
   final results = await scheduler.runOnce();
-  ref.invalidate(tasksProvider);
-  ref.invalidate(queueSizeProvider);
-  ref.invalidate(logsProvider);
+  ref
+    ..invalidate(tasksProvider)
+    ..invalidate(queueSizeProvider)
+    ..invalidate(logsProvider);
   return results;
 });
