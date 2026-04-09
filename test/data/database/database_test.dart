@@ -297,4 +297,71 @@ void main() {
       expect(await db.listLayers(), isEmpty);
     });
   });
+
+  group('thread operations', () {
+    test('saveThread inserts and getThread retrieves', () async {
+      await db.saveThread(
+        ThreadsCompanion.insert(
+          name: 'thread1',
+          path: '/path/to/file.dart',
+          layerNames: '["parse","analyze"]',
+        ),
+      );
+
+      final thread = await db.getThread('thread1');
+      expect(thread, isNotNull);
+      expect(thread!.name, 'thread1');
+      expect(thread.path, '/path/to/file.dart');
+      expect(thread.layerNames, '["parse","analyze"]');
+      expect(thread.enabled, isTrue);
+      expect(thread.status, 'idle');
+    });
+
+    test('getThread returns null for missing name', () async {
+      expect(await db.getThread('nonexistent'), isNull);
+    });
+
+    test('saveThread upserts on conflict', () async {
+      await db.saveThread(
+        ThreadsCompanion.insert(
+          name: 'thread1',
+          path: '/old/path',
+          layerNames: '["a"]',
+        ),
+      );
+      await db.saveThread(
+        ThreadsCompanion.insert(
+          name: 'thread1',
+          path: '/new/path',
+          layerNames: '["b"]',
+        ),
+      );
+
+      final thread = await db.getThread('thread1');
+      expect(thread!.path, '/new/path');
+      expect(thread.layerNames, '["b"]');
+    });
+
+    test('listThreads returns all threads', () async {
+      await db.saveThread(
+        ThreadsCompanion.insert(name: 'a', path: '/a', layerNames: '[]'),
+      );
+      await db.saveThread(
+        ThreadsCompanion.insert(name: 'b', path: '/b', layerNames: '[]'),
+      );
+
+      final threads = await db.listThreads();
+      expect(threads, hasLength(2));
+    });
+
+    test('deleteThread removes thread', () async {
+      await db.saveThread(
+        ThreadsCompanion.insert(name: 'doomed', path: '/x', layerNames: '[]'),
+      );
+      expect(await db.getThread('doomed'), isNotNull);
+
+      await db.deleteThread('doomed');
+      expect(await db.getThread('doomed'), isNull);
+    });
+  });
 }
