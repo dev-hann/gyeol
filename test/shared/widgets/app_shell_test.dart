@@ -72,13 +72,12 @@ void main() {
       expect(find.text('AI Multi-Layer Worker'), findsOneWidget);
     });
 
-    testWidgets('renders all six navigation labels', (tester) async {
+    testWidgets('renders all five navigation labels', (tester) async {
       await pumpShell(tester);
       expect(find.text('Dashboard'), findsAtLeast(1));
       expect(find.text('Monitoring'), findsAtLeast(1));
       expect(find.text('Layers'), findsAtLeast(1));
       expect(find.text('Threads'), findsAtLeast(1));
-      expect(find.text('Workers'), findsAtLeast(1));
       expect(find.text('Settings'), findsAtLeast(1));
     });
 
@@ -117,9 +116,8 @@ void main() {
       await pumpShell(tester);
       expect(find.byIcon(Icons.dashboard_outlined), findsAtLeast(1));
       expect(find.byIcon(Icons.show_chart), findsAtLeast(1));
-      expect(find.byIcon(Icons.layers_outlined), findsAtLeast(1));
       expect(find.byIcon(Icons.account_tree_outlined), findsAtLeast(1));
-      expect(find.byIcon(Icons.memory), findsAtLeast(1));
+      expect(find.byIcon(Icons.layers_outlined), findsAtLeast(1));
       expect(find.byIcon(Icons.settings_outlined), findsAtLeast(1));
     });
   });
