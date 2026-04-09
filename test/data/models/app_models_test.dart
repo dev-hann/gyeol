@@ -197,6 +197,10 @@ void main() {
       expect(settings.anthropicModel, 'claude-sonnet-4-20250514');
       expect(settings.ollamaBaseUrl, 'http://localhost:11434');
       expect(settings.ollamaModel, 'llama3');
+      expect(settings.customBaseUrl, 'http://localhost:8080');
+      expect(settings.customApiKey, '');
+      expect(settings.customModel, '');
+      expect(settings.customApiFormat, CustomApiFormat.openAICompatible);
       expect(settings.defaultTemperature, 0.7);
       expect(settings.defaultMaxTokens, 4096);
     });
@@ -231,6 +235,28 @@ void main() {
       expect(settings.provider, ProviderType.ollama);
     });
 
+    test('fromJson Custom provider', () {
+      final settings = ProviderSettings.fromJson({
+        'provider': 'Custom',
+        'custom_base_url': 'http://my-server:1234',
+        'custom_api_key': 'my-key',
+        'custom_model': 'my-model',
+        'custom_api_format': 'anthropic',
+      });
+      expect(settings.provider, ProviderType.custom);
+      expect(settings.customBaseUrl, 'http://my-server:1234');
+      expect(settings.customApiKey, 'my-key');
+      expect(settings.customModel, 'my-model');
+      expect(settings.customApiFormat, CustomApiFormat.anthropicCompatible);
+    });
+
+    test('fromJson Custom provider defaults', () {
+      final settings = ProviderSettings.fromJson({'provider': 'Custom'});
+      expect(settings.provider, ProviderType.custom);
+      expect(settings.customApiFormat, CustomApiFormat.openAICompatible);
+      expect(settings.customBaseUrl, 'http://localhost:8080');
+    });
+
     test('toJson round-trips through fromJson', () {
       const original = ProviderSettings(
         provider: ProviderType.anthropic,
@@ -240,6 +266,10 @@ void main() {
         anthropicModel: 'claude-3',
         ollamaBaseUrl: 'http://x:1',
         ollamaModel: 'llama2',
+        customBaseUrl: 'http://custom:9999',
+        customApiKey: 'ck',
+        customModel: 'cm',
+        customApiFormat: CustomApiFormat.ollamaCompatible,
         defaultTemperature: 0.3,
         defaultMaxTokens: 1024,
       );
@@ -253,6 +283,10 @@ void main() {
       expect(restored.anthropicModel, original.anthropicModel);
       expect(restored.ollamaBaseUrl, original.ollamaBaseUrl);
       expect(restored.ollamaModel, original.ollamaModel);
+      expect(restored.customBaseUrl, original.customBaseUrl);
+      expect(restored.customApiKey, original.customApiKey);
+      expect(restored.customModel, original.customModel);
+      expect(restored.customApiFormat, original.customApiFormat);
       expect(restored.defaultTemperature, original.defaultTemperature);
       expect(restored.defaultMaxTokens, original.defaultMaxTokens);
     });

@@ -99,9 +99,11 @@ void main() {
       expect(modelLabels, findsAtLeast(3));
     });
 
-    testWidgets('renders Base URL label for Ollama', (tester) async {
+    testWidgets('renders Base URL labels for Ollama and Custom', (
+      tester,
+    ) async {
       await pumpSettingsPage(tester);
-      expect(find.text('Base URL'), findsOneWidget);
+      expect(find.text('Base URL'), findsNWidgets(2));
     });
 
     testWidgets('shows error on provider error', (tester) async {
