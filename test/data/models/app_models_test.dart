@@ -94,6 +94,59 @@ void main() {
     });
   });
 
+  group('AppTask payload type safety', () {
+    test('payload accepts Map<String, Object>', () {
+      final task = AppTask.create('parse', <String, Object>{
+        'text': 'hi',
+        'count': 42,
+      }, TaskPriority.high);
+      expect(task.payload, isA<Map<String, Object>>());
+    });
+
+    test('payload accepts null', () {
+      final task = AppTask.create('parse', null, TaskPriority.low);
+      expect(task.payload, isNull);
+    });
+
+    test('payload accepts List<String>', () {
+      final task = AppTask.create('batch', <String>[
+        'a',
+        'b',
+      ], TaskPriority.medium);
+      expect(task.payload, isA<List<String>>());
+    });
+
+    test('copyWith preserves payload type', () {
+      final task = AppTask.create('parse', <String, dynamic>{
+        'key': 'val',
+      }, TaskPriority.high);
+      final copied = task.copyWith(status: TaskStatus.done);
+      expect(copied.payload, isA<Map<String, dynamic>>());
+      expect(copied.payload, task.payload);
+    });
+  });
+
+  group('AppTask equality', () {
+    test('tasks with same id are equal', () {
+      final a = AppTask.create('parse', {'x': 1}, TaskPriority.high);
+      final b = a.copyWith(status: TaskStatus.running);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('tasks with different id are not equal', () {
+      final a = AppTask.create('parse', null, TaskPriority.low);
+      final b = AppTask.create('parse', null, TaskPriority.low);
+      expect(a, isNot(equals(b)));
+    });
+
+    test('can be used in Set', () {
+      final a = AppTask.create('parse', null, TaskPriority.low);
+      final set = {a, a.copyWith(status: TaskStatus.running)};
+      expect(set, hasLength(1));
+    });
+  });
+
   group('WorkerResult', () {
     test('defaults to empty outputTasks', () {
       const result = WorkerResult(success: true);

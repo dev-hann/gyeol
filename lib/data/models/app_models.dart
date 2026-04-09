@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_equals_and_hash_code_on_mutable_classes
 import 'package:uuid/uuid.dart';
 
 enum TaskPriority { low, medium, high }
@@ -23,7 +24,7 @@ class AppTask {
 
   factory AppTask.create(
     String taskType,
-    dynamic payload,
+    Object? payload,
     TaskPriority priority,
   ) {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -39,7 +40,7 @@ class AppTask {
   }
   final String id;
   final String taskType;
-  final dynamic payload;
+  final Object? payload;
   final TaskPriority priority;
   final TaskStatus status;
   final int retryCount;
@@ -50,6 +51,13 @@ class AppTask {
   final String? workerName;
   final int createdAt;
   final int updatedAt;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is AppTask && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 
   AppTask copyWith({
     TaskStatus? status,
