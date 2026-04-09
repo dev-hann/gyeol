@@ -178,19 +178,31 @@ class GraphState {
   const GraphState({
     this.nodePositions = const {},
     this.removedConnections = const {},
+    this.manualConnections = const {},
   });
   final Map<String, Offset> nodePositions;
   final Set<(String, String)> removedConnections;
+  final Set<(String, String)> manualConnections;
 
   GraphState copyWith({
     Map<String, Offset>? nodePositions,
     Set<(String, String)>? removedConnections,
+    Set<(String, String)>? manualConnections,
   }) {
     return GraphState(
       nodePositions: nodePositions ?? this.nodePositions,
       removedConnections: removedConnections ?? this.removedConnections,
+      manualConnections: manualConnections ?? this.manualConnections,
     );
   }
+}
+
+GraphState _safeGraphState(GraphState? s) {
+  return GraphState(
+    nodePositions: s?.nodePositions ?? const {},
+    removedConnections: s?.removedConnections ?? const {},
+    manualConnections: s?.manualConnections ?? const {},
+  );
 }
 
 final graphStateProvider =
@@ -204,21 +216,36 @@ class GraphStateNotifier extends AsyncNotifier<GraphState> {
     final repo = ref.watch(repositoryProvider);
     final positions = await repo.loadNodePositions();
     final removed = await repo.loadRemovedConnections();
-    return GraphState(nodePositions: positions, removedConnections: removed);
+    final manual = await repo.loadManualConnections();
+    return GraphState(
+      nodePositions: positions,
+      removedConnections: removed,
+      manualConnections: manual,
+    );
   }
 
   Future<void> savePositions(Map<String, Offset> positions) async {
     final repo = ref.read(repositoryProvider);
     await repo.saveNodePositions(positions);
-    final current = state.valueOrNull ?? const GraphState();
-    state = AsyncData(current.copyWith(nodePositions: positions));
+    state = AsyncData(
+      _safeGraphState(state.valueOrNull).copyWith(nodePositions: positions),
+    );
   }
 
   Future<void> saveRemovedConnections(Set<(String, String)> removed) async {
     final repo = ref.read(repositoryProvider);
     await repo.saveRemovedConnections(removed);
-    final current = state.valueOrNull ?? const GraphState();
-    state = AsyncData(current.copyWith(removedConnections: removed));
+    state = AsyncData(
+      _safeGraphState(state.valueOrNull).copyWith(removedConnections: removed),
+    );
+  }
+
+  Future<void> saveManualConnections(Set<(String, String)> manual) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.saveManualConnections(manual);
+    state = AsyncData(
+      _safeGraphState(state.valueOrNull).copyWith(manualConnections: manual),
+    );
   }
 }
 

@@ -188,6 +188,25 @@ class AppRepository {
     return _db.saveJsonValue('graph_removed_connections', encoded);
   }
 
+  Future<Set<(String, String)>> loadManualConnections() async {
+    final json = await _db.getJsonValue('graph_manual_connections');
+    if (json == null) return {};
+    try {
+      final decoded = jsonDecode(json) as List;
+      return decoded.map((e) {
+        final list = e as List;
+        return (list[0] as String, list[1] as String);
+      }).toSet();
+    } on FormatException {
+      return {};
+    }
+  }
+
+  Future<void> saveManualConnections(Set<(String, String)> connections) {
+    final encoded = jsonEncode(connections.map((c) => [c.$1, c.$2]).toList());
+    return _db.saveJsonValue('graph_manual_connections', encoded);
+  }
+
   // ── Execution Logs ──
 
   Future<void> logExecution({

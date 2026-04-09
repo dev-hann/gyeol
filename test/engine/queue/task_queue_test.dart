@@ -133,5 +133,41 @@ void main() {
       expect(queue.pop()!.id, equals('med_mid'));
       expect(queue.pop()!.id, equals('low_old'));
     });
+
+    test('maintains sorted order after many interleaved pushes', () {
+      for (var i = 0; i < 50; i++) {
+        queue.push(
+          _makeTask(
+            id: 'task-$i',
+            priority: TaskPriority.values[i % 3],
+            createdAt: i * 100,
+          ),
+        );
+      }
+
+      TaskPriority? prevPriority;
+      int? prevCreatedAt;
+      while (!queue.isEmpty) {
+        final task = queue.pop()!;
+        if (prevPriority != null) {
+          expect(
+            task.priority.index <= prevPriority.index,
+            isTrue,
+            reason:
+                'Tasks should be ordered by priority desc (high first): '
+                '${task.priority} came after $prevPriority',
+          );
+          if (task.priority == prevPriority && prevCreatedAt != null) {
+            expect(
+              task.createdAt >= prevCreatedAt,
+              isTrue,
+              reason: 'Same priority tasks should be FIFO',
+            );
+          }
+        }
+        prevPriority = task.priority;
+        prevCreatedAt = task.createdAt;
+      }
+    });
   });
 }

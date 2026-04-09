@@ -140,7 +140,7 @@ void main() {
     });
 
     test(
-      'generateWithSystem throws LlmError on malformed JSON response',
+      'generateWithSystem throws LlmError with parse message on malformed JSON',
       () async {
         final mockClient = MockClient((request) async {
           return http.Response('not valid json{{{', 200);
@@ -156,7 +156,13 @@ void main() {
 
         expect(
           provider.generateWithSystem('sys', 'hi'),
-          throwsA(isA<LlmError>()),
+          throwsA(
+            isA<LlmError>().having(
+              (e) => e.message,
+              'message',
+              contains('Failed to parse response'),
+            ),
+          ),
         );
       },
     );

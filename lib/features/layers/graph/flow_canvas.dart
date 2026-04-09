@@ -9,11 +9,13 @@ class FlowCanvas extends StatelessWidget {
     required this.controller,
     required this.onNodeTap,
     this.onNodeDragEnd,
+    this.onConnectionCreated,
     super.key,
   });
   final NodeFlowController<LayerGraphData, void> controller;
   final void Function(String layerName) onNodeTap;
   final VoidCallback? onNodeDragEnd;
+  final VoidCallback? onConnectionCreated;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +30,8 @@ class FlowCanvas extends StatelessWidget {
             selectedColor: AppColors.infoBright,
             strokeWidth: 3,
             selectedStrokeWidth: 3,
-            bezierCurvature: 0.5,
+            bezierCurvature: 1,
+            cornerRadius: 10,
           ),
           temporaryConnectionTheme: ConnectionTheme.dark.copyWith(
             style: ConnectionStyles.bezier,
@@ -44,6 +47,9 @@ class FlowCanvas extends StatelessWidget {
         events: NodeFlowEvents<LayerGraphData, void>(
           node: NodeEvents<LayerGraphData>(
             onDragStop: (_) => onNodeDragEnd?.call(),
+          ),
+          connection: ConnectionEvents<LayerGraphData, void>(
+            onCreated: (_) => onConnectionCreated?.call(),
           ),
         ),
         nodeBuilder: (context, node) {

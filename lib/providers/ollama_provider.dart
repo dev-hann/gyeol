@@ -55,8 +55,10 @@ class OllamaProvider implements LlmProvider {
       return content;
     } on LlmError {
       rethrow;
-    } catch (e) {
-      throw LlmError('Invalid response: $e');
+    } on FormatException catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    } on Object catch (e) {
+      throw LlmError('Failed to parse response: $e');
     }
   }
 

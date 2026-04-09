@@ -49,6 +49,31 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     }
   }
 
+  void _saveManualConnections() {
+    if (!mounted) return;
+    final graphState = ref.read(graphStateProvider).valueOrNull;
+    final removedConnections = graphState?.removedConnections ?? {};
+    final savedManual = graphState?.manualConnections ?? {};
+
+    final layers = ref.read(layersProvider).valueOrNull ?? [];
+    final autoConnections = buildConnections(layers, removedConnections);
+    final autoConnSet = <(String, String)>{};
+    for (final conn in autoConnections) {
+      autoConnSet.add((conn.sourceNodeId, conn.targetNodeId));
+    }
+
+    final liveManual = <(String, String)>{};
+    for (final conn in _controller.connections) {
+      final pair = (conn.sourceNodeId, conn.targetNodeId);
+      if (!autoConnSet.contains(pair) && !removedConnections.contains(pair)) {
+        liveManual.add(pair);
+      }
+    }
+
+    final allManual = {...savedManual, ...liveManual};
+    ref.read(graphStateProvider.notifier).saveManualConnections(allManual);
+  }
+
   void _syncController() {
     _savePositions();
 
@@ -58,7 +83,35 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     final removedConnections = graphState?.removedConnections ?? {};
     final savedPositions = graphState?.nodePositions ?? {};
     final newNodes = buildNodes(layers, tasks);
-    final newConnections = buildConnections(layers, removedConnections);
+    final autoConnections = buildConnections(layers, removedConnections);
+
+    final autoConnSet = <(String, String)>{};
+    for (final conn in autoConnections) {
+      autoConnSet.add((conn.sourceNodeId, conn.targetNodeId));
+    }
+
+    final savedManual = graphState?.manualConnections ?? {};
+
+    final liveManualConnections = <(String, String)>[];
+    for (final conn in _controller.connections) {
+      final pair = (conn.sourceNodeId, conn.targetNodeId);
+      if (!autoConnSet.contains(pair) && !removedConnections.contains(pair)) {
+        liveManualConnections.add(pair);
+      }
+    }
+
+    final allManual = <(String, String)>{
+      ...savedManual,
+      ...liveManualConnections,
+    };
+
+    final manualConnections = <(String, String)>[];
+    for (final conn in _controller.connections) {
+      final pair = (conn.sourceNodeId, conn.targetNodeId);
+      if (!autoConnSet.contains(pair) && !removedConnections.contains(pair)) {
+        manualConnections.add(pair);
+      }
+    }
 
     final positionMap = <String, Offset>{};
     for (final id in _controller.nodeIds) {
@@ -81,24 +134,50 @@ class _LayersPageState extends ConsumerState<LayersPage> {
       _controller.addNode(node);
     }
 
-    for (final conn in newConnections) {
+    for (final conn in autoConnections) {
       _controller.addConnection(conn);
     }
+
+    var idx = autoConnections.length;
+    for (final pair in allManual) {
+      if (autoConnSet.contains(pair)) continue;
+      final srcNode = _controller.getNode(pair.$1);
+      final destNode = _controller.getNode(pair.$2);
+      if (srcNode != null && destNode != null) {
+        _controller.addConnection(
+          Connection<void>(
+            id: 'conn-manual-${idx++}',
+            sourceNodeId: pair.$1,
+            sourcePortId: '${pair.$1}-out',
+            targetNodeId: pair.$2,
+            targetPortId: '${pair.$2}-in',
+          ),
+        );
+      }
+    }
+
+    _persistManualConnections(allManual);
+  }
+
+  void _persistManualConnections(Set<(String, String)> manualConns) {
+    if (!mounted) return;
+    ref.read(graphStateProvider.notifier).saveManualConnections(manualConns);
   }
 
   @override
   Widget build(BuildContext context) {
     final layersAsync = ref.watch(layersProvider);
     final tasksAsync = ref.watch(tasksProvider);
+    final graphAsync = ref.watch(graphStateProvider);
 
-    if (!_initialized && layersAsync.hasValue && tasksAsync.hasValue) {
-      final graphAsync = ref.read(graphStateProvider);
-      if (graphAsync.hasValue) {
-        _initialized = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _syncController();
-        });
-      }
+    if (!_initialized &&
+        layersAsync.hasValue &&
+        tasksAsync.hasValue &&
+        graphAsync.hasValue) {
+      _initialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _syncController();
+      });
     }
 
     ref
@@ -170,6 +249,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               setState(() => _selectedLayerName = name);
             },
             onNodeDragEnd: _savePositions,
+            onConnectionCreated: _saveManualConnections,
           ),
         ),
         if (_selectedLayerName != null)
@@ -178,8 +258,8 @@ class _LayersPageState extends ConsumerState<LayersPage> {
             onClose: () => setState(() => _selectedLayerName = null),
             controller: _controller,
             onConnectionRemoved: (src, dest) {
-              final graphState = ref.read(graphStateProvider).valueOrNull;
-              final updated = {...?graphState?.removedConnections, (src, dest)};
+              final current = ref.read(graphStateProvider).valueOrNull;
+              final updated = {...?current?.removedConnections, (src, dest)};
               ref
                   .read(graphStateProvider.notifier)
                   .saveRemovedConnections(updated);
