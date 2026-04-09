@@ -45,7 +45,7 @@ class TasksNotifier extends AsyncNotifier<List<AppTask>> {
 
   Future<String> createTask(
     String type,
-    dynamic payload,
+    Object? payload,
     TaskPriority priority,
   ) async {
     final repo = ref.read(repositoryProvider);
@@ -179,20 +179,32 @@ class GraphState {
     this.nodePositions = const {},
     this.removedConnections = const {},
     this.manualConnections = const {},
+    this.viewportX = 0,
+    this.viewportY = 0,
+    this.viewportZoom = 1,
   });
   final Map<String, Offset> nodePositions;
   final Set<(String, String)> removedConnections;
   final Set<(String, String)> manualConnections;
+  final double viewportX;
+  final double viewportY;
+  final double viewportZoom;
 
   GraphState copyWith({
     Map<String, Offset>? nodePositions,
     Set<(String, String)>? removedConnections,
     Set<(String, String)>? manualConnections,
+    double? viewportX,
+    double? viewportY,
+    double? viewportZoom,
   }) {
     return GraphState(
       nodePositions: nodePositions ?? this.nodePositions,
       removedConnections: removedConnections ?? this.removedConnections,
       manualConnections: manualConnections ?? this.manualConnections,
+      viewportX: viewportX ?? this.viewportX,
+      viewportY: viewportY ?? this.viewportY,
+      viewportZoom: viewportZoom ?? this.viewportZoom,
     );
   }
 }
@@ -202,6 +214,9 @@ GraphState _safeGraphState(GraphState? s) {
     nodePositions: s?.nodePositions ?? const {},
     removedConnections: s?.removedConnections ?? const {},
     manualConnections: s?.manualConnections ?? const {},
+    viewportX: s?.viewportX ?? 0,
+    viewportY: s?.viewportY ?? 0,
+    viewportZoom: s?.viewportZoom ?? 1,
   );
 }
 
@@ -217,10 +232,14 @@ class GraphStateNotifier extends AsyncNotifier<GraphState> {
     final positions = await repo.loadNodePositions();
     final removed = await repo.loadRemovedConnections();
     final manual = await repo.loadManualConnections();
+    final viewport = await repo.loadViewport();
     return GraphState(
       nodePositions: positions,
       removedConnections: removed,
       manualConnections: manual,
+      viewportX: viewport.$1,
+      viewportY: viewport.$2,
+      viewportZoom: viewport.$3,
     );
   }
 
@@ -245,6 +264,16 @@ class GraphStateNotifier extends AsyncNotifier<GraphState> {
     await repo.saveManualConnections(manual);
     state = AsyncData(
       _safeGraphState(state.valueOrNull).copyWith(manualConnections: manual),
+    );
+  }
+
+  Future<void> saveViewport(double x, double y, double zoom) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.saveViewport(x, y, zoom);
+    state = AsyncData(
+      _safeGraphState(
+        state.valueOrNull,
+      ).copyWith(viewportX: x, viewportY: y, viewportZoom: zoom),
     );
   }
 }

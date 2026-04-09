@@ -167,6 +167,121 @@ void main() {
     });
   });
 
+  group('GraphState', () {
+    test('copyWith preserves unchanged fields', () {
+      const state = GraphState(
+        nodePositions: {'a': Offset(1, 2)},
+        removedConnections: {('x', 'y')},
+        manualConnections: {('m', 'n')},
+        viewportX: 10,
+        viewportY: 20,
+        viewportZoom: 1.5,
+      );
+      final updated = state.copyWith(viewportX: 99);
+      expect(updated.viewportX, 99);
+      expect(updated.viewportY, 20);
+      expect(updated.viewportZoom, 1.5);
+      expect(updated.nodePositions, {'a': const Offset(1, 2)});
+      expect(updated.removedConnections, {('x', 'y')});
+      expect(updated.manualConnections, {('m', 'n')});
+    });
+
+    test('copyWith replaces all fields', () {
+      const state = GraphState();
+      final updated = state.copyWith(
+        nodePositions: const {'b': Offset(3, 4)},
+        removedConnections: {('p', 'q')},
+        manualConnections: {('r', 's')},
+        viewportX: 5,
+        viewportY: 6,
+        viewportZoom: 2,
+      );
+      expect(updated.nodePositions, {'b': const Offset(3, 4)});
+      expect(updated.removedConnections, {('p', 'q')});
+      expect(updated.manualConnections, {('r', 's')});
+      expect(updated.viewportX, 5);
+      expect(updated.viewportY, 6);
+      expect(updated.viewportZoom, 2.0);
+    });
+  });
+
+  group('GraphStateNotifier', () {
+    test('build returns default state when no saved data', () async {
+      final state = await container.read(graphStateProvider.future);
+      expect(state.nodePositions, isEmpty);
+      expect(state.removedConnections, isEmpty);
+      expect(state.manualConnections, isEmpty);
+      expect(state.viewportX, 0);
+      expect(state.viewportY, 0);
+      expect(state.viewportZoom, 1);
+    });
+
+    test('savePositions persists and updates state', () async {
+      final notifier = container.read(graphStateProvider.notifier);
+      await notifier.savePositions({'n1': const Offset(10, 20)});
+
+      final state = await container.read(graphStateProvider.future);
+      expect(state.nodePositions, {'n1': const Offset(10, 20)});
+    });
+
+    test('saveRemovedConnections persists and updates state', () async {
+      final notifier = container.read(graphStateProvider.notifier);
+      await notifier.saveRemovedConnections({('a', 'b')});
+
+      final state = await container.read(graphStateProvider.future);
+      expect(state.removedConnections, {('a', 'b')});
+    });
+
+    test('saveManualConnections persists and updates state', () async {
+      final notifier = container.read(graphStateProvider.notifier);
+      await notifier.saveManualConnections({('c', 'd')});
+
+      final state = await container.read(graphStateProvider.future);
+      expect(state.manualConnections, {('c', 'd')});
+    });
+
+    test('saveViewport persists and updates state', () async {
+      final notifier = container.read(graphStateProvider.notifier);
+      await notifier.saveViewport(5, 10, 2);
+
+      final state = await container.read(graphStateProvider.future);
+      expect(state.viewportX, 5);
+      expect(state.viewportY, 10);
+      expect(state.viewportZoom, 2);
+    });
+
+    test('multiple saves preserve unrelated fields', () async {
+      final notifier = container.read(graphStateProvider.notifier);
+      await notifier.savePositions({'x': const Offset(1, 1)});
+      await notifier.saveViewport(3, 4, 1);
+
+      container.invalidate(graphStateProvider);
+      final state = await container.read(graphStateProvider.future);
+      expect(state.nodePositions, {'x': const Offset(1, 1)});
+      expect(state.viewportX, 3);
+      expect(state.viewportY, 4);
+      expect(state.viewportZoom, 1);
+    });
+  });
+
+  group('TasksNotifier payload type', () {
+    test('createTask accepts Object? payload', () async {
+      final notifier = container.read(tasksProvider.notifier);
+      final id = await notifier.createTask(
+        'summarize',
+        'plain string',
+        TaskPriority.low,
+      );
+      expect(id, isNotEmpty);
+    });
+
+    test('createTask accepts null payload', () async {
+      final notifier = container.read(tasksProvider.notifier);
+      final id = await notifier.createTask('summarize', null, TaskPriority.low);
+      expect(id, isNotEmpty);
+    });
+  });
+
   group('queueSizeProvider', () {
     test('returns 0 when no pending tasks', () async {
       final size = await container.read(queueSizeProvider.future);
