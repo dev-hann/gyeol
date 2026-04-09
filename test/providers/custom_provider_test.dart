@@ -341,4 +341,160 @@ void main() {
       },
     );
   });
+
+  group('CustomProvider - error handling', () {
+    test(
+      'OpenAI compatible throws LlmError with parse message on malformed JSON',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('not valid json{{{', 200);
+        });
+
+        final provider = CustomProvider(
+          baseUrl: 'http://localhost:8080',
+          model: 'my-model',
+          temperature: 0.7,
+          maxTokens: 100,
+          apiFormat: CustomApiFormat.openAICompatible,
+          apiKey: 'key',
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(
+            isA<LlmError>().having(
+              (e) => e.message,
+              'message',
+              contains('Failed to parse response'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test('Anthropic compatible throws LlmError on malformed JSON', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('not valid json{{{', 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'key',
+        client: mockClient,
+      );
+
+      expect(
+        provider.generateWithSystem('sys', 'hi'),
+        throwsA(
+          isA<LlmError>().having(
+            (e) => e.message,
+            'message',
+            contains('Failed to parse response'),
+          ),
+        ),
+      );
+    });
+
+    test('Ollama compatible throws LlmError on malformed JSON', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('not valid json{{{', 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.ollamaCompatible,
+        client: mockClient,
+      );
+
+      expect(
+        provider.generateWithSystem('sys', 'hi'),
+        throwsA(
+          isA<LlmError>().having(
+            (e) => e.message,
+            'message',
+            contains('Failed to parse response'),
+          ),
+        ),
+      );
+    });
+
+    test(
+      'OpenAI compatible throws LlmError on unexpected type in response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'choices': 'not a list'}), 200);
+        });
+
+        final provider = CustomProvider(
+          baseUrl: 'http://localhost:8080',
+          model: 'my-model',
+          temperature: 0.7,
+          maxTokens: 100,
+          apiFormat: CustomApiFormat.openAICompatible,
+          apiKey: 'key',
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test(
+      'Anthropic compatible throws LlmError on unexpected type in response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'content': 'not a list'}), 200);
+        });
+
+        final provider = CustomProvider(
+          baseUrl: 'http://localhost:8080',
+          model: 'my-model',
+          temperature: 0.7,
+          maxTokens: 100,
+          apiFormat: CustomApiFormat.anthropicCompatible,
+          apiKey: 'key',
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test(
+      'Ollama compatible throws LlmError on unexpected type in response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'message': 'not a map'}), 200);
+        });
+
+        final provider = CustomProvider(
+          baseUrl: 'http://localhost:8080',
+          model: 'my-model',
+          temperature: 0.7,
+          maxTokens: 100,
+          apiFormat: CustomApiFormat.ollamaCompatible,
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+  });
 }

@@ -64,15 +64,23 @@ class CustomProvider implements LlmProvider {
       throw LlmError('${response.statusCode}: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final choices = data['choices'] as List<dynamic>?;
-    final message = (choices != null && choices.isNotEmpty)
-        ? (choices[0] as Map<String, dynamic>)['message']
-              as Map<String, dynamic>?
-        : null;
-    final content = message?['content'] as String?;
-    if (content == null) throw LlmError('No content in response');
-    return content;
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final choices = data['choices'] as List<dynamic>?;
+      final message = (choices != null && choices.isNotEmpty)
+          ? (choices[0] as Map<String, dynamic>)['message']
+                as Map<String, dynamic>?
+          : null;
+      final content = message?['content'] as String?;
+      if (content == null) throw LlmError('No content in response');
+      return content;
+    } on LlmError {
+      rethrow;
+    } on FormatException catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    } on Object catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    }
   }
 
   Future<String> _generateAnthropic(String system, String user) async {
@@ -106,12 +114,20 @@ class CustomProvider implements LlmProvider {
       throw LlmError('${response.statusCode}: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final contentList = data['content'] as List<dynamic>?;
-    final firstBlock = contentList?.firstOrNull as Map<String, dynamic>?;
-    final content = firstBlock?['text'] as String?;
-    if (content == null) throw LlmError('No content in response');
-    return content;
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final contentList = data['content'] as List<dynamic>?;
+      final firstBlock = contentList?.firstOrNull as Map<String, dynamic>?;
+      final content = firstBlock?['text'] as String?;
+      if (content == null) throw LlmError('No content in response');
+      return content;
+    } on LlmError {
+      rethrow;
+    } on FormatException catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    } on Object catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    }
   }
 
   Future<String> _generateOllama(String system, String user) async {
@@ -138,11 +154,19 @@ class CustomProvider implements LlmProvider {
       throw LlmError('${response.statusCode}: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final message = data['message'] as Map<String, dynamic>?;
-    final content = message?['content'] as String?;
-    if (content == null) throw LlmError('No content in response');
-    return content;
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final message = data['message'] as Map<String, dynamic>?;
+      final content = message?['content'] as String?;
+      if (content == null) throw LlmError('No content in response');
+      return content;
+    } on LlmError {
+      rethrow;
+    } on FormatException catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    } on Object catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    }
   }
 
   @override
