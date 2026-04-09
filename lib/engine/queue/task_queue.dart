@@ -20,8 +20,9 @@ class TaskQueue {
   final List<_PrioritizedTask> _heap = [];
 
   void push(AppTask task) {
-    _heap.add(_PrioritizedTask(task));
-    _heap.sort();
+    _heap
+      ..add(_PrioritizedTask(task))
+      ..sort();
   }
 
   AppTask? pop() {
