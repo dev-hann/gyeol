@@ -50,9 +50,10 @@ void main() {
     });
 
     test('higher priority tasks are popped first', () {
-      queue.push(_makeTask(id: 'low', priority: TaskPriority.low));
-      queue.push(_makeTask(id: 'high', priority: TaskPriority.high));
-      queue.push(_makeTask(id: 'med'));
+      queue
+        ..push(_makeTask(id: 'low', priority: TaskPriority.low))
+        ..push(_makeTask(id: 'high', priority: TaskPriority.high))
+        ..push(_makeTask(id: 'med'));
 
       expect(queue.pop()!.id, equals('high'));
       expect(queue.pop()!.id, equals('med'));
@@ -60,9 +61,10 @@ void main() {
     });
 
     test('same priority — earlier createdAt popped first (FIFO)', () {
-      queue.push(_makeTask(id: 'first', createdAt: 100));
-      queue.push(_makeTask(id: 'second', createdAt: 200));
-      queue.push(_makeTask(id: 'third', createdAt: 300));
+      queue
+        ..push(_makeTask(id: 'first', createdAt: 100))
+        ..push(_makeTask(id: 'second', createdAt: 200))
+        ..push(_makeTask(id: 'third', createdAt: 300));
 
       expect(queue.pop()!.id, equals('first'));
       expect(queue.pop()!.id, equals('second'));
@@ -70,8 +72,9 @@ void main() {
     });
 
     test('peek returns highest priority without removing', () {
-      queue.push(_makeTask(id: 'low', priority: TaskPriority.low));
-      queue.push(_makeTask(id: 'high', priority: TaskPriority.high));
+      queue
+        ..push(_makeTask(id: 'low', priority: TaskPriority.low))
+        ..push(_makeTask(id: 'high', priority: TaskPriority.high));
 
       expect(queue.peek()!.id, equals('high'));
       expect(queue.length, equals(2));
@@ -89,8 +92,9 @@ void main() {
     });
 
     test('drainAll returns all tasks and clears queue', () {
-      queue.push(_makeTask(id: 'a', priority: TaskPriority.high));
-      queue.push(_makeTask(id: 'b', priority: TaskPriority.low));
+      queue
+        ..push(_makeTask(id: 'a', priority: TaskPriority.high))
+        ..push(_makeTask(id: 'b', priority: TaskPriority.low));
 
       final drained = queue.drainAll();
       expect(drained.length, equals(2));
@@ -101,22 +105,28 @@ void main() {
     });
 
     test('pop on drained queue returns null', () {
-      queue.push(_makeTask(id: 'a'));
-      queue.drainAll();
+      queue
+        ..push(_makeTask(id: 'a'))
+        ..drainAll();
       expect(queue.pop(), isNull);
     });
 
     test('mixed priorities and timestamps order correctly', () {
-      queue.push(
-        _makeTask(id: 'low_old', priority: TaskPriority.low, createdAt: 100),
-      );
-      queue.push(
-        _makeTask(id: 'high_new', priority: TaskPriority.high, createdAt: 300),
-      );
-      queue.push(_makeTask(id: 'med_mid', createdAt: 200));
-      queue.push(
-        _makeTask(id: 'high_old', priority: TaskPriority.high, createdAt: 50),
-      );
+      queue
+        ..push(
+          _makeTask(id: 'low_old', priority: TaskPriority.low, createdAt: 100),
+        )
+        ..push(
+          _makeTask(
+            id: 'high_new',
+            priority: TaskPriority.high,
+            createdAt: 300,
+          ),
+        )
+        ..push(_makeTask(id: 'med_mid', createdAt: 200))
+        ..push(
+          _makeTask(id: 'high_old', priority: TaskPriority.high, createdAt: 50),
+        );
 
       expect(queue.pop()!.id, equals('high_old'));
       expect(queue.pop()!.id, equals('high_new'));

@@ -72,6 +72,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 value: ProviderType.ollama,
                                 child: Text('Ollama (Local)'),
                               ),
+                              DropdownMenuItem(
+                                value: ProviderType.custom,
+                                child: Text('Custom'),
+                              ),
                             ],
                             onChanged: (v) {
                               if (v != null) {
@@ -176,6 +180,89 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   ),
                                   onChanged: (v) =>
                                       _form = _form.copyWith(ollamaModel: v),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ]),
+                        const SizedBox(height: 20),
+                        _buildSection('Custom', [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Base URL',
+                                  ),
+                                  controller: TextEditingController(
+                                    text: _form.customBaseUrl,
+                                  ),
+                                  onChanged: (v) =>
+                                      _form = _form.copyWith(customBaseUrl: v),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  obscureText: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'API Key (optional)',
+                                  ),
+                                  controller: TextEditingController(
+                                    text: _form.customApiKey,
+                                  ),
+                                  onChanged: (v) =>
+                                      _form = _form.copyWith(customApiKey: v),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Model',
+                                  ),
+                                  controller: TextEditingController(
+                                    text: _form.customModel,
+                                  ),
+                                  onChanged: (v) =>
+                                      _form = _form.copyWith(customModel: v),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<CustomApiFormat>(
+                                  initialValue: _form.customApiFormat,
+                                  decoration: const InputDecoration(
+                                    labelText: 'API Format',
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: CustomApiFormat.openAICompatible,
+                                      child: Text('OpenAI Compatible'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value:
+                                          CustomApiFormat.anthropicCompatible,
+                                      child: Text('Anthropic Compatible'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: CustomApiFormat.ollamaCompatible,
+                                      child: Text('Ollama Compatible'),
+                                    ),
+                                  ],
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(
+                                        () => _form = _form.copyWith(
+                                          customApiFormat: v,
+                                        ),
+                                      );
+                                    }
+                                  },
                                 ),
                               ),
                             ],

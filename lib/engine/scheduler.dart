@@ -2,6 +2,7 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 import 'package:gyeol/engine/queue/task_queue.dart';
 import 'package:gyeol/providers/anthropic_provider.dart';
+import 'package:gyeol/providers/custom_provider.dart';
 import 'package:gyeol/providers/lllm_provider.dart';
 import 'package:gyeol/providers/ollama_provider.dart';
 import 'package:gyeol/providers/openai_provider.dart';
@@ -188,6 +189,14 @@ class Scheduler {
         model: settings.ollamaModel,
         temperature: settings.defaultTemperature,
         maxTokens: settings.defaultMaxTokens,
+      ),
+      ProviderType.custom => CustomProvider(
+        baseUrl: settings.customBaseUrl,
+        model: settings.customModel,
+        temperature: settings.defaultTemperature,
+        maxTokens: settings.defaultMaxTokens,
+        apiFormat: settings.customApiFormat,
+        apiKey: settings.customApiKey,
       ),
     };
   }

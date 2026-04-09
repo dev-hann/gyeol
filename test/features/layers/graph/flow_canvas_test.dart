@@ -53,16 +53,15 @@ void main() {
     testWidgets('customElementBuilder returns SizedBox for null data', (
       tester,
     ) async {
-      final dashboard = Dashboard<LayerGraphData>(
-        dataSerializer: DataSerializerImpl(),
-      );
-      dashboard.addElement(
-        FlowElement<LayerGraphData>(
-          size: const Size(100, 100),
-          text: 'empty',
-          kind: ElementKind.custom,
-        ),
-      );
+      final dashboard =
+          Dashboard<LayerGraphData>(dataSerializer: DataSerializerImpl())
+            ..addElement(
+              FlowElement<LayerGraphData>(
+                size: const Size(100, 100),
+                text: 'empty',
+                kind: ElementKind.custom,
+              ),
+            );
 
       await tester.pumpWidget(buildWidget(dashboard));
       final flowChart = tester.widget<FlowChart<LayerGraphData>>(

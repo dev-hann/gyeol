@@ -198,7 +198,9 @@ class WorkerDefinition {
   }
 }
 
-enum ProviderType { openAI, anthropic, ollama }
+enum ProviderType { openAI, anthropic, ollama, custom }
+
+enum CustomApiFormat { openAICompatible, anthropicCompatible, ollamaCompatible }
 
 class ProviderSettings {
   const ProviderSettings({
@@ -209,6 +211,10 @@ class ProviderSettings {
     this.anthropicModel = 'claude-sonnet-4-20250514',
     this.ollamaBaseUrl = 'http://localhost:11434',
     this.ollamaModel = 'llama3',
+    this.customBaseUrl = 'http://localhost:8080',
+    this.customApiKey = '',
+    this.customModel = '',
+    this.customApiFormat = CustomApiFormat.openAICompatible,
     this.defaultTemperature = 0.7,
     this.defaultMaxTokens = 4096,
   });
@@ -218,6 +224,7 @@ class ProviderSettings {
       provider: switch (json['provider']) {
         'Anthropic' => ProviderType.anthropic,
         'Ollama' => ProviderType.ollama,
+        'Custom' => ProviderType.custom,
         _ => ProviderType.openAI,
       },
       openaiApiKey: json['openai_api_key'] as String? ?? '',
@@ -228,6 +235,15 @@ class ProviderSettings {
       ollamaBaseUrl:
           json['ollama_base_url'] as String? ?? 'http://localhost:11434',
       ollamaModel: json['ollama_model'] as String? ?? 'llama3',
+      customBaseUrl:
+          json['custom_base_url'] as String? ?? 'http://localhost:8080',
+      customApiKey: json['custom_api_key'] as String? ?? '',
+      customModel: json['custom_model'] as String? ?? '',
+      customApiFormat: switch (json['custom_api_format']) {
+        'anthropic' => CustomApiFormat.anthropicCompatible,
+        'ollama' => CustomApiFormat.ollamaCompatible,
+        _ => CustomApiFormat.openAICompatible,
+      },
       defaultTemperature:
           (json['default_temperature'] as num?)?.toDouble() ?? 0.7,
       defaultMaxTokens: (json['default_max_tokens'] as num?)?.toInt() ?? 4096,
@@ -240,6 +256,10 @@ class ProviderSettings {
   final String anthropicModel;
   final String ollamaBaseUrl;
   final String ollamaModel;
+  final String customBaseUrl;
+  final String customApiKey;
+  final String customModel;
+  final CustomApiFormat customApiFormat;
   final double defaultTemperature;
   final int defaultMaxTokens;
 
@@ -248,6 +268,7 @@ class ProviderSettings {
       ProviderType.openAI => 'OpenAI',
       ProviderType.anthropic => 'Anthropic',
       ProviderType.ollama => 'Ollama',
+      ProviderType.custom => 'Custom',
     },
     'openai_api_key': openaiApiKey,
     'openai_model': openaiModel,
@@ -255,6 +276,14 @@ class ProviderSettings {
     'anthropic_model': anthropicModel,
     'ollama_base_url': ollamaBaseUrl,
     'ollama_model': ollamaModel,
+    'custom_base_url': customBaseUrl,
+    'custom_api_key': customApiKey,
+    'custom_model': customModel,
+    'custom_api_format': switch (customApiFormat) {
+      CustomApiFormat.openAICompatible => 'openai',
+      CustomApiFormat.anthropicCompatible => 'anthropic',
+      CustomApiFormat.ollamaCompatible => 'ollama',
+    },
     'default_temperature': defaultTemperature,
     'default_max_tokens': defaultMaxTokens,
   };
@@ -267,6 +296,10 @@ class ProviderSettings {
     String? anthropicModel,
     String? ollamaBaseUrl,
     String? ollamaModel,
+    String? customBaseUrl,
+    String? customApiKey,
+    String? customModel,
+    CustomApiFormat? customApiFormat,
     double? defaultTemperature,
     int? defaultMaxTokens,
   }) {
@@ -278,6 +311,10 @@ class ProviderSettings {
       anthropicModel: anthropicModel ?? this.anthropicModel,
       ollamaBaseUrl: ollamaBaseUrl ?? this.ollamaBaseUrl,
       ollamaModel: ollamaModel ?? this.ollamaModel,
+      customBaseUrl: customBaseUrl ?? this.customBaseUrl,
+      customApiKey: customApiKey ?? this.customApiKey,
+      customModel: customModel ?? this.customModel,
+      customApiFormat: customApiFormat ?? this.customApiFormat,
       defaultTemperature: defaultTemperature ?? this.defaultTemperature,
       defaultMaxTokens: defaultMaxTokens ?? this.defaultMaxTokens,
     );
