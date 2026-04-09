@@ -83,8 +83,8 @@ class _AppShellState extends State<AppShell> {
             (i) =>
                 _NavItem(_navItems[i].icon, _navItems[i].label, index: i).build(
                   context,
-                  i == _currentIndex,
-                  () => setState(() => _currentIndex = i),
+                  isActive: i == _currentIndex,
+                  onTap: () => setState(() => _currentIndex = i),
                 ),
           ),
           const Spacer(),
@@ -115,7 +115,11 @@ class _NavItem {
   final String label;
   final int? index;
 
-  Widget build(BuildContext context, bool isActive, VoidCallback onTap) {
+  Widget build(
+    BuildContext context, {
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       child: Material(
