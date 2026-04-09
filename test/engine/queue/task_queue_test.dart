@@ -1,0 +1,135 @@
+import 'package:gyeol/data/models/app_models.dart';
+import 'package:gyeol/engine/queue/task_queue.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+AppTask _makeTask({
+  required String id,
+  String taskType = 'test',
+  TaskPriority priority = TaskPriority.medium,
+  int createdAt = 1000,
+}) {
+  return AppTask(
+    id: id,
+    taskType: taskType,
+    payload: <String, dynamic>{},
+    priority: priority,
+    status: TaskStatus.pending,
+    createdAt: createdAt,
+    updatedAt: createdAt,
+  );
+}
+
+void main() {
+  group('TaskQueue', () {
+    late TaskQueue queue;
+
+    setUp(() {
+      queue = TaskQueue();
+    });
+
+    test('empty queue — pop returns null', () {
+      expect(queue.pop(), isNull);
+    });
+
+    test('empty queue — peek returns null', () {
+      expect(queue.peek(), isNull);
+    });
+
+    test('empty queue — isEmpty is true and length is 0', () {
+      expect(queue.isEmpty, isTrue);
+      expect(queue.length, equals(0));
+    });
+
+    test('push then pop returns the task', () {
+      final task = _makeTask(id: 'a');
+      queue.push(task);
+      final result = queue.pop();
+      expect(result, isNotNull);
+      expect(result!.id, equals('a'));
+      expect(queue.isEmpty, isTrue);
+    });
+
+    test('higher priority tasks are popped first', () {
+      queue.push(_makeTask(id: 'low', priority: TaskPriority.low));
+      queue.push(_makeTask(id: 'high', priority: TaskPriority.high));
+      queue.push(_makeTask(id: 'med', priority: TaskPriority.medium));
+
+      expect(queue.pop()!.id, equals('high'));
+      expect(queue.pop()!.id, equals('med'));
+      expect(queue.pop()!.id, equals('low'));
+    });
+
+    test('same priority — earlier createdAt popped first (FIFO)', () {
+      queue.push(
+        _makeTask(id: 'first', priority: TaskPriority.medium, createdAt: 100),
+      );
+      queue.push(
+        _makeTask(id: 'second', priority: TaskPriority.medium, createdAt: 200),
+      );
+      queue.push(
+        _makeTask(id: 'third', priority: TaskPriority.medium, createdAt: 300),
+      );
+
+      expect(queue.pop()!.id, equals('first'));
+      expect(queue.pop()!.id, equals('second'));
+      expect(queue.pop()!.id, equals('third'));
+    });
+
+    test('peek returns highest priority without removing', () {
+      queue.push(_makeTask(id: 'low', priority: TaskPriority.low));
+      queue.push(_makeTask(id: 'high', priority: TaskPriority.high));
+
+      expect(queue.peek()!.id, equals('high'));
+      expect(queue.length, equals(2));
+      expect(queue.peek()!.id, equals('high'));
+    });
+
+    test('length tracks queue size', () {
+      expect(queue.length, equals(0));
+      queue.push(_makeTask(id: 'a'));
+      expect(queue.length, equals(1));
+      queue.push(_makeTask(id: 'b'));
+      expect(queue.length, equals(2));
+      queue.pop();
+      expect(queue.length, equals(1));
+    });
+
+    test('drainAll returns all tasks and clears queue', () {
+      queue.push(_makeTask(id: 'a', priority: TaskPriority.high));
+      queue.push(_makeTask(id: 'b', priority: TaskPriority.low));
+
+      final drained = queue.drainAll();
+      expect(drained.length, equals(2));
+      expect(drained.any((t) => t.id == 'a'), isTrue);
+      expect(drained.any((t) => t.id == 'b'), isTrue);
+      expect(queue.isEmpty, isTrue);
+      expect(queue.drainAll(), isEmpty);
+    });
+
+    test('pop on drained queue returns null', () {
+      queue.push(_makeTask(id: 'a'));
+      queue.drainAll();
+      expect(queue.pop(), isNull);
+    });
+
+    test('mixed priorities and timestamps order correctly', () {
+      queue.push(
+        _makeTask(id: 'low_old', priority: TaskPriority.low, createdAt: 100),
+      );
+      queue.push(
+        _makeTask(id: 'high_new', priority: TaskPriority.high, createdAt: 300),
+      );
+      queue.push(
+        _makeTask(id: 'med_mid', priority: TaskPriority.medium, createdAt: 200),
+      );
+      queue.push(
+        _makeTask(id: 'high_old', priority: TaskPriority.high, createdAt: 50),
+      );
+
+      expect(queue.pop()!.id, equals('high_old'));
+      expect(queue.pop()!.id, equals('high_new'));
+      expect(queue.pop()!.id, equals('med_mid'));
+      expect(queue.pop()!.id, equals('low_old'));
+    });
+  });
+}

@@ -57,9 +57,9 @@ class AppRepository {
         .map(
           (r) => LayerDefinition(
             name: r.name,
-            inputTypes: List<String>.from(jsonDecode(r.inputTypes)),
-            outputTypes: List<String>.from(jsonDecode(r.outputTypes)),
-            workerNames: List<String>.from(jsonDecode(r.workerNames)),
+            inputTypes: List<String>.from(jsonDecode(r.inputTypes) as List),
+            outputTypes: List<String>.from(jsonDecode(r.outputTypes) as List),
+            workerNames: List<String>.from(jsonDecode(r.workerNames) as List),
             order: r.sortOrder,
             enabled: r.enabled,
           ),

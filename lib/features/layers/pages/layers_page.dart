@@ -26,34 +26,36 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     final layersAsync = ref.watch(layersProvider);
     final tasksAsync = ref.watch(tasksProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
-          child: PageHeader(
-            icon: Icons.layers_outlined,
-            title: 'Layers',
-            description:
-                'Graph editor — click nodes to view details, drag to reposition',
-            action: OutlinedButton.icon(
-              onPressed: () => _showAddLayerDialog(context),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Layer'),
+    return Scaffold(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
+            child: PageHeader(
+              icon: Icons.layers_outlined,
+              title: 'Layers',
+              description:
+                  'Graph editor — click nodes to view details, drag to reposition',
+              action: OutlinedButton.icon(
+                onPressed: () => _showAddLayerDialog(context),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Layer'),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: layersAsync.when(
-            data: (layers) {
-              final tasks = tasksAsync.valueOrNull ?? [];
-              return _buildGraph(layers, tasks);
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+          Expanded(
+            child: layersAsync.when(
+              data: (layers) {
+                final tasks = tasksAsync.valueOrNull ?? [];
+                return _buildGraph(layers, tasks);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

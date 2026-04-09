@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_flow_chart/flutter_flow_chart.dart';
-import 'package:gyeol/core/theme/app_theme.dart';
-import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/layer_node_widget.dart';
 

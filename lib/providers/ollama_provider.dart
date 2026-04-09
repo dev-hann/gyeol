@@ -7,13 +7,15 @@ class OllamaProvider implements LlmProvider {
   final String model;
   final double temperature;
   final int maxTokens;
+  final http.Client _client;
 
   OllamaProvider({
     required this.baseUrl,
     required this.model,
     required this.temperature,
     required this.maxTokens,
-  });
+    http.Client? client,
+  }) : _client = client ?? http.Client();
 
   @override
   Future<String> generate(String prompt) {
@@ -35,7 +37,7 @@ class OllamaProvider implements LlmProvider {
       'stream': false,
     });
 
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
       body: body,
