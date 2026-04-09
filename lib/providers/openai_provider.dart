@@ -49,15 +49,23 @@ class OpenAIProvider implements LlmProvider {
       throw LlmError('${response.statusCode}: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final choices = data['choices'] as List<dynamic>?;
-    final message = (choices != null && choices.isNotEmpty)
-        ? (choices[0] as Map<String, dynamic>)['message']
-              as Map<String, dynamic>?
-        : null;
-    final content = message?['content'] as String?;
-    if (content == null) throw LlmError('No content in response');
-    return content;
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final choices = data['choices'] as List<dynamic>?;
+      final message = (choices != null && choices.isNotEmpty)
+          ? (choices[0] as Map<String, dynamic>)['message']
+                as Map<String, dynamic>?
+          : null;
+      final content = message?['content'] as String?;
+      if (content == null) throw LlmError('No content in response');
+      return content;
+    } on LlmError {
+      rethrow;
+    } on FormatException catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    } on Object catch (e) {
+      throw LlmError('Failed to parse response: $e');
+    }
   }
 
   @override

@@ -104,6 +104,69 @@ void main() {
     });
 
     test(
+      'generateWithSystem throws LlmError on malformed JSON response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'choices': 'not-a-list'}), 200);
+        });
+
+        final provider = OpenAIProvider(
+          apiKey: 'test-key',
+          model: 'gpt-4o',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test('generateWithSystem throws LlmError on non-map JSON body', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode([1, 2, 3]), 200);
+      });
+
+      final provider = OpenAIProvider(
+        apiKey: 'test-key',
+        model: 'gpt-4o',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      expect(
+        provider.generateWithSystem('sys', 'hi'),
+        throwsA(isA<LlmError>()),
+      );
+    });
+
+    test(
+      'generateWithSystem throws LlmError when choices is empty list',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'choices': <dynamic>[]}), 200);
+        });
+
+        final provider = OpenAIProvider(
+          apiKey: 'test-key',
+          model: 'gpt-4o',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test(
       'generate delegates to generateWithSystem with default system prompt',
       () async {
         final mockClient = MockClient((request) async {
