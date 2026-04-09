@@ -1,14 +1,9 @@
 import 'dart:convert';
+
+import 'package:gyeol/providers/lllm_provider.dart';
 import 'package:http/http.dart' as http;
-import 'lllm_provider.dart';
 
 class OpenAIProvider implements LlmProvider {
-  final String apiKey;
-  final String model;
-  final double temperature;
-  final int maxTokens;
-  final http.Client _client;
-
   OpenAIProvider({
     required this.apiKey,
     required this.model,
@@ -16,6 +11,11 @@ class OpenAIProvider implements LlmProvider {
     required this.maxTokens,
     http.Client? client,
   }) : _client = client ?? http.Client();
+  final String apiKey;
+  final String model;
+  final double temperature;
+  final int maxTokens;
+  final http.Client _client;
 
   @override
   Future<String> generate(String prompt) {
@@ -50,7 +50,12 @@ class OpenAIProvider implements LlmProvider {
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final content = data['choices']?[0]?['message']?['content'] as String?;
+    final choices = data['choices'] as List<dynamic>?;
+    final message = (choices != null && choices.isNotEmpty)
+        ? (choices[0] as Map<String, dynamic>)['message']
+              as Map<String, dynamic>?
+        : null;
+    final content = message?['content'] as String?;
     if (content == null) throw LlmError('No content in response');
     return content;
   }
