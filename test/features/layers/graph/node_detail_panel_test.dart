@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/node_detail_panel.dart';
+import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
@@ -41,13 +43,24 @@ List<WorkerDefinition> fakeWorkers() => [
   ),
 ];
 
+NodeFlowController<LayerGraphData, void> createTestController() {
+  final nodes = buildNodes(fakeLayers(), []);
+  final connections = buildConnections(fakeLayers(), <(String, String)>{});
+  return NodeFlowController<LayerGraphData, void>(
+    nodes: nodes,
+    connections: connections,
+  );
+}
+
 Future<void> pumpPanel(
   WidgetTester tester, {
   String? layerName,
   List<LayerDefinition>? layers,
   List<WorkerDefinition>? workers,
   VoidCallback? onClose,
+  NodeFlowController<LayerGraphData, void>? controller,
 }) async {
+  final ctrl = controller ?? createTestController();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -63,6 +76,7 @@ Future<void> pumpPanel(
           body: NodeDetailPanel(
             layerName: layerName,
             onClose: onClose ?? () {},
+            controller: ctrl,
           ),
         ),
       ),
@@ -130,13 +144,24 @@ void main() {
 
     testWidgets('renders close button', (tester) async {
       await pumpPanel(tester, layerName: 'Draft');
-      expect(find.byIcon(Icons.close), findsOneWidget);
+      final closeButtons = find.byIcon(Icons.close);
+      expect(closeButtons, findsWidgets);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Icon && w.icon == Icons.close && w.size == 18.0,
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('onClose callback is invoked on close tap', (tester) async {
       var closed = false;
       await pumpPanel(tester, layerName: 'Draft', onClose: () => closed = true);
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is Icon && w.icon == Icons.close && w.size == 18.0,
+        ),
+      );
       expect(closed, isTrue);
     });
 
@@ -215,6 +240,7 @@ void main() {
     testWidgets('shows CircularProgressIndicator while loading', (
       tester,
     ) async {
+      final ctrl = NodeFlowController<LayerGraphData, void>();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -225,7 +251,11 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: NodeDetailPanel(layerName: 'Draft', onClose: () {}),
+              body: NodeDetailPanel(
+                layerName: 'Draft',
+                onClose: () {},
+                controller: ctrl,
+              ),
             ),
           ),
         ),
@@ -242,6 +272,7 @@ void main() {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;
       final notifier = _CapturingLayersNotifier(fakeLayers());
+      final ctrl = NodeFlowController<LayerGraphData, void>();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -252,7 +283,11 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: NodeDetailPanel(layerName: 'Draft', onClose: () {}),
+              body: NodeDetailPanel(
+                layerName: 'Draft',
+                onClose: () {},
+                controller: ctrl,
+              ),
             ),
           ),
         ),
@@ -292,6 +327,9 @@ void main() {
           workerNames: [],
         ),
       ];
+      final ctrl = NodeFlowController<LayerGraphData, void>(
+        nodes: buildNodes(layers, []),
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -301,7 +339,11 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: NodeDetailPanel(layerName: 'A', onClose: () {}),
+              body: NodeDetailPanel(
+                layerName: 'A',
+                onClose: () {},
+                controller: ctrl,
+              ),
             ),
           ),
         ),
@@ -319,7 +361,11 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: NodeDetailPanel(layerName: 'B', onClose: () {}),
+              body: NodeDetailPanel(
+                layerName: 'B',
+                onClose: () {},
+                controller: ctrl,
+              ),
             ),
           ),
         ),
@@ -346,6 +392,9 @@ void main() {
           enabled: false,
         ),
       ];
+      final ctrl = NodeFlowController<LayerGraphData, void>(
+        nodes: buildNodes(layers, []),
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -355,7 +404,11 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: NodeDetailPanel(layerName: 'On', onClose: () {}),
+              body: NodeDetailPanel(
+                layerName: 'On',
+                onClose: () {},
+                controller: ctrl,
+              ),
             ),
           ),
         ),
@@ -371,7 +424,11 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: NodeDetailPanel(layerName: 'Off', onClose: () {}),
+              body: NodeDetailPanel(
+                layerName: 'Off',
+                onClose: () {},
+                controller: ctrl,
+              ),
             ),
           ),
         ),

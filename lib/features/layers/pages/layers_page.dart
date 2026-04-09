@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_flow_chart/flutter_flow_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
@@ -9,6 +8,7 @@ import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/node_detail_panel.dart';
 import 'package:gyeol/shared/widgets/empty_state.dart';
 import 'package:gyeol/shared/widgets/page_header.dart';
+import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 class LayersPage extends ConsumerStatefulWidget {
   const LayersPage({super.key});
@@ -18,13 +18,96 @@ class LayersPage extends ConsumerStatefulWidget {
 }
 
 class _LayersPageState extends ConsumerState<LayersPage> {
-  late Dashboard<LayerGraphData> _dashboard;
+  late NodeFlowController<LayerGraphData, void> _controller;
   String? _selectedLayerName;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = NodeFlowController<LayerGraphData, void>(
+      config: NodeFlowConfig(showAttribution: false),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _savePositions() {
+    final positions = <String, Offset>{};
+    for (final id in _controller.nodeIds) {
+      final node = _controller.getNode(id);
+      if (node != null) {
+        positions[id] = node.position.value;
+      }
+    }
+    if (positions.isNotEmpty && mounted) {
+      ref.read(graphStateProvider.notifier).savePositions(positions);
+    }
+  }
+
+  void _syncController() {
+    _savePositions();
+
+    final layers = ref.read(layersProvider).valueOrNull ?? [];
+    final tasks = ref.read(tasksProvider).valueOrNull ?? [];
+    final graphState = ref.read(graphStateProvider).valueOrNull;
+    final removedConnections = graphState?.removedConnections ?? {};
+    final savedPositions = graphState?.nodePositions ?? {};
+    final newNodes = buildNodes(layers, tasks);
+    final newConnections = buildConnections(layers, removedConnections);
+
+    final positionMap = <String, Offset>{};
+    for (final id in _controller.nodeIds) {
+      final node = _controller.getNode(id);
+      if (node != null) {
+        positionMap[id] = node.position.value;
+      }
+    }
+
+    _controller.clearGraph();
+
+    for (final node in newNodes) {
+      final pos = positionMap[node.id] ?? savedPositions[node.id];
+      if (pos != null) {
+        node.position.value = pos;
+      }
+    }
+
+    for (final node in newNodes) {
+      _controller.addNode(node);
+    }
+
+    for (final conn in newConnections) {
+      _controller.addConnection(conn);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final layersAsync = ref.watch(layersProvider);
     final tasksAsync = ref.watch(tasksProvider);
+
+    if (!_initialized && layersAsync.hasValue && tasksAsync.hasValue) {
+      final graphAsync = ref.read(graphStateProvider);
+      if (graphAsync.hasValue) {
+        _initialized = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _syncController();
+        });
+      }
+    }
+
+    ref
+      ..listen(layersProvider, (prev, next) {
+        if (_initialized) _syncController();
+      })
+      ..listen(tasksProvider, (prev, next) {
+        if (_initialized) _syncController();
+      });
 
     return Scaffold(
       body: Column(
@@ -77,20 +160,30 @@ class _LayersPageState extends ConsumerState<LayersPage> {
       );
     }
 
-    _dashboard = buildDashboard(layers, tasks);
-
     return Row(
       children: [
         Expanded(
           child: FlowCanvas(
-            dashboard: _dashboard,
-            onNodeTap: (name) => setState(() => _selectedLayerName = name),
+            controller: _controller,
+            onNodeTap: (name) {
+              _savePositions();
+              setState(() => _selectedLayerName = name);
+            },
+            onNodeDragEnd: _savePositions,
           ),
         ),
         if (_selectedLayerName != null)
           NodeDetailPanel(
             layerName: _selectedLayerName,
             onClose: () => setState(() => _selectedLayerName = null),
+            controller: _controller,
+            onConnectionRemoved: (src, dest) {
+              final graphState = ref.read(graphStateProvider).valueOrNull;
+              final updated = {...?graphState?.removedConnections, (src, dest)};
+              ref
+                  .read(graphStateProvider.notifier)
+                  .saveRemovedConnections(updated);
+            },
           ),
       ],
     );

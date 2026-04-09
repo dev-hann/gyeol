@@ -3,15 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/features/layers/graph/graph_utils.dart';
+import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 class NodeDetailPanel extends ConsumerStatefulWidget {
   const NodeDetailPanel({
     required this.layerName,
     required this.onClose,
+    required this.controller,
+    this.onConnectionRemoved,
     super.key,
   });
   final String? layerName;
   final VoidCallback onClose;
+  final NodeFlowController<LayerGraphData, void> controller;
+  final void Function(String src, String dest)? onConnectionRemoved;
 
   @override
   ConsumerState<NodeDetailPanel> createState() => _NodeDetailPanelState();
@@ -24,7 +30,6 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   late TextEditingController _orderCtl;
   bool _enabled = true;
 
-  // Worker form
   bool _showWorkerForm = false;
   String? _editingWorkerName;
   late TextEditingController _wNameCtl;
@@ -138,6 +143,8 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
               padding: const EdgeInsets.all(16),
               children: [
                 if (!_editing) _buildViewMode(layer) else _buildEditMode(),
+                const SizedBox(height: 20),
+                _buildConnectionsSection(layer),
                 const SizedBox(height: 20),
                 _buildWorkerSection(layerWorkers),
               ],
@@ -306,6 +313,109 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildConnectionsSection(LayerDefinition layer) {
+    final nodeConns = widget.controller.getConnectionsForNode(layer.name);
+    final outgoing = <Connection<void>>[];
+    final incoming = <Connection<void>>[];
+
+    for (final conn in nodeConns) {
+      if (conn.sourceNodeId == layer.name) {
+        outgoing.add(conn);
+      } else {
+        incoming.add(conn);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.alt_route,
+              size: 14,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Connections (${outgoing.length + incoming.length})',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.foreground,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (outgoing.isEmpty && incoming.isEmpty)
+          const Text(
+            'No connections',
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+          )
+        else ...[
+          if (outgoing.isNotEmpty) ...[
+            const Text(
+              'Outgoing',
+              style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 4),
+            ...outgoing.map((c) => _buildConnectionTile(c, true)),
+          ],
+          if (incoming.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Incoming',
+              style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 4),
+            ...incoming.map((c) => _buildConnectionTile(c, false)),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildConnectionTile(Connection<void> conn, bool isOutgoing) {
+    final otherName = isOutgoing ? conn.targetNodeId : conn.sourceNodeId;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            isOutgoing ? Icons.arrow_forward : Icons.arrow_back,
+            size: 12,
+            color: isOutgoing ? AppColors.primaryBright : AppColors.infoBright,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              otherName,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 12),
+            onPressed: () {
+              final srcName = conn.sourceNodeId;
+              final destName = conn.targetNodeId;
+              widget.controller.removeConnection(conn.id);
+              widget.onConnectionRemoved?.call(srcName, destName);
+              setState(() {});
+            },
+            color: AppColors.error,
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+            padding: EdgeInsets.zero,
+            tooltip: 'Disconnect',
+          ),
+        ],
+      ),
     );
   }
 

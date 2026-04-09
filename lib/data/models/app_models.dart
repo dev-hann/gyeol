@@ -198,6 +198,52 @@ class WorkerDefinition {
   }
 }
 
+enum ThreadStatus { idle, running, completed, failed }
+
+class ThreadDefinition {
+  const ThreadDefinition({
+    required this.name,
+    required this.path,
+    required this.layerNames,
+    this.enabled = true,
+    this.status = ThreadStatus.idle,
+  });
+  final String name;
+  final String path;
+  final List<String> layerNames;
+  final bool enabled;
+  final ThreadStatus status;
+
+  ThreadDefinition copyWith({
+    String? name,
+    String? path,
+    List<String>? layerNames,
+    bool? enabled,
+    ThreadStatus? status,
+  }) {
+    return ThreadDefinition(
+      name: name ?? this.name,
+      path: path ?? this.path,
+      layerNames: layerNames ?? this.layerNames,
+      enabled: enabled ?? this.enabled,
+      status: status ?? this.status,
+    );
+  }
+
+  String get statusLabel {
+    switch (status) {
+      case ThreadStatus.idle:
+        return 'Idle';
+      case ThreadStatus.running:
+        return 'Running';
+      case ThreadStatus.completed:
+        return 'Completed';
+      case ThreadStatus.failed:
+        return 'Failed';
+    }
+  }
+}
+
 enum ProviderType { openAI, anthropic, ollama, custom }
 
 enum CustomApiFormat { openAICompatible, anthropicCompatible, ollamaCompatible }

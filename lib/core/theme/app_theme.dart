@@ -16,6 +16,8 @@ class AppColors {
   static const warning = Color(0xFFf59e0b);
   static const error = Color(0xFFef4444);
   static const info = Color(0xFF3b82f6);
+  static const primaryBright = Color(0xFFe0d4ff);
+  static const infoBright = Color(0xFFbdd7ff);
 }
 
 ThemeData buildAppTheme() {

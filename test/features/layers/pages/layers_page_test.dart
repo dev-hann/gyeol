@@ -45,6 +45,10 @@ void main() {
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -54,18 +58,26 @@ void main() {
           tasksProvider.overrideWith(
             () => _FakeTasksNotifier(tasks ?? fakeTasks()),
           ),
+          graphStateProvider.overrideWith(_FakeGraphStateNotifier.new),
         ],
         child: const MaterialApp(home: LayersPage()),
       ),
     );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+
+  Future<void> disposeLayersPage(WidgetTester tester) async {
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
   }
 
   group('LayersPage', () {
     testWidgets('renders PageHeader with Layers title', (tester) async {
       await pumpLayersPage(tester);
       expect(find.text('Layers'), findsOneWidget);
+      await disposeLayersPage(tester);
     });
 
     testWidgets('renders description text', (tester) async {
@@ -76,11 +88,13 @@ void main() {
         ),
         findsOneWidget,
       );
+      await disposeLayersPage(tester);
     });
 
     testWidgets('renders Add Layer button', (tester) async {
       await pumpLayersPage(tester);
       expect(find.text('Add Layer'), findsWidgets);
+      await disposeLayersPage(tester);
     });
 
     testWidgets('shows empty state when no layers', (tester) async {
@@ -104,6 +118,7 @@ void main() {
           overrides: [
             layersProvider.overrideWith(_ErrorLayersNotifier.new),
             tasksProvider.overrideWith(() => _FakeTasksNotifier(fakeTasks())),
+            graphStateProvider.overrideWith(_FakeGraphStateNotifier.new),
           ],
           child: const MaterialApp(home: LayersPage()),
         ),
@@ -121,6 +136,7 @@ void main() {
           overrides: [
             layersProvider.overrideWith(_LoadingLayersNotifier.new),
             tasksProvider.overrideWith(() => _FakeTasksNotifier(fakeTasks())),
+            graphStateProvider.overrideWith(_FakeGraphStateNotifier.new),
           ],
           child: const MaterialApp(home: LayersPage()),
         ),
@@ -133,6 +149,7 @@ void main() {
       await pumpLayersPage(tester);
       expect(find.text('Layers'), findsOneWidget);
       expect(find.text('No layers yet'), findsNothing);
+      await disposeLayersPage(tester);
     });
 
     testWidgets('Add Layer dialog opens with text fields', (tester) async {
@@ -142,6 +159,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('New Layer'), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(4));
+      await disposeLayersPage(tester);
     });
 
     testWidgets('Add Layer dialog closes on Cancel', (tester) async {
@@ -153,6 +171,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('New Layer'), findsNothing);
+      await disposeLayersPage(tester);
     });
   });
 }
@@ -182,4 +201,9 @@ class _LoadingLayersNotifier extends LayersNotifier {
   @override
   Future<List<LayerDefinition>> build() =>
       Completer<List<LayerDefinition>>().future;
+}
+
+class _FakeGraphStateNotifier extends GraphStateNotifier {
+  @override
+  Future<GraphState> build() async => const GraphState();
 }

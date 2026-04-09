@@ -1,140 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_flow_chart/flutter_flow_chart.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/features/layers/graph/flow_canvas.dart';
 import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/layer_node_widget.dart';
+import 'package:vyuh_node_flow/vyuh_node_flow.dart';
+
+NodeFlowController<LayerGraphData, void> createTestController() {
+  final nodes = buildNodes([
+    const LayerDefinition(
+      name: 'TestLayer',
+      inputTypes: ['text'],
+      outputTypes: ['json'],
+      workerNames: ['w1'],
+    ),
+  ], []);
+  return NodeFlowController<LayerGraphData, void>(nodes: nodes);
+}
+
+Widget buildWidget(
+  NodeFlowController<LayerGraphData, void> controller, {
+  void Function(String)? onNodeTap,
+}) {
+  return MaterialApp(
+    home: Scaffold(
+      body: FlowCanvas(controller: controller, onNodeTap: onNodeTap ?? (_) {}),
+    ),
+  );
+}
 
 void main() {
-  Dashboard<LayerGraphData> createTestDashboard() {
-    return buildDashboard([
-      const LayerDefinition(
-        name: 'TestLayer',
-        inputTypes: ['text'],
-        outputTypes: ['json'],
-        workerNames: ['w1'],
-      ),
-    ], []);
-  }
-
-  Widget buildWidget(
-    Dashboard<LayerGraphData> dashboard, {
-    void Function(String)? onNodeTap,
-  }) {
-    return MaterialApp(
-      home: Scaffold(
-        body: FlowCanvas(dashboard: dashboard, onNodeTap: onNodeTap ?? (_) {}),
-      ),
-    );
-  }
-
   group('FlowCanvas', () {
-    testWidgets('renders FlowChart widget', (tester) async {
-      final dashboard = createTestDashboard();
-      await tester.pumpWidget(buildWidget(dashboard));
-      expect(find.byType(FlowChart<LayerGraphData>), findsOneWidget);
+    testWidgets('renders NodeFlowEditor widget', (tester) async {
+      final controller = createTestController();
+      await tester.pumpWidget(buildWidget(controller));
+      expect(find.byType(NodeFlowEditor<LayerGraphData, void>), findsOneWidget);
     });
 
     testWidgets('renders layer name via LayerNodeWidget', (tester) async {
-      final dashboard = createTestDashboard();
-      await tester.pumpWidget(buildWidget(dashboard));
+      final controller = createTestController();
+      await tester.pumpWidget(buildWidget(controller));
       await tester.pumpAndSettle();
       expect(find.text('TestLayer'), findsOneWidget);
     });
 
     testWidgets('renders worker count text', (tester) async {
-      final dashboard = createTestDashboard();
-      await tester.pumpWidget(buildWidget(dashboard));
+      final controller = createTestController();
+      await tester.pumpWidget(buildWidget(controller));
       await tester.pumpAndSettle();
       expect(find.text('1 worker'), findsOneWidget);
     });
 
-    testWidgets('customElementBuilder returns SizedBox for null data', (
-      tester,
-    ) async {
-      final dashboard =
-          Dashboard<LayerGraphData>(dataSerializer: DataSerializerImpl())
-            ..addElement(
-              FlowElement<LayerGraphData>(
-                size: const Size(100, 100),
-                text: 'empty',
-                kind: ElementKind.custom,
-              ),
-            );
-
-      await tester.pumpWidget(buildWidget(dashboard));
-      final flowChart = tester.widget<FlowChart<LayerGraphData>>(
-        find.byType(FlowChart<LayerGraphData>),
-      );
-
-      final builder = flowChart.customElementBuilder!;
-      final context = tester.element(find.byType(FlowChart<LayerGraphData>));
-      final result = builder(context, dashboard.elements.first);
-
-      expect(result, isA<SizedBox>());
-    });
-
-    testWidgets('customElementBuilder returns LayerNodeWidget for valid data', (
-      tester,
-    ) async {
-      final dashboard = createTestDashboard();
-      await tester.pumpWidget(buildWidget(dashboard));
-
-      final flowChart = tester.widget<FlowChart<LayerGraphData>>(
-        find.byType(FlowChart<LayerGraphData>),
-      );
-
-      final builder = flowChart.customElementBuilder!;
-      final context = tester.element(find.byType(FlowChart<LayerGraphData>));
-      final result = builder(context, dashboard.elements.first);
-
-      expect(result, isA<LayerNodeWidget>());
-      final node = result as LayerNodeWidget;
-      expect(node.name, 'TestLayer');
-      expect(node.enabled, isTrue);
-      expect(node.workerCount, 1);
-    });
-
-    testWidgets('onElementPressed callback is wired', (tester) async {
-      final dashboard = createTestDashboard();
-      await tester.pumpWidget(buildWidget(dashboard));
-
-      final flowChart = tester.widget<FlowChart<LayerGraphData>>(
-        find.byType(FlowChart<LayerGraphData>),
-      );
-
-      expect(flowChart.onElementPressed, isNotNull);
-    });
-
-    testWidgets('onDashboardTapped callback is wired', (tester) async {
-      final dashboard = createTestDashboard();
-      await tester.pumpWidget(buildWidget(dashboard));
-
-      final flowChart = tester.widget<FlowChart<LayerGraphData>>(
-        find.byType(FlowChart<LayerGraphData>),
-      );
-
-      expect(flowChart.onDashboardTapped, isNotNull);
-    });
-
     testWidgets('renders output type tag', (tester) async {
-      final dashboard = createTestDashboard();
-      await tester.pumpWidget(buildWidget(dashboard));
+      final controller = createTestController();
+      await tester.pumpWidget(buildWidget(controller));
       await tester.pumpAndSettle();
       expect(find.text('json'), findsOneWidget);
     });
 
-    testWidgets('renders with empty dashboard', (tester) async {
-      final dashboard = Dashboard<LayerGraphData>(
-        dataSerializer: DataSerializerImpl(),
-      );
-      await tester.pumpWidget(buildWidget(dashboard));
-      expect(find.byType(FlowChart<LayerGraphData>), findsOneWidget);
+    testWidgets('renders with empty controller', (tester) async {
+      final controller = NodeFlowController<LayerGraphData, void>();
+      await tester.pumpWidget(buildWidget(controller));
+      expect(find.byType(NodeFlowEditor<LayerGraphData, void>), findsOneWidget);
     });
 
     testWidgets('renders disabled layer with reduced opacity', (tester) async {
-      final dashboard = buildDashboard([
+      final nodes = buildNodes([
         const LayerDefinition(
           name: 'DisabledLayer',
           inputTypes: [],
@@ -143,11 +74,26 @@ void main() {
           enabled: false,
         ),
       ], []);
-      await tester.pumpWidget(buildWidget(dashboard));
+      final controller = NodeFlowController<LayerGraphData, void>(nodes: nodes);
+      await tester.pumpWidget(buildWidget(controller));
       await tester.pumpAndSettle();
 
       final opacity = tester.widget<Opacity>(find.byType(Opacity).first);
       expect(opacity.opacity, 0.5);
+    });
+
+    testWidgets('contains LayerNodeWidget with correct data', (tester) async {
+      final controller = createTestController();
+      await tester.pumpWidget(buildWidget(controller));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayerNodeWidget), findsOneWidget);
+      final nodeWidget = tester.widget<LayerNodeWidget>(
+        find.byType(LayerNodeWidget),
+      );
+      expect(nodeWidget.name, 'TestLayer');
+      expect(nodeWidget.enabled, isTrue);
+      expect(nodeWidget.workerCount, 1);
     });
   });
 }

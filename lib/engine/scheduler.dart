@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 import 'package:gyeol/engine/queue/task_queue.dart';
@@ -121,6 +123,97 @@ class Scheduler {
   }
 
   int get queueLength => _queue.length;
+
+  static const _sourceExtensions = ['.dart', '.yaml', '.md', '.json', '.txt'];
+
+  static Future<List<String>> collectFilesFromPath(
+    String path, {
+    List<String> extensions = _sourceExtensions,
+  }) async {
+    final dir = Directory(path);
+    if (!dir.existsSync()) return [];
+
+    final files = <String>[];
+    try {
+      await for (final entity in dir.list(recursive: true)) {
+        if (entity is File) {
+          if (extensions.any((ext) => entity.path.endsWith(ext))) {
+            files.add(entity.path);
+          }
+        }
+      }
+    } on PathAccessException {
+      return files;
+    }
+    return files..sort();
+  }
+
+  Future<List<WorkerResult>> runThread(ThreadDefinition thread) async {
+    if (thread.layerNames.isEmpty) return [];
+
+    final allResults = <WorkerResult>[];
+    final files = await collectFilesFromPath(thread.path);
+
+    var currentType = 'raw';
+
+    for (final layerName in thread.layerNames) {
+      final layers = _layerRegistry.findByInputType(currentType);
+      final layer = layers.where((l) => l.name == layerName).firstOrNull;
+      if (layer == null || !layer.enabled) continue;
+
+      final payload = <String, dynamic>{
+        'thread': thread.name,
+        'path': thread.path,
+        'currentType': currentType,
+        if (files.isNotEmpty) 'files': files,
+      };
+
+      final task = AppTask.create(
+        currentType,
+        payload,
+        TaskPriority.high,
+      ).copyWith(layerName: layer.name);
+
+      final updatedTask = task.copyWith(
+        status: TaskStatus.running,
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+      );
+      await _repo.saveTask(updatedTask);
+
+      final layerFutures = <Future<WorkerResult>>[];
+      for (final workerName in layer.workerNames) {
+        layerFutures.add(_executeWorker(updatedTask, workerName));
+      }
+
+      final layerResults = await Future.wait(layerFutures);
+      allResults.addAll(layerResults);
+
+      if (layer.outputTypes.isNotEmpty) {
+        currentType = layer.outputTypes.first;
+      }
+
+      for (final result in layerResults) {
+        if (result.success) {
+          for (final outputTask in result.outputTasks) {
+            _messageBus.publish(outputTask);
+          }
+        }
+      }
+    }
+
+    return allResults;
+  }
+
+  Future<Map<String, List<WorkerResult>>> runAllThreads(
+    List<ThreadDefinition> threads,
+  ) async {
+    final results = <String, List<WorkerResult>>{};
+    for (final thread in threads) {
+      if (!thread.enabled) continue;
+      results[thread.name] = await runThread(thread);
+    }
+    return results;
+  }
 
   Future<WorkerResult> _executeWorker(AppTask task, String workerName) async {
     final workerDef = await _repo.getWorker(workerName);

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
@@ -118,6 +119,38 @@ class WorkersNotifier extends AsyncNotifier<List<WorkerDefinition>> {
   }
 }
 
+// ── Threads ──
+
+final threadsProvider =
+    AsyncNotifierProvider<ThreadsNotifier, List<ThreadDefinition>>(
+      ThreadsNotifier.new,
+    );
+
+class ThreadsNotifier extends AsyncNotifier<List<ThreadDefinition>> {
+  @override
+  Future<List<ThreadDefinition>> build() async {
+    final repo = ref.watch(repositoryProvider);
+    return repo.listThreads();
+  }
+
+  Future<void> refresh() async {
+    final repo = ref.read(repositoryProvider);
+    state = AsyncData(await repo.listThreads());
+  }
+
+  Future<void> saveThread(ThreadDefinition thread) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.saveThread(thread);
+    await refresh();
+  }
+
+  Future<void> deleteThread(String name) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.deleteThread(name);
+    await refresh();
+  }
+}
+
 // ── Settings ──
 
 final settingsProvider =
@@ -136,6 +169,56 @@ class SettingsNotifier extends AsyncNotifier<ProviderSettings> {
     final repo = ref.read(repositoryProvider);
     await repo.saveSettings(settings);
     state = AsyncData(settings);
+  }
+}
+
+// ── Graph State ──
+
+class GraphState {
+  const GraphState({
+    this.nodePositions = const {},
+    this.removedConnections = const {},
+  });
+  final Map<String, Offset> nodePositions;
+  final Set<(String, String)> removedConnections;
+
+  GraphState copyWith({
+    Map<String, Offset>? nodePositions,
+    Set<(String, String)>? removedConnections,
+  }) {
+    return GraphState(
+      nodePositions: nodePositions ?? this.nodePositions,
+      removedConnections: removedConnections ?? this.removedConnections,
+    );
+  }
+}
+
+final graphStateProvider =
+    AsyncNotifierProvider<GraphStateNotifier, GraphState>(
+      GraphStateNotifier.new,
+    );
+
+class GraphStateNotifier extends AsyncNotifier<GraphState> {
+  @override
+  Future<GraphState> build() async {
+    final repo = ref.watch(repositoryProvider);
+    final positions = await repo.loadNodePositions();
+    final removed = await repo.loadRemovedConnections();
+    return GraphState(nodePositions: positions, removedConnections: removed);
+  }
+
+  Future<void> savePositions(Map<String, Offset> positions) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.saveNodePositions(positions);
+    final current = state.valueOrNull ?? const GraphState();
+    state = AsyncData(current.copyWith(nodePositions: positions));
+  }
+
+  Future<void> saveRemovedConnections(Set<(String, String)> removed) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.saveRemovedConnections(removed);
+    final current = state.valueOrNull ?? const GraphState();
+    state = AsyncData(current.copyWith(removedConnections: removed));
   }
 }
 

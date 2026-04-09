@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/database/database.dart';
@@ -101,6 +101,75 @@ void main() {
         expect(settings, equals(const ProviderSettings()));
       },
     );
+  });
+
+  group('thread CRUD', () {
+    test('saveThread and listThreads round-trip', () async {
+      const thread = ThreadDefinition(
+        name: 'review',
+        path: '/home/user/project',
+        layerNames: ['parse', 'analyze'],
+      );
+      await repo.saveThread(thread);
+
+      final threads = await repo.listThreads();
+      expect(threads, hasLength(1));
+      expect(threads.first.name, 'review');
+      expect(threads.first.path, '/home/user/project');
+      expect(threads.first.layerNames, ['parse', 'analyze']);
+      expect(threads.first.enabled, true);
+      expect(threads.first.status, ThreadStatus.idle);
+    });
+
+    test('getThread returns null when not found', () async {
+      final thread = await repo.getThread('nonexistent');
+      expect(thread, isNull);
+    });
+
+    test('getThread returns saved thread', () async {
+      const thread = ThreadDefinition(
+        name: 'build',
+        path: '/src',
+        layerNames: ['compile'],
+        status: ThreadStatus.running,
+      );
+      await repo.saveThread(thread);
+
+      final found = await repo.getThread('build');
+      expect(found, isNotNull);
+      expect(found!.name, 'build');
+      expect(found.status, ThreadStatus.running);
+    });
+
+    test('deleteThread removes thread', () async {
+      await repo.saveThread(
+        const ThreadDefinition(name: 'tmp', path: '/tmp', layerNames: []),
+      );
+      expect(await repo.listThreads(), hasLength(1));
+
+      await repo.deleteThread('tmp');
+      expect(await repo.listThreads(), isEmpty);
+    });
+
+    test('saveThread upserts existing thread', () async {
+      await repo.saveThread(
+        const ThreadDefinition(name: 't1', path: '/old', layerNames: ['A']),
+      );
+      await repo.saveThread(
+        const ThreadDefinition(
+          name: 't1',
+          path: '/new',
+          layerNames: ['A', 'B'],
+          enabled: false,
+        ),
+      );
+
+      final threads = await repo.listThreads();
+      expect(threads, hasLength(1));
+      expect(threads.first.path, '/new');
+      expect(threads.first.layerNames, ['A', 'B']);
+      expect(threads.first.enabled, false);
+    });
   });
 
   group('task CRUD', () {

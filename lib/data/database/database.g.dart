@@ -2270,6 +2270,367 @@ class ExecutionLogsCompanion extends UpdateCompanion<ExecutionLog> {
   }
 }
 
+class $ThreadsTable extends Threads with TableInfo<$ThreadsTable, Thread> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ThreadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _layerNamesMeta = const VerificationMeta(
+    'layerNames',
+  );
+  @override
+  late final GeneratedColumn<String> layerNames = GeneratedColumn<String>(
+    'layer_names',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('idle'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    name,
+    path,
+    layerNames,
+    enabled,
+    status,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'threads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Thread> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('layer_names')) {
+      context.handle(
+        _layerNamesMeta,
+        layerNames.isAcceptableOrUnknown(data['layer_names']!, _layerNamesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_layerNamesMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {name};
+  @override
+  Thread map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Thread(
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      layerNames: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}layer_names'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+    );
+  }
+
+  @override
+  $ThreadsTable createAlias(String alias) {
+    return $ThreadsTable(attachedDatabase, alias);
+  }
+}
+
+class Thread extends DataClass implements Insertable<Thread> {
+  final String name;
+  final String path;
+  final String layerNames;
+  final bool enabled;
+  final String status;
+  const Thread({
+    required this.name,
+    required this.path,
+    required this.layerNames,
+    required this.enabled,
+    required this.status,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['name'] = Variable<String>(name);
+    map['path'] = Variable<String>(path);
+    map['layer_names'] = Variable<String>(layerNames);
+    map['enabled'] = Variable<bool>(enabled);
+    map['status'] = Variable<String>(status);
+    return map;
+  }
+
+  ThreadsCompanion toCompanion(bool nullToAbsent) {
+    return ThreadsCompanion(
+      name: Value(name),
+      path: Value(path),
+      layerNames: Value(layerNames),
+      enabled: Value(enabled),
+      status: Value(status),
+    );
+  }
+
+  factory Thread.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Thread(
+      name: serializer.fromJson<String>(json['name']),
+      path: serializer.fromJson<String>(json['path']),
+      layerNames: serializer.fromJson<String>(json['layerNames']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      status: serializer.fromJson<String>(json['status']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'name': serializer.toJson<String>(name),
+      'path': serializer.toJson<String>(path),
+      'layerNames': serializer.toJson<String>(layerNames),
+      'enabled': serializer.toJson<bool>(enabled),
+      'status': serializer.toJson<String>(status),
+    };
+  }
+
+  Thread copyWith({
+    String? name,
+    String? path,
+    String? layerNames,
+    bool? enabled,
+    String? status,
+  }) => Thread(
+    name: name ?? this.name,
+    path: path ?? this.path,
+    layerNames: layerNames ?? this.layerNames,
+    enabled: enabled ?? this.enabled,
+    status: status ?? this.status,
+  );
+  Thread copyWithCompanion(ThreadsCompanion data) {
+    return Thread(
+      name: data.name.present ? data.name.value : this.name,
+      path: data.path.present ? data.path.value : this.path,
+      layerNames: data.layerNames.present
+          ? data.layerNames.value
+          : this.layerNames,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      status: data.status.present ? data.status.value : this.status,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Thread(')
+          ..write('name: $name, ')
+          ..write('path: $path, ')
+          ..write('layerNames: $layerNames, ')
+          ..write('enabled: $enabled, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(name, path, layerNames, enabled, status);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Thread &&
+          other.name == this.name &&
+          other.path == this.path &&
+          other.layerNames == this.layerNames &&
+          other.enabled == this.enabled &&
+          other.status == this.status);
+}
+
+class ThreadsCompanion extends UpdateCompanion<Thread> {
+  final Value<String> name;
+  final Value<String> path;
+  final Value<String> layerNames;
+  final Value<bool> enabled;
+  final Value<String> status;
+  final Value<int> rowid;
+  const ThreadsCompanion({
+    this.name = const Value.absent(),
+    this.path = const Value.absent(),
+    this.layerNames = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ThreadsCompanion.insert({
+    required String name,
+    required String path,
+    required String layerNames,
+    this.enabled = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name),
+       path = Value(path),
+       layerNames = Value(layerNames);
+  static Insertable<Thread> custom({
+    Expression<String>? name,
+    Expression<String>? path,
+    Expression<String>? layerNames,
+    Expression<bool>? enabled,
+    Expression<String>? status,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (name != null) 'name': name,
+      if (path != null) 'path': path,
+      if (layerNames != null) 'layer_names': layerNames,
+      if (enabled != null) 'enabled': enabled,
+      if (status != null) 'status': status,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ThreadsCompanion copyWith({
+    Value<String>? name,
+    Value<String>? path,
+    Value<String>? layerNames,
+    Value<bool>? enabled,
+    Value<String>? status,
+    Value<int>? rowid,
+  }) {
+    return ThreadsCompanion(
+      name: name ?? this.name,
+      path: path ?? this.path,
+      layerNames: layerNames ?? this.layerNames,
+      enabled: enabled ?? this.enabled,
+      status: status ?? this.status,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (layerNames.present) {
+      map['layer_names'] = Variable<String>(layerNames.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ThreadsCompanion(')
+          ..write('name: $name, ')
+          ..write('path: $path, ')
+          ..write('layerNames: $layerNames, ')
+          ..write('enabled: $enabled, ')
+          ..write('status: $status, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2278,6 +2639,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $WorkersTable workers = $WorkersTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $ExecutionLogsTable executionLogs = $ExecutionLogsTable(this);
+  late final $ThreadsTable threads = $ThreadsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2288,6 +2650,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     workers,
     settings,
     executionLogs,
+    threads,
   ];
 }
 
@@ -3447,6 +3810,202 @@ typedef $$ExecutionLogsTableProcessedTableManager =
       ExecutionLog,
       PrefetchHooks Function()
     >;
+typedef $$ThreadsTableCreateCompanionBuilder =
+    ThreadsCompanion Function({
+      required String name,
+      required String path,
+      required String layerNames,
+      Value<bool> enabled,
+      Value<String> status,
+      Value<int> rowid,
+    });
+typedef $$ThreadsTableUpdateCompanionBuilder =
+    ThreadsCompanion Function({
+      Value<String> name,
+      Value<String> path,
+      Value<String> layerNames,
+      Value<bool> enabled,
+      Value<String> status,
+      Value<int> rowid,
+    });
+
+class $$ThreadsTableFilterComposer
+    extends Composer<_$AppDatabase, $ThreadsTable> {
+  $$ThreadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get layerNames => $composableBuilder(
+    column: $table.layerNames,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ThreadsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ThreadsTable> {
+  $$ThreadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get layerNames => $composableBuilder(
+    column: $table.layerNames,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ThreadsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ThreadsTable> {
+  $$ThreadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get layerNames => $composableBuilder(
+    column: $table.layerNames,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+}
+
+class $$ThreadsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ThreadsTable,
+          Thread,
+          $$ThreadsTableFilterComposer,
+          $$ThreadsTableOrderingComposer,
+          $$ThreadsTableAnnotationComposer,
+          $$ThreadsTableCreateCompanionBuilder,
+          $$ThreadsTableUpdateCompanionBuilder,
+          (Thread, BaseReferences<_$AppDatabase, $ThreadsTable, Thread>),
+          Thread,
+          PrefetchHooks Function()
+        > {
+  $$ThreadsTableTableManager(_$AppDatabase db, $ThreadsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ThreadsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ThreadsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ThreadsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> name = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String> layerNames = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ThreadsCompanion(
+                name: name,
+                path: path,
+                layerNames: layerNames,
+                enabled: enabled,
+                status: status,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String name,
+                required String path,
+                required String layerNames,
+                Value<bool> enabled = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ThreadsCompanion.insert(
+                name: name,
+                path: path,
+                layerNames: layerNames,
+                enabled: enabled,
+                status: status,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ThreadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ThreadsTable,
+      Thread,
+      $$ThreadsTableFilterComposer,
+      $$ThreadsTableOrderingComposer,
+      $$ThreadsTableAnnotationComposer,
+      $$ThreadsTableCreateCompanionBuilder,
+      $$ThreadsTableUpdateCompanionBuilder,
+      (Thread, BaseReferences<_$AppDatabase, $ThreadsTable, Thread>),
+      Thread,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3461,4 +4020,6 @@ class $AppDatabaseManager {
       $$SettingsTableTableManager(_db, _db.settings);
   $$ExecutionLogsTableTableManager get executionLogs =>
       $$ExecutionLogsTableTableManager(_db, _db.executionLogs);
+  $$ThreadsTableTableManager get threads =>
+      $$ThreadsTableTableManager(_db, _db.threads);
 }

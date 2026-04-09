@@ -52,6 +52,17 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+class Threads extends Table {
+  TextColumn get name => text()();
+  TextColumn get path => text()();
+  TextColumn get layerNames => text()();
+  BoolColumn get enabled => boolean().withDefault(const Constant(true))();
+  TextColumn get status => text().withDefault(const Constant('idle'))();
+
+  @override
+  Set<Column> get primaryKey => {name};
+}
+
 class ExecutionLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get taskId => text()();

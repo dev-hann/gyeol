@@ -140,6 +140,50 @@ void main() {
     });
 
     test(
+      'generateWithSystem throws LlmError on malformed JSON response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('not valid json{{{', 200);
+        });
+
+        final provider = OllamaProvider(
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test(
+      'generateWithSystem throws LlmError on unexpected type in response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'message': 'not a map'}), 200);
+        });
+
+        final provider = OllamaProvider(
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test(
       'generateWithSystem uses correct URL when baseUrl has no trailing slash',
       () async {
         final mockClient = MockClient((request) async {

@@ -5,7 +5,9 @@ import 'package:gyeol/data/database/app_database.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Tasks, Layers, Workers, Settings, ExecutionLogs])
+@DriftDatabase(
+  tables: [Tasks, Layers, Workers, Settings, ExecutionLogs, Threads],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -16,7 +18,17 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(threads);
+      }
+    },
+  );
 
   Future<void> saveTask(TasksCompanion task) {
     return into(tasks).insertOnConflictUpdate(task);
@@ -86,6 +98,18 @@ class AppDatabase extends _$AppDatabase {
         .then((row) => row?.value);
   }
 
+  Future<void> saveJsonValue(String key, String json) {
+    return into(settings).insertOnConflictUpdate(
+      SettingsCompanion(key: Value(key), value: Value(json)),
+    );
+  }
+
+  Future<String?> getJsonValue(String key) {
+    return (select(settings)..where((s) => s.key.equals(key)))
+        .getSingleOrNull()
+        .then((row) => row?.value);
+  }
+
   Future<void> logExecution({
     required String taskId,
     required String status,
@@ -101,6 +125,24 @@ class AppDatabase extends _$AppDatabase {
         createdAt: DateTime.now().millisecondsSinceEpoch,
       ),
     );
+  }
+
+  Future<void> saveThread(ThreadsCompanion thread) {
+    return into(threads).insertOnConflictUpdate(thread);
+  }
+
+  Future<List<Thread>> listThreads() {
+    return select(threads).get();
+  }
+
+  Future<Thread?> getThread(String name) {
+    return (select(
+      threads,
+    )..where((t) => t.name.equals(name))).getSingleOrNull();
+  }
+
+  Future<void> deleteThread(String name) {
+    return (delete(threads)..where((t) => t.name.equals(name))).go();
   }
 
   Future<List<ExecutionLog>> listExecutionLogs({

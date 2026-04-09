@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:drift/drift.dart';
 import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
@@ -96,6 +97,32 @@ class AppRepository {
 
   Future<void> deleteWorker(String name) => _db.deleteWorker(name);
 
+  // ── Threads ──
+
+  Future<void> saveThread(ThreadDefinition thread) {
+    return _db.saveThread(
+      ThreadsCompanion.insert(
+        name: thread.name,
+        path: thread.path,
+        layerNames: jsonEncode(thread.layerNames),
+        enabled: Value(thread.enabled),
+        status: Value(thread.status.name),
+      ),
+    );
+  }
+
+  Future<List<ThreadDefinition>> listThreads() async {
+    final rows = await _db.listThreads();
+    return rows.map(_threadFromRow).toList();
+  }
+
+  Future<ThreadDefinition?> getThread(String name) async {
+    final row = await _db.getThread(name);
+    return row != null ? _threadFromRow(row) : null;
+  }
+
+  Future<void> deleteThread(String name) => _db.deleteThread(name);
+
   // ── Settings ──
 
   Future<ProviderSettings> getSettings() async {
@@ -114,6 +141,51 @@ class AppRepository {
 
   Future<void> saveSettings(ProviderSettings settings) {
     return _db.saveSettings(jsonEncode(settings.toJson()));
+  }
+
+  // ── Graph State ──
+
+  Future<Map<String, Offset>> loadNodePositions() async {
+    final json = await _db.getJsonValue('graph_node_positions');
+    if (json == null) return {};
+    try {
+      final decoded = jsonDecode(json) as Map<String, dynamic>;
+      return decoded.map((k, v) {
+        final list = v as List;
+        return MapEntry(
+          k,
+          Offset((list[0] as num).toDouble(), (list[1] as num).toDouble()),
+        );
+      });
+    } on FormatException {
+      return {};
+    }
+  }
+
+  Future<void> saveNodePositions(Map<String, Offset> positions) {
+    final encoded = jsonEncode(
+      positions.map((k, v) => MapEntry(k, [v.dx, v.dy])),
+    );
+    return _db.saveJsonValue('graph_node_positions', encoded);
+  }
+
+  Future<Set<(String, String)>> loadRemovedConnections() async {
+    final json = await _db.getJsonValue('graph_removed_connections');
+    if (json == null) return {};
+    try {
+      final decoded = jsonDecode(json) as List;
+      return decoded.map((e) {
+        final list = e as List;
+        return (list[0] as String, list[1] as String);
+      }).toSet();
+    } on FormatException {
+      return {};
+    }
+  }
+
+  Future<void> saveRemovedConnections(Set<(String, String)> connections) {
+    final encoded = jsonEncode(connections.map((c) => [c.$1, c.$2]).toList());
+    return _db.saveJsonValue('graph_removed_connections', encoded);
   }
 
   // ── Execution Logs ──
@@ -192,6 +264,19 @@ class AppRepository {
       temperature: r.temperature,
       maxTokens: r.maxTokens,
       enabled: r.enabled,
+    );
+  }
+
+  ThreadDefinition _threadFromRow(Thread r) {
+    return ThreadDefinition(
+      name: r.name,
+      path: r.path,
+      layerNames: List<String>.from(jsonDecode(r.layerNames) as List),
+      enabled: r.enabled,
+      status: ThreadStatus.values.firstWhere(
+        (s) => s.name == r.status,
+        orElse: () => ThreadStatus.idle,
+      ),
     );
   }
 }

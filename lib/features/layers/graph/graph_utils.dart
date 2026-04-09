@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_flow_chart/flutter_flow_chart.dart';
 import 'package:gyeol/data/models/app_models.dart';
+import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 const double kNodeWidth = 240;
 const double kNodeHeight = 120;
@@ -24,51 +24,11 @@ class LayerGraphData {
   final int runningTasks;
 }
 
-class DataSerializerImpl
-    with DataSerializer<LayerGraphData, Map<String, dynamic>> {
-  @override
-  LayerGraphData? fromJson(Map<String, dynamic>? source) {
-    if (source == null) return null;
-    return LayerGraphData(
-      layerName: source['layerName'] as String? ?? '',
-      inputTypes: List<String>.from(source['inputTypes'] as List? ?? []),
-      outputTypes: List<String>.from(source['outputTypes'] as List? ?? []),
-      workerNames: List<String>.from(source['workerNames'] as List? ?? []),
-      enabled: source['enabled'] as bool? ?? true,
-      runningTasks: source['runningTasks'] as int? ?? 0,
-    );
-  }
-
-  @override
-  Map<String, dynamic>? toJson(LayerGraphData? data) {
-    if (data == null) return null;
-    return {
-      'layerName': data.layerName,
-      'inputTypes': data.inputTypes,
-      'outputTypes': data.outputTypes,
-      'workerNames': data.workerNames,
-      'enabled': data.enabled,
-      'runningTasks': data.runningTasks,
-    };
-  }
-}
-
-Dashboard<LayerGraphData> buildDashboard(
+List<Node<LayerGraphData>> buildNodes(
   List<LayerDefinition> layers,
   List<AppTask> tasks,
 ) {
-  final dashboard =
-      Dashboard<LayerGraphData>(
-          dataSerializer: DataSerializerImpl(),
-          minimumZoomFactor: 0.3,
-        )
-        ..gridBackgroundParams = GridBackgroundParams(
-          backgroundColor: const Color(0xFF0f0f11),
-          gridColor: const Color(0xFF2e2e33),
-          gridThickness: 1,
-        );
-
-  if (layers.isEmpty) return dashboard;
+  if (layers.isEmpty) return [];
 
   final runningByLayer = <String, int>{};
   for (final task in tasks) {
@@ -81,27 +41,15 @@ Dashboard<LayerGraphData> buildDashboard(
   final sorted = List<LayerDefinition>.from(layers)
     ..sort((a, b) => a.order.compareTo(b.order));
 
-  final elements = <String, FlowElement<LayerGraphData>>{};
   final positions = _layoutLR(sorted);
 
-  final idToName = <String, String>{};
-
-  for (final layer in sorted) {
-    final pos = positions[layer.name]!;
-    final element = FlowElement<LayerGraphData>(
-      position: pos,
+  return sorted.map((layer) {
+    return Node<LayerGraphData>(
+      id: layer.name,
+      type: 'layer',
+      position: positions[layer.name]!,
       size: const Size(kNodeWidth, kNodeHeight),
-      text: layer.name,
-      kind: ElementKind.custom,
-      handlers: const [Handler.leftCenter, Handler.rightCenter],
-      handlerSize: 12,
-      backgroundColor: const Color(0xFF18181b),
-      borderColor: layer.enabled
-          ? const Color(0xFF6d5acf)
-          : const Color(0xFF71717a),
-      borderThickness: 2,
-      elevation: 0,
-      elementData: LayerGraphData(
+      data: LayerGraphData(
         layerName: layer.name,
         inputTypes: layer.inputTypes,
         outputTypes: layer.outputTypes,
@@ -109,40 +57,64 @@ Dashboard<LayerGraphData> buildDashboard(
         enabled: layer.enabled,
         runningTasks: runningByLayer[layer.name] ?? 0,
       ),
+      ports: [
+        Port(
+          id: '${layer.name}-in',
+          name: 'In',
+          type: PortType.input,
+          offset: const Offset(0, 40),
+          size: const Size(16, 16),
+          multiConnections: true,
+        ),
+        Port(
+          id: '${layer.name}-out',
+          name: 'Out',
+          position: PortPosition.right,
+          type: PortType.output,
+          offset: const Offset(0, 40),
+          size: const Size(16, 16),
+          multiConnections: true,
+        ),
+      ],
     );
-    elements[layer.name] = element;
-    idToName[element.id] = layer.name;
-    dashboard.addElement(element);
-  }
+  }).toList();
+}
+
+List<Connection<void>> buildConnections(
+  List<LayerDefinition> layers,
+  Set<(String, String)> removedConnections,
+) {
+  final sorted = List<LayerDefinition>.from(layers)
+    ..sort((a, b) => a.order.compareTo(b.order));
+
+  final connections = <Connection<void>>[];
+  var connIndex = 0;
 
   for (var i = 0; i < sorted.length; i++) {
     for (var j = 0; j < sorted.length; j++) {
       if (i == j) continue;
+      final srcName = sorted[i].name;
+      final destName = sorted[j].name;
+      if (removedConnections.contains((srcName, destName))) continue;
+
       final overlap = sorted[i].outputTypes.toSet().intersection(
         sorted[j].inputTypes.toSet(),
       );
       if (overlap.isNotEmpty) {
-        final src = elements[sorted[i].name]!;
-        final destId = elements[sorted[j].name]!.id;
-        final hasRunning =
-            (runningByLayer[sorted[i].name] ?? 0) > 0 ||
-            (runningByLayer[sorted[j].name] ?? 0) > 0;
-
-        dashboard.addNextById(
-          src,
-          destId,
-          ArrowParams(
-            thickness: 2,
-            color: hasRunning
-                ? const Color(0xFF3b82f6)
-                : const Color(0xFF6d5acf),
+        connections.add(
+          Connection<void>(
+            id: 'conn-${connIndex++}',
+            sourceNodeId: srcName,
+            sourcePortId: '$srcName-out',
+            targetNodeId: destName,
+            targetPortId: '$destName-in',
           ),
         );
       }
     }
   }
 
-  return dashboard;
+  return connections;
 }
 
 Map<String, Offset> _layoutLR(List<LayerDefinition> sorted) {
@@ -164,16 +136,4 @@ Map<String, Offset> _layoutLR(List<LayerDefinition> sorted) {
   }
 
   return result;
-}
-
-void syncDashboard(
-  Dashboard<LayerGraphData> dashboard,
-  List<LayerDefinition> layers,
-  List<AppTask> tasks,
-) {
-  dashboard.removeAllElements();
-  final newDb = buildDashboard(layers, tasks);
-  for (final e in newDb.elements) {
-    dashboard.addElement(e);
-  }
 }

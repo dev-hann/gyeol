@@ -47,11 +47,17 @@ class OllamaProvider implements LlmProvider {
       throw LlmError('${response.statusCode}: ${response.body}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final message = data['message'] as Map<String, dynamic>?;
-    final content = message?['content'] as String?;
-    if (content == null) throw LlmError('No content in response');
-    return content;
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final message = data['message'] as Map<String, dynamic>?;
+      final content = message?['content'] as String?;
+      if (content == null) throw LlmError('No content in response');
+      return content;
+    } on LlmError {
+      rethrow;
+    } catch (e) {
+      throw LlmError('Invalid response: $e');
+    }
   }
 
   @override
