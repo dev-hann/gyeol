@@ -7,8 +7,6 @@ import 'package:gyeol/engine/queue/task_queue.dart';
 import 'package:gyeol/engine/scheduler.dart';
 
 void main() {
-  // ── LayerRegistry ──
-
   group('LayerRegistry register', () {
     test('adds a layer', () {
       final registry = LayerRegistry();
@@ -187,8 +185,6 @@ void main() {
     });
   });
 
-  // ── MessageBus ──
-
   group('MessageBus publish', () {
     test('calls subscriber matching taskType', () {
       final bus = MessageBus();
@@ -275,8 +271,6 @@ void main() {
       expect(received2, hasLength(1));
     });
   });
-
-  // ── Scheduler ──
 
   group('Scheduler submit', () {
     late Scheduler scheduler;
@@ -401,6 +395,23 @@ void main() {
       expect(results, hasLength(1));
       expect(results.first.success, false);
       expect(results.first.error, contains('missing_worker'));
+      expect(scheduler.queueLength, 0);
+    });
+
+    test('drains queue after processing valid task', () async {
+      registry.register(
+        const LayerDefinition(
+          name: 'L',
+          inputTypes: ['text'],
+          outputTypes: [],
+          workerNames: ['w1'],
+        ),
+      );
+
+      scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+
+      expect(scheduler.queueLength, 1);
+      await scheduler.runOnce();
       expect(scheduler.queueLength, 0);
     });
   });

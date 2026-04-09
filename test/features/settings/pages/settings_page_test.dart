@@ -106,6 +106,25 @@ void main() {
       expect(find.text('Base URL'), findsNWidgets(2));
     });
 
+    testWidgets('renders Custom section', (tester) async {
+      await pumpSettingsPage(tester);
+      expect(find.text('Custom'), findsOneWidget);
+    });
+
+    testWidgets('renders API Format dropdown in Custom section', (
+      tester,
+    ) async {
+      await pumpSettingsPage(tester);
+      expect(find.text('API Format'), findsOneWidget);
+    });
+
+    testWidgets('renders API Key (optional) label in Custom section', (
+      tester,
+    ) async {
+      await pumpSettingsPage(tester);
+      expect(find.text('API Key (optional)'), findsOneWidget);
+    });
+
     testWidgets('shows error on provider error', (tester) async {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;

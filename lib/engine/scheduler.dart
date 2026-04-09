@@ -158,7 +158,7 @@ class Scheduler {
         outputTasks: [outputTask],
         metadata: {'worker': workerName},
       );
-    } on Object catch (e) {
+    } on Exception catch (e) {
       await _repo.logExecution(
         taskId: task.id,
         workerName: workerName,
@@ -167,6 +167,8 @@ class Scheduler {
       );
 
       return WorkerResult(success: false, error: e.toString());
+    } finally {
+      provider.close();
     }
   }
 

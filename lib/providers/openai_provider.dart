@@ -59,4 +59,7 @@ class OpenAIProvider implements LlmProvider {
     if (content == null) throw LlmError('No content in response');
     return content;
   }
+
+  @override
+  void close() => _client.close();
 }

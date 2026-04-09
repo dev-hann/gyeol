@@ -235,6 +235,45 @@ void main() {
     });
   });
 
+  group('NodeDetailPanel — save layer preserves workerNames', () {
+    testWidgets('saving edited layer preserves existing workerNames', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      final notifier = _CapturingLayersNotifier(fakeLayers());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            layersProvider.overrideWith(() => notifier),
+            workersProvider.overrideWith(
+              () => _FakeWorkersNotifier(fakeWorkers()),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: NodeDetailPanel(layerName: 'Draft', onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(notifier.saved, isNotEmpty);
+      expect(
+        notifier.saved.last.workerNames,
+        equals(['writer-1']),
+        reason: 'saveLayer should preserve existing workerNames',
+      );
+    });
+  });
+
   group('NodeDetailPanel — empty types', () {
     testWidgets('shows None for empty input types', (tester) async {
       await pumpPanel(
@@ -269,6 +308,20 @@ class _FakeWorkersNotifier extends WorkersNotifier {
 
   @override
   Future<List<WorkerDefinition>> build() async => _workers;
+}
+
+class _CapturingLayersNotifier extends LayersNotifier {
+  _CapturingLayersNotifier(this._layers);
+  final List<LayerDefinition> _layers;
+  final List<LayerDefinition> saved = [];
+
+  @override
+  Future<List<LayerDefinition>> build() async => _layers;
+
+  @override
+  Future<void> saveLayer(LayerDefinition layer) async {
+    saved.add(layer);
+  }
 }
 
 class _NeverLayersNotifier extends LayersNotifier {

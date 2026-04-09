@@ -1,6 +1,7 @@
 abstract class LlmProvider {
   Future<String> generate(String prompt);
   Future<String> generateWithSystem(String system, String user);
+  void close();
 }
 
 class LlmError implements Exception {

@@ -29,14 +29,28 @@ void main() {
         'system: sys user: user',
       );
     });
+
+    test('close can be overridden and tracks calls', () {
+      final provider = _FakeLlmProvider();
+      expect(provider.closeCalled, false);
+      provider.close();
+      expect(provider.closeCalled, true);
+    });
   });
 }
 
 class _FakeLlmProvider extends LlmProvider {
+  bool closeCalled = false;
+
   @override
   Future<String> generate(String prompt) async => 'generated: $prompt';
 
   @override
   Future<String> generateWithSystem(String system, String user) async =>
       'system: $system user: $user';
+
+  @override
+  void close() {
+    closeCalled = true;
+  }
 }

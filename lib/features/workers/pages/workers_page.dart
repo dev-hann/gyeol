@@ -81,7 +81,8 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Worker configuration is managed through layers. Go to Layers to add or edit workers.',
+                'Worker configuration is managed through layers. '
+                'Go to Layers to add or edit workers.',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
             ),
@@ -151,7 +152,8 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
               const SizedBox(width: 8),
               StatusBadge(
                 status:
-                    '${layerWorkers.length} worker${layerWorkers.length != 1 ? 's' : ''}',
+                    '${layerWorkers.length} worker'
+                    '${layerWorkers.length != 1 ? 's' : ''}',
               ),
             ],
           ),

@@ -36,8 +36,8 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               icon: Icons.layers_outlined,
               title: 'Layers',
               description:
-                  // ignore: lines_longer_than_80_chars
-                  'Graph editor — click nodes to view details, drag to reposition',
+                  'Graph editor — click nodes to view details, '
+                  'drag to reposition',
               action: OutlinedButton.icon(
                 onPressed: () => _showAddLayerDialog(context),
                 icon: const Icon(Icons.add, size: 16),

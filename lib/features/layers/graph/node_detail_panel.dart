@@ -613,11 +613,14 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
 
   void _saveLayer() {
     if (widget.layerName == null) return;
-    final layer = LayerDefinition(
-      name: widget.layerName!,
+    final layers = ref.read(layersProvider).valueOrNull ?? [];
+    final existing = layers
+        .where((l) => l.name == widget.layerName)
+        .firstOrNull;
+    if (existing == null) return;
+    final layer = existing.copyWith(
       inputTypes: _splitCSV(_inputCtl.text),
       outputTypes: _splitCSV(_outputCtl.text),
-      workerNames: [],
       order: int.tryParse(_orderCtl.text) ?? 0,
       enabled: _enabled,
     );
