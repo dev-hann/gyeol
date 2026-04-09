@@ -57,16 +57,16 @@ Dashboard<LayerGraphData> buildDashboard(
   List<LayerDefinition> layers,
   List<AppTask> tasks,
 ) {
-  final dashboard = Dashboard<LayerGraphData>(
-    dataSerializer: DataSerializerImpl(),
-    minimumZoomFactor: 0.3,
-  );
-
-  dashboard.gridBackgroundParams = GridBackgroundParams(
-    backgroundColor: const Color(0xFF0f0f11),
-    gridColor: const Color(0xFF2e2e33),
-    gridThickness: 1,
-  );
+  final dashboard =
+      Dashboard<LayerGraphData>(
+          dataSerializer: DataSerializerImpl(),
+          minimumZoomFactor: 0.3,
+        )
+        ..gridBackgroundParams = GridBackgroundParams(
+          backgroundColor: const Color(0xFF0f0f11),
+          gridColor: const Color(0xFF2e2e33),
+          gridThickness: 1,
+        );
 
   if (layers.isEmpty) return dashboard;
 

@@ -141,7 +141,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                 child: tasks.isEmpty
                                     ? const Center(
                                         child: Text(
-                                          'No tasks yet. Create a task or configure layers to get started.',
+                                          'No tasks yet. Create a task or '
+                                          'configure layers to get started.',
                                           style: TextStyle(
                                             fontSize: 13,
                                             color: AppColors.textSecondary,
