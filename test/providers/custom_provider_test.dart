@@ -71,7 +71,6 @@ void main() {
         temperature: 0.7,
         maxTokens: 100,
         apiFormat: CustomApiFormat.openAICompatible,
-        apiKey: '',
         client: mockClient,
       );
 
@@ -217,7 +216,6 @@ void main() {
         temperature: 0.7,
         maxTokens: 100,
         apiFormat: CustomApiFormat.anthropicCompatible,
-        apiKey: '',
         client: mockClient,
       );
 
