@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_flow_chart/flutter_flow_chart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
-import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/flow_canvas.dart';
+import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/node_detail_panel.dart';
-import 'package:gyeol/shared/widgets/page_header.dart';
 import 'package:gyeol/shared/widgets/empty_state.dart';
+import 'package:gyeol/shared/widgets/page_header.dart';
 
 class LayersPage extends ConsumerStatefulWidget {
   const LayersPage({super.key});
@@ -18,7 +18,7 @@ class LayersPage extends ConsumerStatefulWidget {
 }
 
 class _LayersPageState extends ConsumerState<LayersPage> {
-  Dashboard<LayerGraphData>? _dashboard;
+  late Dashboard<LayerGraphData> _dashboard;
   String? _selectedLayerName;
 
   @override
@@ -36,6 +36,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               icon: Icons.layers_outlined,
               title: 'Layers',
               description:
+                  // ignore: lines_longer_than_80_chars
                   'Graph editor — click nodes to view details, drag to reposition',
               action: OutlinedButton.icon(
                 onPressed: () => _showAddLayerDialog(context),
@@ -82,7 +83,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
       children: [
         Expanded(
           child: FlowCanvas(
-            dashboard: _dashboard!,
+            dashboard: _dashboard,
             onNodeTap: (name) => setState(() => _selectedLayerName = name),
           ),
         ),
@@ -101,7 +102,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     final outputCtl = TextEditingController();
     final workerCtl = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,

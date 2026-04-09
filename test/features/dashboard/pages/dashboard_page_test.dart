@@ -12,8 +12,8 @@ List<AppTask> fakeTasks() => [
     payload: null,
     priority: TaskPriority.high,
     status: TaskStatus.pending,
-    createdAt: DateTime(2025, 1, 1, 12, 0, 0).millisecondsSinceEpoch,
-    updatedAt: DateTime(2025, 1, 1, 12, 0, 0).millisecondsSinceEpoch,
+    createdAt: DateTime(2025, 1, 1, 12).millisecondsSinceEpoch,
+    updatedAt: DateTime(2025, 1, 1, 12).millisecondsSinceEpoch,
   ),
   AppTask(
     id: 'bbbbbbbb-0000-0000-0000-000000000002',
@@ -23,8 +23,8 @@ List<AppTask> fakeTasks() => [
     status: TaskStatus.running,
     layerName: 'Draft',
     workerName: 'writer-1',
-    createdAt: DateTime(2025, 1, 1, 12, 1, 0).millisecondsSinceEpoch,
-    updatedAt: DateTime(2025, 1, 1, 12, 1, 0).millisecondsSinceEpoch,
+    createdAt: DateTime(2025, 1, 1, 12, 1).millisecondsSinceEpoch,
+    updatedAt: DateTime(2025, 1, 1, 12, 1).millisecondsSinceEpoch,
   ),
   AppTask(
     id: 'cccccccc-0000-0000-0000-000000000003',
@@ -32,8 +32,8 @@ List<AppTask> fakeTasks() => [
     payload: null,
     priority: TaskPriority.low,
     status: TaskStatus.done,
-    createdAt: DateTime(2025, 1, 1, 12, 2, 0).millisecondsSinceEpoch,
-    updatedAt: DateTime(2025, 1, 1, 12, 2, 0).millisecondsSinceEpoch,
+    createdAt: DateTime(2025, 1, 1, 12, 2).millisecondsSinceEpoch,
+    updatedAt: DateTime(2025, 1, 1, 12, 2).millisecondsSinceEpoch,
   ),
   AppTask(
     id: 'dddddddd-0000-0000-0000-000000000004',
@@ -41,8 +41,8 @@ List<AppTask> fakeTasks() => [
     payload: null,
     priority: TaskPriority.high,
     status: TaskStatus.failed,
-    createdAt: DateTime(2025, 1, 1, 12, 3, 0).millisecondsSinceEpoch,
-    updatedAt: DateTime(2025, 1, 1, 12, 3, 0).millisecondsSinceEpoch,
+    createdAt: DateTime(2025, 1, 1, 12, 3).millisecondsSinceEpoch,
+    updatedAt: DateTime(2025, 1, 1, 12, 3).millisecondsSinceEpoch,
   ),
 ];
 
@@ -167,7 +167,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            tasksProvider.overrideWith(() => _ErrorTasksNotifier()),
+            tasksProvider.overrideWith(_ErrorTasksNotifier.new),
             queueSizeProvider.overrideWith((ref) async => 0),
           ],
           child: const MaterialApp(home: DashboardPage()),
@@ -180,8 +180,8 @@ void main() {
 }
 
 class _FakeTasksNotifier extends TasksNotifier {
-  final List<AppTask> _tasks;
   _FakeTasksNotifier(this._tasks);
+  final List<AppTask> _tasks;
 
   @override
   Future<List<AppTask>> build() async => _tasks;

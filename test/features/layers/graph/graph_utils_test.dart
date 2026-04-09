@@ -140,14 +140,13 @@ void main() {
 
     test('creates one element per layer', () {
       final layers = [
-        LayerDefinition(
+        const LayerDefinition(
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
           workerNames: ['w1'],
-          order: 0,
         ),
-        LayerDefinition(
+        const LayerDefinition(
           name: 'L2',
           inputTypes: ['json'],
           outputTypes: ['result'],
@@ -161,12 +160,11 @@ void main() {
 
     test('element text matches layer name', () {
       final layers = [
-        LayerDefinition(
+        const LayerDefinition(
           name: 'Alpha',
           inputTypes: ['text'],
           outputTypes: ['json'],
           workerNames: ['w1'],
-          order: 0,
         ),
       ];
       final dashboard = buildDashboard(layers, []);
@@ -175,14 +173,13 @@ void main() {
 
     test('elements are separated by kNodeWidth + kRankSep horizontally', () {
       final layers = [
-        LayerDefinition(
+        const LayerDefinition(
           name: 'L0',
           inputTypes: ['text'],
           outputTypes: ['json'],
           workerNames: ['w1'],
-          order: 0,
         ),
-        LayerDefinition(
+        const LayerDefinition(
           name: 'L1',
           inputTypes: ['json'],
           outputTypes: ['result'],
@@ -199,14 +196,13 @@ void main() {
 
     test('connects layers with overlapping output/input types', () {
       final layers = [
-        LayerDefinition(
+        const LayerDefinition(
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
           workerNames: ['w1'],
-          order: 0,
         ),
-        LayerDefinition(
+        const LayerDefinition(
           name: 'B',
           inputTypes: ['json'],
           outputTypes: ['result'],
@@ -220,14 +216,13 @@ void main() {
 
     test('does not connect layers without type overlap', () {
       final layers = [
-        LayerDefinition(
+        const LayerDefinition(
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
           workerNames: ['w1'],
-          order: 0,
         ),
-        LayerDefinition(
+        const LayerDefinition(
           name: 'B',
           inputTypes: ['image'],
           outputTypes: ['result'],
@@ -241,16 +236,15 @@ void main() {
 
     test('counts running tasks per layer in element data', () {
       final layers = [
-        LayerDefinition(
+        const LayerDefinition(
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
           workerNames: ['w1'],
-          order: 0,
         ),
       ];
       final tasks = [
-        AppTask(
+        const AppTask(
           id: 't1',
           taskType: 'test',
           payload: null,
@@ -260,7 +254,7 @@ void main() {
           createdAt: 0,
           updatedAt: 0,
         ),
-        AppTask(
+        const AppTask(
           id: 't2',
           taskType: 'test',
           payload: null,
@@ -272,30 +266,28 @@ void main() {
         ),
       ];
       final dashboard = buildDashboard(layers, tasks);
-      final data = dashboard.elements.first.elementData as LayerGraphData;
+      final data = dashboard.elements.first.elementData!;
       expect(data.runningTasks, 1);
     });
 
     test('syncDashboard replaces all elements', () {
       final original = buildDashboard([
-        LayerDefinition(
+        const LayerDefinition(
           name: 'Old',
           inputTypes: ['a'],
           outputTypes: ['b'],
           workerNames: ['w1'],
-          order: 0,
         ),
       ], []);
 
       syncDashboard(original, [
-        LayerDefinition(
+        const LayerDefinition(
           name: 'New1',
           inputTypes: ['x'],
           outputTypes: ['y'],
           workerNames: ['w2'],
-          order: 0,
         ),
-        LayerDefinition(
+        const LayerDefinition(
           name: 'New2',
           inputTypes: ['y'],
           outputTypes: ['z'],

@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
-import 'package:gyeol/shared/widgets/page_header.dart';
 import 'package:gyeol/shared/widgets/empty_state.dart';
+import 'package:gyeol/shared/widgets/page_header.dart';
 import 'package:gyeol/shared/widgets/status_badge.dart';
 
 class WorkersPage extends ConsumerStatefulWidget {
@@ -71,22 +71,15 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
       color: AppColors.tertiary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(
-          color: AppColors.border,
-          style: BorderStyle.solid,
-        ),
+        side: const BorderSide(color: AppColors.border),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+      child: const Padding(
+        padding: EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(
-              Icons.info_outline,
-              size: 16,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(width: 8),
-            const Expanded(
+            Icon(Icons.info_outline, size: 16, color: AppColors.textSecondary),
+            SizedBox(width: 8),
+            Expanded(
               child: Text(
                 'Worker configuration is managed through layers. Go to Layers to add or edit workers.',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
@@ -205,10 +198,9 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
 }
 
 class _WorkerCard extends StatelessWidget {
+  const _WorkerCard({required this.worker, this.unassigned = false});
   final WorkerDefinition worker;
   final bool unassigned;
-
-  const _WorkerCard({required this.worker, this.unassigned = false});
 
   @override
   Widget build(BuildContext context) {

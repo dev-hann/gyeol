@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 
 class PageHeader extends StatelessWidget {
+  const PageHeader({
+    required this.icon,
+    required this.title,
+    required this.description,
+    super.key,
+    this.action,
+  });
   final IconData icon;
   final String title;
   final String description;
   final Widget? action;
-
-  const PageHeader({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.description,
-    this.action,
-  });
 
   @override
   Widget build(BuildContext context) {

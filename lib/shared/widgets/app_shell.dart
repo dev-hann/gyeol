@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/features/dashboard/pages/dashboard_page.dart';
-import 'package:gyeol/features/monitoring/pages/monitoring_page.dart';
 import 'package:gyeol/features/layers/pages/layers_page.dart';
-import 'package:gyeol/features/workers/pages/workers_page.dart';
+import 'package:gyeol/features/monitoring/pages/monitoring_page.dart';
 import 'package:gyeol/features/settings/pages/settings_page.dart';
+import 'package:gyeol/features/workers/pages/workers_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -17,19 +17,19 @@ class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
 
   static final _pages = <Widget>[
-    DashboardPage(),
-    MonitoringPage(),
-    LayersPage(),
-    WorkersPage(),
-    SettingsPage(),
+    const DashboardPage(),
+    const MonitoringPage(),
+    const LayersPage(),
+    const WorkersPage(),
+    const SettingsPage(),
   ];
 
   static final _navItems = [
-    _NavItem(Icons.dashboard_outlined, 'Dashboard'),
-    _NavItem(Icons.show_chart, 'Monitoring'),
-    _NavItem(Icons.layers_outlined, 'Layers'),
-    _NavItem(Icons.memory, 'Workers'),
-    _NavItem(Icons.settings_outlined, 'Settings'),
+    const _NavItem(Icons.dashboard_outlined, 'Dashboard'),
+    const _NavItem(Icons.show_chart, 'Monitoring'),
+    const _NavItem(Icons.layers_outlined, 'Layers'),
+    const _NavItem(Icons.memory, 'Workers'),
+    const _NavItem(Icons.settings_outlined, 'Settings'),
   ];
 
   @override
@@ -52,12 +52,12 @@ class _AppShellState extends State<AppShell> {
       color: AppColors.card,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
+          const Padding(
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Gyeol',
                   style: TextStyle(
                     fontSize: 18,
@@ -65,7 +65,7 @@ class _AppShellState extends State<AppShell> {
                     color: AppColors.foreground,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   'AI Multi-Layer Worker',
                   style: TextStyle(
@@ -110,11 +110,10 @@ class _AppShellState extends State<AppShell> {
 }
 
 class _NavItem {
+  const _NavItem(this.icon, this.label, {this.index});
   final IconData icon;
   final String label;
   final int? index;
-
-  const _NavItem(this.icon, this.label, {this.index});
 
   Widget build(BuildContext context, bool isActive, VoidCallback onTap) {
     return Padding(

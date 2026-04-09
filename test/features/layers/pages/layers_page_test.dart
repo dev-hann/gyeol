@@ -8,14 +8,13 @@ import 'package:gyeol/data/providers/app_providers.dart';
 import 'package:gyeol/features/layers/pages/layers_page.dart';
 
 List<LayerDefinition> fakeLayers() => [
-  LayerDefinition(
+  const LayerDefinition(
     name: 'Draft',
     inputTypes: ['issue'],
     outputTypes: ['plan'],
     workerNames: ['writer-1'],
-    order: 0,
   ),
-  LayerDefinition(
+  const LayerDefinition(
     name: 'Review',
     inputTypes: ['plan'],
     outputTypes: ['analysis'],
@@ -25,7 +24,7 @@ List<LayerDefinition> fakeLayers() => [
 ];
 
 List<AppTask> fakeTasks() => [
-  AppTask(
+  const AppTask(
     id: 't1',
     taskType: 'generate',
     payload: null,
@@ -103,7 +102,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            layersProvider.overrideWith(() => _ErrorLayersNotifier()),
+            layersProvider.overrideWith(_ErrorLayersNotifier.new),
             tasksProvider.overrideWith(() => _FakeTasksNotifier(fakeTasks())),
           ],
           child: const MaterialApp(home: LayersPage()),
@@ -120,7 +119,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            layersProvider.overrideWith(() => _LoadingLayersNotifier()),
+            layersProvider.overrideWith(_LoadingLayersNotifier.new),
             tasksProvider.overrideWith(() => _FakeTasksNotifier(fakeTasks())),
           ],
           child: const MaterialApp(home: LayersPage()),
@@ -135,20 +134,40 @@ void main() {
       expect(find.text('Layers'), findsOneWidget);
       expect(find.text('No layers yet'), findsNothing);
     });
+
+    testWidgets('Add Layer dialog opens with text fields', (tester) async {
+      await pumpLayersPage(tester);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Add Layer'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('New Layer'), findsOneWidget);
+      expect(find.byType(TextField), findsNWidgets(4));
+    });
+
+    testWidgets('Add Layer dialog closes on Cancel', (tester) async {
+      await pumpLayersPage(tester);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Add Layer'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('New Layer'), findsNothing);
+    });
   });
 }
 
 class _FakeLayersNotifier extends LayersNotifier {
-  final List<LayerDefinition> _layers;
   _FakeLayersNotifier(this._layers);
+  final List<LayerDefinition> _layers;
 
   @override
   Future<List<LayerDefinition>> build() async => _layers;
 }
 
 class _FakeTasksNotifier extends TasksNotifier {
-  final List<AppTask> _tasks;
   _FakeTasksNotifier(this._tasks);
+  final List<AppTask> _tasks;
 
   @override
   Future<List<AppTask>> build() async => _tasks;

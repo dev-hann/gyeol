@@ -4,8 +4,8 @@ abstract class LlmProvider {
 }
 
 class LlmError implements Exception {
-  final String message;
   LlmError(this.message);
+  final String message;
   @override
   String toString() => message;
 }

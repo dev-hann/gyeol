@@ -6,22 +6,20 @@ import 'package:gyeol/data/providers/app_providers.dart';
 import 'package:gyeol/features/workers/pages/workers_page.dart';
 
 List<WorkerDefinition> fakeWorkers() => [
-  WorkerDefinition(
+  const WorkerDefinition(
     name: 'writer-1',
     layerName: 'Draft',
     systemPrompt: 'You are a creative writer.',
     model: 'gpt-4o',
     temperature: 0.7,
     maxTokens: 4096,
-    enabled: true,
   ),
-  WorkerDefinition(
+  const WorkerDefinition(
     name: 'critic-1',
     layerName: 'Draft',
     systemPrompt: 'You are a critical reviewer.',
-    enabled: true,
   ),
-  WorkerDefinition(
+  const WorkerDefinition(
     name: 'orphan-1',
     layerName: 'NonExistent',
     systemPrompt: 'I have no layer.',
@@ -30,13 +28,11 @@ List<WorkerDefinition> fakeWorkers() => [
 ];
 
 List<LayerDefinition> fakeLayers() => [
-  LayerDefinition(
+  const LayerDefinition(
     name: 'Draft',
     inputTypes: ['text'],
     outputTypes: ['draft'],
     workerNames: ['writer-1', 'critic-1'],
-    order: 0,
-    enabled: true,
   ),
 ];
 
@@ -134,7 +130,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            workersProvider.overrideWith(() => _ErrorWorkersNotifier()),
+            workersProvider.overrideWith(_ErrorWorkersNotifier.new),
             layersProvider.overrideWith(
               () => _FakeLayersNotifier(fakeLayers()),
             ),
@@ -150,29 +146,25 @@ void main() {
       await pumpWorkersPage(
         tester,
         workers: [
-          WorkerDefinition(
+          const WorkerDefinition(
             name: 'writer-1',
             layerName: 'Draft',
             systemPrompt: 'You are a writer.',
-            enabled: true,
           ),
         ],
         layers: [
-          LayerDefinition(
+          const LayerDefinition(
             name: 'Draft',
             inputTypes: ['text'],
             outputTypes: ['draft'],
             workerNames: ['writer-1'],
-            order: 0,
-            enabled: true,
           ),
-          LayerDefinition(
+          const LayerDefinition(
             name: 'Review',
             inputTypes: ['draft'],
             outputTypes: ['review'],
             workerNames: [],
             order: 1,
-            enabled: true,
           ),
         ],
       );
@@ -182,16 +174,16 @@ void main() {
 }
 
 class _FakeWorkersNotifier extends WorkersNotifier {
-  final List<WorkerDefinition> _workers;
   _FakeWorkersNotifier(this._workers);
+  final List<WorkerDefinition> _workers;
 
   @override
   Future<List<WorkerDefinition>> build() async => _workers;
 }
 
 class _FakeLayersNotifier extends LayersNotifier {
-  final List<LayerDefinition> _layers;
   _FakeLayersNotifier(this._layers);
+  final List<LayerDefinition> _layers;
 
   @override
   Future<List<LayerDefinition>> build() async => _layers;

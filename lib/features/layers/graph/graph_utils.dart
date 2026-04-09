@@ -8,13 +8,6 @@ const double kRankSep = 140;
 const double kNodeSep = 60;
 
 class LayerGraphData {
-  final String layerName;
-  final List<String> inputTypes;
-  final List<String> outputTypes;
-  final List<String> workerNames;
-  final bool enabled;
-  final int runningTasks;
-
   const LayerGraphData({
     required this.layerName,
     required this.inputTypes,
@@ -23,6 +16,12 @@ class LayerGraphData {
     required this.enabled,
     this.runningTasks = 0,
   });
+  final String layerName;
+  final List<String> inputTypes;
+  final List<String> outputTypes;
+  final List<String> workerNames;
+  final bool enabled;
+  final int runningTasks;
 }
 
 class DataSerializerImpl
@@ -60,15 +59,13 @@ Dashboard<LayerGraphData> buildDashboard(
 ) {
   final dashboard = Dashboard<LayerGraphData>(
     dataSerializer: DataSerializerImpl(),
-    defaultArrowStyle: ArrowStyle.curve,
     minimumZoomFactor: 0.3,
   );
 
   dashboard.gridBackgroundParams = GridBackgroundParams(
     backgroundColor: const Color(0xFF0f0f11),
     gridColor: const Color(0xFF2e2e33),
-    gridSquare: 20.0,
-    gridThickness: 1.0,
+    gridThickness: 1,
   );
 
   if (layers.isEmpty) return dashboard;
@@ -104,9 +101,6 @@ Dashboard<LayerGraphData> buildDashboard(
           : const Color(0xFF71717a),
       borderThickness: 2,
       elevation: 0,
-      isDraggable: true,
-      isResizable: false,
-      isConnectable: true,
       elementData: LayerGraphData(
         layerName: layer.name,
         inputTypes: layer.inputTypes,
@@ -121,8 +115,8 @@ Dashboard<LayerGraphData> buildDashboard(
     dashboard.addElement(element);
   }
 
-  for (int i = 0; i < sorted.length; i++) {
-    for (int j = 0; j < sorted.length; j++) {
+  for (var i = 0; i < sorted.length; i++) {
+    for (var j = 0; j < sorted.length; j++) {
       if (i == j) continue;
       final overlap = sorted[i].outputTypes.toSet().intersection(
         sorted[j].inputTypes.toSet(),
@@ -142,8 +136,6 @@ Dashboard<LayerGraphData> buildDashboard(
             color: hasRunning
                 ? const Color(0xFF3b82f6)
                 : const Color(0xFF6d5acf),
-            startArrowPosition: Alignment.centerRight,
-            endArrowPosition: Alignment.centerLeft,
           ),
         );
       }
@@ -164,7 +156,7 @@ Map<String, Offset> _layoutLR(List<LayerDefinition> sorted) {
   final depths = byDepth.keys.toList()..sort();
   for (final depth in depths) {
     final group = byDepth[depth]!;
-    for (int i = 0; i < group.length; i++) {
+    for (var i = 0; i < group.length; i++) {
       final x = 80.0 + (depths.indexOf(depth) * (kNodeWidth + kRankSep));
       final y = 80.0 + (i * (kNodeHeight + kNodeSep));
       result[group[i].name] = Offset(x, y);

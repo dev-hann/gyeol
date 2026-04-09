@@ -50,7 +50,7 @@ void main() {
     test('saveLayer adds layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        LayerDefinition(
+        const LayerDefinition(
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
@@ -68,7 +68,7 @@ void main() {
     test('deleteLayer removes layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        LayerDefinition(
+        const LayerDefinition(
           name: 'temp',
           inputTypes: [],
           outputTypes: [],
@@ -94,7 +94,7 @@ void main() {
     test('saveWorker adds worker and refreshes list', () async {
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
-        WorkerDefinition(
+        const WorkerDefinition(
           name: 'parser',
           layerName: 'parse',
           systemPrompt: 'Parse the text',
@@ -110,7 +110,11 @@ void main() {
     test('deleteWorker removes worker and refreshes list', () async {
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
-        WorkerDefinition(name: 'temp', layerName: 'tmp', systemPrompt: 'tmp'),
+        const WorkerDefinition(
+          name: 'temp',
+          layerName: 'tmp',
+          systemPrompt: 'tmp',
+        ),
       );
 
       await notifier.deleteWorker('temp');
@@ -129,7 +133,7 @@ void main() {
     test('save persists and updates settings', () async {
       final notifier = container.read(settingsProvider.notifier);
       await notifier.save(
-        ProviderSettings(
+        const ProviderSettings(
           provider: ProviderType.anthropic,
           anthropicApiKey: 'sk-test',
           defaultTemperature: 0.5,

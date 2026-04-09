@@ -1,14 +1,9 @@
 import 'dart:convert';
+
+import 'package:gyeol/providers/lllm_provider.dart';
 import 'package:http/http.dart' as http;
-import 'lllm_provider.dart';
 
 class AnthropicProvider implements LlmProvider {
-  final String apiKey;
-  final String model;
-  final double temperature;
-  final int maxTokens;
-  final http.Client _client;
-
   AnthropicProvider({
     required this.apiKey,
     required this.model,
@@ -16,6 +11,11 @@ class AnthropicProvider implements LlmProvider {
     required this.maxTokens,
     http.Client? client,
   }) : _client = client ?? http.Client();
+  final String apiKey;
+  final String model;
+  final double temperature;
+  final int maxTokens;
+  final http.Client _client;
 
   @override
   Future<String> generate(String prompt) {
@@ -51,7 +51,9 @@ class AnthropicProvider implements LlmProvider {
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final content = data['content']?[0]?['text'] as String?;
+    final contentList = data['content'] as List<dynamic>?;
+    final firstBlock = contentList?.firstOrNull as Map<String, dynamic>?;
+    final content = firstBlock?['text'] as String?;
     if (content == null) throw LlmError('No content in response');
     return content;
   }

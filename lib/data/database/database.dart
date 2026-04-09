@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
-import 'app_database.dart';
+import 'package:gyeol/data/database/app_database.dart';
 
 part 'database.g.dart';
 
@@ -88,8 +88,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> logExecution({
     required String taskId,
-    String? workerName,
     required String status,
+    String? workerName,
     String? message,
   }) {
     return into(executionLogs).insert(

@@ -5,34 +5,20 @@ enum TaskPriority { low, medium, high }
 enum TaskStatus { pending, running, done, failed }
 
 class AppTask {
-  final String id;
-  final String taskType;
-  final dynamic payload;
-  final TaskPriority priority;
-  final TaskStatus status;
-  final int retryCount;
-  final int maxRetries;
-  final int depth;
-  final String? parentTaskId;
-  final String? layerName;
-  final String? workerName;
-  final int createdAt;
-  final int updatedAt;
-
   const AppTask({
     required this.id,
     required this.taskType,
     required this.payload,
     required this.priority,
     required this.status,
+    required this.createdAt,
+    required this.updatedAt,
     this.retryCount = 0,
     this.maxRetries = 3,
     this.depth = 0,
     this.parentTaskId,
     this.layerName,
     this.workerName,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory AppTask.create(
@@ -51,6 +37,19 @@ class AppTask {
       updatedAt: now,
     );
   }
+  final String id;
+  final String taskType;
+  final dynamic payload;
+  final TaskPriority priority;
+  final TaskStatus status;
+  final int retryCount;
+  final int maxRetries;
+  final int depth;
+  final String? parentTaskId;
+  final String? layerName;
+  final String? workerName;
+  final int createdAt;
+  final int updatedAt;
 
   AppTask copyWith({
     TaskStatus? status,
@@ -104,39 +103,30 @@ class AppTask {
 }
 
 class WorkerResult {
-  final bool success;
-  final List<AppTask> outputTasks;
-  final String? error;
-  final Map<String, dynamic>? metadata;
-
   const WorkerResult({
     required this.success,
     this.outputTasks = const [],
     this.error,
     this.metadata,
   });
+  final bool success;
+  final List<AppTask> outputTasks;
+  final String? error;
+  final Map<String, dynamic>? metadata;
 }
 
 class EvaluationResult {
-  final bool passed;
-  final double score;
-  final List<String> reasons;
-
   const EvaluationResult({
     required this.passed,
     required this.score,
     required this.reasons,
   });
+  final bool passed;
+  final double score;
+  final List<String> reasons;
 }
 
 class LayerDefinition {
-  final String name;
-  final List<String> inputTypes;
-  final List<String> outputTypes;
-  final List<String> workerNames;
-  final int order;
-  final bool enabled;
-
   const LayerDefinition({
     required this.name,
     required this.inputTypes,
@@ -145,6 +135,12 @@ class LayerDefinition {
     this.order = 0,
     this.enabled = true,
   });
+  final String name;
+  final List<String> inputTypes;
+  final List<String> outputTypes;
+  final List<String> workerNames;
+  final int order;
+  final bool enabled;
 
   LayerDefinition copyWith({
     List<String>? inputTypes,
@@ -165,14 +161,6 @@ class LayerDefinition {
 }
 
 class WorkerDefinition {
-  final String name;
-  final String layerName;
-  final String systemPrompt;
-  final String? model;
-  final double? temperature;
-  final int? maxTokens;
-  final bool enabled;
-
   const WorkerDefinition({
     required this.name,
     required this.layerName,
@@ -182,6 +170,13 @@ class WorkerDefinition {
     this.maxTokens,
     this.enabled = true,
   });
+  final String name;
+  final String layerName;
+  final String systemPrompt;
+  final String? model;
+  final double? temperature;
+  final int? maxTokens;
+  final bool enabled;
 
   WorkerDefinition copyWith({
     String? layerName,
@@ -206,16 +201,6 @@ class WorkerDefinition {
 enum ProviderType { openAI, anthropic, ollama }
 
 class ProviderSettings {
-  final ProviderType provider;
-  final String openaiApiKey;
-  final String openaiModel;
-  final String anthropicApiKey;
-  final String anthropicModel;
-  final String ollamaBaseUrl;
-  final String ollamaModel;
-  final double defaultTemperature;
-  final int defaultMaxTokens;
-
   const ProviderSettings({
     this.provider = ProviderType.openAI,
     this.openaiApiKey = '',
@@ -248,6 +233,15 @@ class ProviderSettings {
       defaultMaxTokens: (json['default_max_tokens'] as num?)?.toInt() ?? 4096,
     );
   }
+  final ProviderType provider;
+  final String openaiApiKey;
+  final String openaiModel;
+  final String anthropicApiKey;
+  final String anthropicModel;
+  final String ollamaBaseUrl;
+  final String ollamaModel;
+  final double defaultTemperature;
+  final int defaultMaxTokens;
 
   Map<String, dynamic> toJson() => {
     'provider': switch (provider) {

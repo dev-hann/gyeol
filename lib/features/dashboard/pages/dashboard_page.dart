@@ -175,8 +175,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 }
 
 class _TaskTile extends StatelessWidget {
-  final AppTask task;
   const _TaskTile({required this.task});
+  final AppTask task;
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +219,7 @@ class _TaskTile extends StatelessWidget {
                         ),
                       if (task.workerName != null) ...[
                         const SizedBox(width: 8),
-                        Icon(
+                        const Icon(
                           Icons.north_east,
                           size: 10,
                           color: AppColors.textMuted,

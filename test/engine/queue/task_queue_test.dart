@@ -1,6 +1,6 @@
+import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/engine/queue/task_queue.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 AppTask _makeTask({
   required String id,
@@ -52,7 +52,7 @@ void main() {
     test('higher priority tasks are popped first', () {
       queue.push(_makeTask(id: 'low', priority: TaskPriority.low));
       queue.push(_makeTask(id: 'high', priority: TaskPriority.high));
-      queue.push(_makeTask(id: 'med', priority: TaskPriority.medium));
+      queue.push(_makeTask(id: 'med'));
 
       expect(queue.pop()!.id, equals('high'));
       expect(queue.pop()!.id, equals('med'));
@@ -60,15 +60,9 @@ void main() {
     });
 
     test('same priority — earlier createdAt popped first (FIFO)', () {
-      queue.push(
-        _makeTask(id: 'first', priority: TaskPriority.medium, createdAt: 100),
-      );
-      queue.push(
-        _makeTask(id: 'second', priority: TaskPriority.medium, createdAt: 200),
-      );
-      queue.push(
-        _makeTask(id: 'third', priority: TaskPriority.medium, createdAt: 300),
-      );
+      queue.push(_makeTask(id: 'first', createdAt: 100));
+      queue.push(_makeTask(id: 'second', createdAt: 200));
+      queue.push(_makeTask(id: 'third', createdAt: 300));
 
       expect(queue.pop()!.id, equals('first'));
       expect(queue.pop()!.id, equals('second'));
@@ -119,9 +113,7 @@ void main() {
       queue.push(
         _makeTask(id: 'high_new', priority: TaskPriority.high, createdAt: 300),
       );
-      queue.push(
-        _makeTask(id: 'med_mid', priority: TaskPriority.medium, createdAt: 200),
-      );
+      queue.push(_makeTask(id: 'med_mid', createdAt: 200));
       queue.push(
         _makeTask(id: 'high_old', priority: TaskPriority.high, createdAt: 50),
       );

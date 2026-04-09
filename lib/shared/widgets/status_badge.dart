@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 
 class StatusBadge extends StatelessWidget {
+  const StatusBadge({required this.status, super.key, this.fontSize});
   final String status;
   final double? fontSize;
-
-  const StatusBadge({super.key, required this.status, this.fontSize});
 
   @override
   Widget build(BuildContext context) {

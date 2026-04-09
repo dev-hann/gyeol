@@ -66,6 +66,43 @@ void main() {
     });
   });
 
+  group('getSettings', () {
+    test('returns default settings when no settings stored', () async {
+      final settings = await repo.getSettings();
+      expect(settings, equals(const ProviderSettings()));
+    });
+
+    test('returns parsed settings from valid JSON', () async {
+      await db.saveSettings(
+        '{"provider":"Anthropic","openai_api_key":"k1","openai_model":"gpt-4o",'
+        '"anthropic_api_key":"","anthropic_model":"claude-sonnet-4-20250514",'
+        '"ollama_base_url":"http://localhost:11434","ollama_model":"llama3",'
+        '"default_temperature":0.7,"default_max_tokens":4096}',
+      );
+
+      final settings = await repo.getSettings();
+      expect(settings.provider, ProviderType.anthropic);
+      expect(settings.openaiApiKey, 'k1');
+    });
+
+    test('returns default settings on malformed JSON', () async {
+      await db.saveSettings('not-valid-json{{{');
+
+      final settings = await repo.getSettings();
+      expect(settings, equals(const ProviderSettings()));
+    });
+
+    test(
+      'returns default settings when stored value is not a JSON map',
+      () async {
+        await db.saveSettings('"just a string"');
+
+        final settings = await repo.getSettings();
+        expect(settings, equals(const ProviderSettings()));
+      },
+    );
+  });
+
   group('task CRUD', () {
     test('createTask stores and retrieves a task', () async {
       final id = await repo.createTask('summarize', {

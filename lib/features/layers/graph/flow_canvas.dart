@@ -4,14 +4,13 @@ import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/layer_node_widget.dart';
 
 class FlowCanvas extends StatelessWidget {
-  final Dashboard<LayerGraphData> dashboard;
-  final void Function(String layerName) onNodeTap;
-
   const FlowCanvas({
-    super.key,
     required this.dashboard,
     required this.onNodeTap,
+    super.key,
   });
+  final Dashboard<LayerGraphData> dashboard;
+  final void Function(String layerName) onNodeTap;
 
   @override
   Widget build(BuildContext context) {

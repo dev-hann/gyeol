@@ -1,13 +1,12 @@
 import 'package:gyeol/data/models/app_models.dart';
 
 class _PrioritizedTask implements Comparable<_PrioritizedTask> {
-  final int priority;
-  final int createdAt;
-  final AppTask task;
-
   _PrioritizedTask(this.task)
     : priority = task.priority.index,
       createdAt = task.createdAt;
+  final int priority;
+  final int createdAt;
+  final AppTask task;
 
   @override
   int compareTo(_PrioritizedTask other) {

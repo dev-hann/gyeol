@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
 import 'package:gyeol/features/monitoring/pages/monitoring_page.dart';
 
-import 'package:gyeol/data/database/database.dart';
-
 List<AppTask> fakeTasks() => [
-  AppTask(
+  const AppTask(
     id: 't1',
     taskType: 'generate',
     payload: null,
@@ -17,26 +16,22 @@ List<AppTask> fakeTasks() => [
     layerName: 'Draft',
     workerName: 'writer-1',
     depth: 1,
-    retryCount: 0,
-    maxRetries: 3,
     createdAt: 1000,
     updatedAt: 1000,
   ),
-  AppTask(
+  const AppTask(
     id: 't2',
     taskType: 'review',
     payload: null,
     priority: TaskPriority.medium,
     status: TaskStatus.pending,
     layerName: 'Review',
-    workerName: null,
     depth: 2,
     retryCount: 1,
-    maxRetries: 3,
     createdAt: 2000,
     updatedAt: 2000,
   ),
-  AppTask(
+  const AppTask(
     id: 't3',
     taskType: 'done-task',
     payload: null,
@@ -54,15 +49,14 @@ List<ExecutionLog> fakeLogs() => [
     workerName: 'writer-1',
     status: 'success',
     message: 'Generated draft',
-    createdAt: DateTime(2026, 1, 1, 12, 0, 0).millisecondsSinceEpoch,
+    createdAt: DateTime(2026, 1, 1, 12).millisecondsSinceEpoch,
   ),
   ExecutionLog(
     id: 2,
     taskId: 't2',
-    workerName: null,
     status: 'error',
     message: 'Timeout',
-    createdAt: DateTime(2026, 1, 1, 12, 1, 0).millisecondsSinceEpoch,
+    createdAt: DateTime(2026, 1, 1, 12, 1).millisecondsSinceEpoch,
   ),
 ];
 
@@ -137,7 +131,7 @@ void main() {
       await pumpMonitoringPage(
         tester,
         tasks: [
-          AppTask(
+          const AppTask(
             id: 't4',
             taskType: 'done-task',
             payload: null,
@@ -168,7 +162,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            tasksProvider.overrideWith(() => _ErrorTasksNotifier()),
+            tasksProvider.overrideWith(_ErrorTasksNotifier.new),
             logsProvider.overrideWith(() => _FakeLogsNotifier(fakeLogs())),
           ],
           child: const MaterialApp(home: MonitoringPage()),
@@ -182,16 +176,16 @@ void main() {
 }
 
 class _FakeTasksNotifier extends TasksNotifier {
-  final List<AppTask> _tasks;
   _FakeTasksNotifier(this._tasks);
+  final List<AppTask> _tasks;
 
   @override
   Future<List<AppTask>> build() async => _tasks;
 }
 
 class _FakeLogsNotifier extends LogsNotifier {
-  final List<ExecutionLog> _logs;
   _FakeLogsNotifier(this._logs);
+  final List<ExecutionLog> _logs;
 
   @override
   Future<List<ExecutionLog>> build() async => _logs;

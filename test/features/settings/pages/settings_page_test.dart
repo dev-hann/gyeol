@@ -110,7 +110,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            settingsProvider.overrideWith(() => _ErrorSettingsNotifier()),
+            settingsProvider.overrideWith(_ErrorSettingsNotifier.new),
           ],
           child: const MaterialApp(home: SettingsPage()),
         ),
@@ -123,8 +123,8 @@ void main() {
 }
 
 class _FakeSettingsNotifier extends SettingsNotifier {
-  final ProviderSettings _settings;
   _FakeSettingsNotifier(this._settings);
+  final ProviderSettings _settings;
 
   @override
   Future<ProviderSettings> build() async => _settings;

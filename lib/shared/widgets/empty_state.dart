@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 
 class EmptyState extends StatelessWidget {
+  const EmptyState({
+    required this.icon,
+    required this.title,
+    required this.description,
+    super.key,
+    this.action,
+  });
   final IconData icon;
   final String title;
   final String description;
   final Widget? action;
-
-  const EmptyState({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.description,
-    this.action,
-  });
 
   @override
   Widget build(BuildContext context) {

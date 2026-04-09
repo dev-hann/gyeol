@@ -1,18 +1,19 @@
-import '../data/repositories/app_repository.dart';
-import '../data/models/app_models.dart';
-import '../providers/lllm_provider.dart';
-import '../providers/openai_provider.dart';
-import '../providers/anthropic_provider.dart';
-import '../providers/ollama_provider.dart';
-import 'queue/task_queue.dart';
+import 'package:gyeol/data/models/app_models.dart';
+import 'package:gyeol/data/repositories/app_repository.dart';
+import 'package:gyeol/engine/queue/task_queue.dart';
+import 'package:gyeol/providers/anthropic_provider.dart';
+import 'package:gyeol/providers/lllm_provider.dart';
+import 'package:gyeol/providers/ollama_provider.dart';
+import 'package:gyeol/providers/openai_provider.dart';
 
 class LayerRegistry {
   final List<LayerDefinition> _layers = [];
 
   void register(LayerDefinition layer) {
-    _layers.removeWhere((l) => l.name == layer.name);
-    _layers.add(layer);
-    _layers.sort((a, b) => a.order.compareTo(b.order));
+    _layers
+      ..removeWhere((l) => l.name == layer.name)
+      ..add(layer)
+      ..sort((a, b) => a.order.compareTo(b.order));
   }
 
   void remove(String name) {
@@ -53,12 +54,6 @@ class MessageBus {
 const _maxExecutionDepth = 10;
 
 class Scheduler {
-  final TaskQueue _queue;
-  final LayerRegistry _layerRegistry;
-  final MessageBus _messageBus;
-  final AppRepository _repo;
-  final int maxConcurrent;
-
   Scheduler({
     required TaskQueue queue,
     required LayerRegistry layerRegistry,
@@ -69,6 +64,11 @@ class Scheduler {
        _layerRegistry = layerRegistry,
        _messageBus = messageBus,
        _repo = repo;
+  final TaskQueue _queue;
+  final LayerRegistry _layerRegistry;
+  final MessageBus _messageBus;
+  final AppRepository _repo;
+  final int maxConcurrent;
 
   String submit(AppTask task) {
     _queue.push(task);

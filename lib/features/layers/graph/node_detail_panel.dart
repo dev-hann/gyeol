@@ -5,14 +5,13 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
 
 class NodeDetailPanel extends ConsumerStatefulWidget {
-  final String? layerName;
-  final VoidCallback onClose;
-
   const NodeDetailPanel({
-    super.key,
     required this.layerName,
     required this.onClose,
+    super.key,
   });
+  final String? layerName;
+  final VoidCallback onClose;
 
   @override
   ConsumerState<NodeDetailPanel> createState() => _NodeDetailPanelState();
@@ -82,11 +81,11 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
                 .toList();
             return _buildPanel(layer, layerWorkers);
           },
-          loading: () => _buildLoading(),
+          loading: _buildLoading,
           error: (_, __) => _buildLoading(),
         );
       },
-      loading: () => _buildLoading(),
+      loading: _buildLoading,
       error: (_, __) => _buildLoading(),
     );
   }
@@ -112,7 +111,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
 
     return Container(
       width: 400,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.card,
         border: Border(left: BorderSide(color: AppColors.border)),
       ),
@@ -381,7 +380,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
         ),
         const SizedBox(height: 8),
         if (_showWorkerForm) _buildWorkerForm(),
-        ...layerWorkers.map((w) => _buildWorkerCard(w)),
+        ...layerWorkers.map(_buildWorkerCard),
       ],
     );
   }

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_flow_chart/flutter_flow_chart.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,12 +9,11 @@ import 'package:gyeol/features/layers/graph/layer_node_widget.dart';
 void main() {
   Dashboard<LayerGraphData> createTestDashboard() {
     return buildDashboard([
-      LayerDefinition(
+      const LayerDefinition(
         name: 'TestLayer',
         inputTypes: ['text'],
         outputTypes: ['json'],
         workerNames: ['w1'],
-        order: 0,
       ),
     ], []);
   }
@@ -61,7 +58,6 @@ void main() {
       );
       dashboard.addElement(
         FlowElement<LayerGraphData>(
-          position: Offset.zero,
           size: const Size(100, 100),
           text: 'empty',
           kind: ElementKind.custom,
@@ -140,12 +136,11 @@ void main() {
 
     testWidgets('renders disabled layer with reduced opacity', (tester) async {
       final dashboard = buildDashboard([
-        LayerDefinition(
+        const LayerDefinition(
           name: 'DisabledLayer',
           inputTypes: [],
           outputTypes: [],
           workerNames: [],
-          order: 0,
           enabled: false,
         ),
       ], []);

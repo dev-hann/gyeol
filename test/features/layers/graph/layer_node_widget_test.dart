@@ -13,7 +13,6 @@ void main() {
     enabled: true,
     workerCount: 3,
     outputTypes: ['text', 'summary'],
-    runningTasks: 0,
   );
 
   group('LayerNodeWidget', () {
@@ -94,8 +93,8 @@ void main() {
         final d = c.decoration as BoxDecoration?;
         return d?.border is Border;
       });
-      final decoration = nodeContainer.decoration as BoxDecoration;
-      final border = decoration.border as Border;
+      final decoration = nodeContainer.decoration! as BoxDecoration;
+      final border = decoration.border! as Border;
       expect(border.top.color, AppColors.primary);
     });
 
@@ -115,8 +114,8 @@ void main() {
         final d = c.decoration as BoxDecoration?;
         return d?.border is Border;
       });
-      final decoration = nodeContainer.decoration as BoxDecoration;
-      final border = decoration.border as Border;
+      final decoration = nodeContainer.decoration! as BoxDecoration;
+      final border = decoration.border! as Border;
       expect(border.top.color, AppColors.textMuted);
     });
 
@@ -192,7 +191,7 @@ void main() {
         final d = c.decoration as BoxDecoration?;
         return d?.boxShadow != null && d!.boxShadow!.isNotEmpty;
       });
-      final decoration = nodeContainer.decoration as BoxDecoration;
+      final decoration = nodeContainer.decoration! as BoxDecoration;
       expect(decoration.boxShadow, isNotEmpty);
       expect(
         decoration.boxShadow!.first.color,

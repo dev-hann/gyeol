@@ -104,8 +104,9 @@ ThemeData buildAppTheme() {
         return AppColors.textMuted;
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected))
+        if (states.contains(WidgetState.selected)) {
           return AppColors.primaryHover;
+        }
         return AppColors.tertiary;
       }),
     ),

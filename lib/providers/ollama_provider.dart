@@ -1,14 +1,9 @@
 import 'dart:convert';
+
+import 'package:gyeol/providers/lllm_provider.dart';
 import 'package:http/http.dart' as http;
-import 'lllm_provider.dart';
 
 class OllamaProvider implements LlmProvider {
-  final String baseUrl;
-  final String model;
-  final double temperature;
-  final int maxTokens;
-  final http.Client _client;
-
   OllamaProvider({
     required this.baseUrl,
     required this.model,
@@ -16,6 +11,11 @@ class OllamaProvider implements LlmProvider {
     required this.maxTokens,
     http.Client? client,
   }) : _client = client ?? http.Client();
+  final String baseUrl;
+  final String model;
+  final double temperature;
+  final int maxTokens;
+  final http.Client _client;
 
   @override
   Future<String> generate(String prompt) {
@@ -48,7 +48,8 @@ class OllamaProvider implements LlmProvider {
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final content = data['message']?['content'] as String?;
+    final message = data['message'] as Map<String, dynamic>?;
+    final content = message?['content'] as String?;
     if (content == null) throw LlmError('No content in response');
     return content;
   }

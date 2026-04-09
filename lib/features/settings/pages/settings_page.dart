@@ -74,10 +74,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               ),
                             ],
                             onChanged: (v) {
-                              if (v != null)
+                              if (v != null) {
                                 setState(
                                   () => _form = _form.copyWith(provider: v),
                                 );
+                              }
                             },
                           ),
                         ]),

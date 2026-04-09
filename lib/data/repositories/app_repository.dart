@@ -4,9 +4,8 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 
 class AppRepository {
-  final AppDatabase _db;
-
   AppRepository(this._db);
+  final AppDatabase _db;
 
   // ── Tasks ──
 
@@ -103,10 +102,12 @@ class AppRepository {
     final json = await _db.getSettingsJson();
     if (json == null) return const ProviderSettings();
     try {
-      return ProviderSettings.fromJson(
-        jsonDecode(json) as Map<String, dynamic>,
-      );
-    } catch (_) {
+      final decoded = jsonDecode(json);
+      if (decoded is! Map<String, dynamic>) {
+        return const ProviderSettings();
+      }
+      return ProviderSettings.fromJson(decoded);
+    } on FormatException {
       return const ProviderSettings();
     }
   }
@@ -119,8 +120,8 @@ class AppRepository {
 
   Future<void> logExecution({
     required String taskId,
-    String? workerName,
     required String status,
+    String? workerName,
     String? message,
   }) {
     return _db.logExecution(

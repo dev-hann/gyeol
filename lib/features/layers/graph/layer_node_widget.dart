@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 
 class LayerNodeWidget extends StatelessWidget {
+  const LayerNodeWidget({
+    required this.name,
+    required this.enabled,
+    required this.workerCount,
+    required this.outputTypes,
+    super.key,
+    this.runningTasks = 0,
+  });
   final String name;
   final bool enabled;
   final int workerCount;
   final List<String> outputTypes;
   final int runningTasks;
-
-  const LayerNodeWidget({
-    super.key,
-    required this.name,
-    required this.enabled,
-    required this.workerCount,
-    required this.outputTypes,
-    this.runningTasks = 0,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +80,7 @@ class LayerNodeWidget extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(
+                          const SizedBox(
                             width: 10,
                             height: 10,
                             child: CircularProgressIndicator(
@@ -105,7 +104,11 @@ class LayerNodeWidget extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.memory, size: 12, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.memory,
+                    size: 12,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     '$workerCount worker${workerCount != 1 ? 's' : ''}',

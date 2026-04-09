@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
-import 'package:gyeol/engine/scheduler.dart';
 import 'package:gyeol/engine/queue/task_queue.dart';
+import 'package:gyeol/engine/scheduler.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase());
 
