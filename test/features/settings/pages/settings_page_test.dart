@@ -125,6 +125,15 @@ void main() {
       expect(find.text('API Key (optional)'), findsOneWidget);
     });
 
+    testWidgets('save button triggers snackbar', (tester) async {
+      await pumpSettingsPage(tester);
+      final saveBtn = find.text('Save Settings');
+      expect(saveBtn, findsOneWidget);
+      await tester.tap(saveBtn);
+      await tester.pump();
+      expect(find.text('Settings saved'), findsOneWidget);
+    });
+
     testWidgets('shows error on provider error', (tester) async {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -149,6 +158,11 @@ class _FakeSettingsNotifier extends SettingsNotifier {
 
   @override
   Future<ProviderSettings> build() async => _settings;
+
+  @override
+  Future<void> save(ProviderSettings settings) async {
+    state = AsyncData(settings);
+  }
 }
 
 class _ErrorSettingsNotifier extends SettingsNotifier {

@@ -16,11 +16,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   late ProviderSettings _form;
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(settingsProvider);
 
@@ -346,6 +341,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _save() {
+    if (!mounted) return;
     ref.read(settingsProvider.notifier).save(_form);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

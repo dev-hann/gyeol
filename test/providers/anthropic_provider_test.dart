@@ -101,6 +101,50 @@ void main() {
     });
 
     test(
+      'generateWithSystem throws LlmError on malformed JSON response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('not valid json', 200);
+        });
+
+        final provider = AnthropicProvider(
+          apiKey: 'test-key',
+          model: 'claude-3-sonnet',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test(
+      'generateWithSystem throws LlmError on wrong type in response',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'content': 'not-a-list'}), 200);
+        });
+
+        final provider = AnthropicProvider(
+          apiKey: 'test-key',
+          model: 'claude-3-sonnet',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        expect(
+          provider.generateWithSystem('sys', 'hi'),
+          throwsA(isA<LlmError>()),
+        );
+      },
+    );
+
+    test(
       'generate delegates to generateWithSystem with default system prompt',
       () async {
         final mockClient = MockClient((request) async {
