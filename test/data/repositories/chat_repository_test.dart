@@ -73,6 +73,14 @@ void main() {
 
   group('saveMessage + listMessages', () {
     test('round-trips a ChatMessage', () async {
+      await repo.chat.saveConversation(
+        const ChatConversation(
+          id: 'conv-1',
+          title: 'Test',
+          createdAt: 1000,
+          updatedAt: 1000,
+        ),
+      );
       final msg = ChatMessage.create(
         conversationId: 'conv-1',
         role: 'user',
@@ -92,6 +100,22 @@ void main() {
     });
 
     test('filters messages by conversationId', () async {
+      await repo.chat.saveConversation(
+        const ChatConversation(
+          id: 'conv-a',
+          title: 'A',
+          createdAt: 1000,
+          updatedAt: 1000,
+        ),
+      );
+      await repo.chat.saveConversation(
+        const ChatConversation(
+          id: 'conv-b',
+          title: 'B',
+          createdAt: 1000,
+          updatedAt: 1000,
+        ),
+      );
       final msgA = ChatMessage.create(
         conversationId: 'conv-a',
         role: 'user',
@@ -115,6 +139,14 @@ void main() {
     });
 
     test('returns messages ordered by createdAt ascending', () async {
+      await repo.chat.saveConversation(
+        const ChatConversation(
+          id: 'conv-1',
+          title: 'Test',
+          createdAt: 1000,
+          updatedAt: 1000,
+        ),
+      );
       const first = ChatMessage(
         id: 'msg-1',
         conversationId: 'conv-1',
@@ -139,6 +171,14 @@ void main() {
     });
 
     test('round-trips tool fields', () async {
+      await repo.chat.saveConversation(
+        const ChatConversation(
+          id: 'conv-1',
+          title: 'Test',
+          createdAt: 1000,
+          updatedAt: 1000,
+        ),
+      );
       final msg = ChatMessage.create(
         conversationId: 'conv-1',
         role: 'tool',
@@ -160,6 +200,14 @@ void main() {
     });
 
     test('upserts message with same id', () async {
+      await repo.chat.saveConversation(
+        const ChatConversation(
+          id: 'conv-1',
+          title: 'Test',
+          createdAt: 1000,
+          updatedAt: 1000,
+        ),
+      );
       final msg = ChatMessage.create(
         conversationId: 'conv-1',
         role: 'user',
@@ -259,6 +307,14 @@ void main() {
     });
 
     test('does not affect other messages', () async {
+      await repo.chat.saveConversation(
+        const ChatConversation(
+          id: 'c1',
+          title: 'C1',
+          createdAt: 1000,
+          updatedAt: 1000,
+        ),
+      );
       final msg1 = ChatMessage.create(
         conversationId: 'c1',
         role: 'user',

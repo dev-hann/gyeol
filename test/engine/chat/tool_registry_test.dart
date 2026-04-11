@@ -136,6 +136,9 @@ void main() {
 
     group('create_worker', () {
       test('creates a worker and returns success', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
         final result = await ToolRegistry.executeTool('create_worker', {
           'name': 'W1',
           'layerName': 'L1',
@@ -159,6 +162,12 @@ void main() {
 
     group('list_workers', () {
       test('returns workers filtered by layerName', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L2', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(
             name: 'W1',
@@ -195,6 +204,9 @@ void main() {
       });
 
       test('updates existing worker', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(
             name: 'W1',
@@ -217,6 +229,9 @@ void main() {
 
     group('delete_worker', () {
       test('deletes a worker by name', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(
             name: 'W1',
@@ -238,6 +253,12 @@ void main() {
 
     group('create_thread', () {
       test('creates a thread and returns success', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L2', inputTypes: [], outputTypes: []),
+        );
         final result = await ToolRegistry.executeTool('create_thread', {
           'name': 'T1',
           'path': '/home/user/project',
@@ -255,6 +276,9 @@ void main() {
 
     group('list_threads', () {
       test('returns all threads', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
         await repo.threads.saveThread(
           const ThreadDefinition(name: 'T1', path: '/a', layerNames: ['L1']),
         );
@@ -279,6 +303,12 @@ void main() {
       });
 
       test('returns queued status for existing thread', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L2', inputTypes: [], outputTypes: []),
+        );
         await repo.threads.saveThread(
           const ThreadDefinition(
             name: 'T1',
@@ -329,6 +359,9 @@ void main() {
 
     group('assign_worker / unassign_worker', () {
       test('assign_worker returns error when layer not found', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: '', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(name: 'W1', layerName: '', systemPrompt: 'p'),
         );
@@ -349,6 +382,9 @@ void main() {
             outputTypes: ['b'],
           ),
         );
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: '', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(name: 'W1', layerName: '', systemPrompt: 'p'),
         );
@@ -365,6 +401,12 @@ void main() {
       });
 
       test('unassign_worker removes worker from layer', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: '', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(
             name: 'W1',
@@ -385,6 +427,9 @@ void main() {
       });
 
       test('unassign_worker returns error when worker not on layer', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L2', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(
             name: 'W1',
@@ -412,6 +457,9 @@ void main() {
       });
 
       test('updates existing thread fields', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
         await repo.threads.saveThread(
           const ThreadDefinition(name: 'T1', path: '/old', layerNames: ['L1']),
         );
@@ -449,6 +497,9 @@ void main() {
 
     group('get_status', () {
       test('returns thread status when threadName provided', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
         await repo.threads.saveThread(
           const ThreadDefinition(
             name: 'T1',
@@ -525,6 +576,9 @@ void main() {
       });
 
       test('returns worker details with recent logs', () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(name: 'L1', inputTypes: [], outputTypes: []),
+        );
         await repo.workers.saveWorker(
           const WorkerDefinition(
             name: 'W1',

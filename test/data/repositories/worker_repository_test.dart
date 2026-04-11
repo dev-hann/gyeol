@@ -1,7 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/database/database.dart';
-import 'package:gyeol/data/models/worker_models.dart';
+import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
 void main() {
@@ -19,6 +19,13 @@ void main() {
 
   group('WorkerRepository saveWorker + getWorker', () {
     test('round-trips a worker with required fields only', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'parse',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const worker = WorkerDefinition(
         name: 'parser',
         layerName: 'parse',
@@ -38,6 +45,13 @@ void main() {
     });
 
     test('round-trips a worker with all optional fields', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'analyze',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const worker = WorkerDefinition(
         name: 'analyzer',
         layerName: 'analyze',
@@ -73,6 +87,20 @@ void main() {
     });
 
     test('returns all saved workers', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L2',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const w1 = WorkerDefinition(
         name: 'a',
         layerName: 'L1',
@@ -95,6 +123,13 @@ void main() {
 
   group('WorkerRepository deleteWorker', () {
     test('removes a saved worker', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const worker = WorkerDefinition(
         name: 'to_delete',
         layerName: 'L1',
@@ -117,6 +152,20 @@ void main() {
 
   group('WorkerRepository upsert', () {
     test('replaces existing worker with same name', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L2',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const original = WorkerDefinition(
         name: 'upsert_w',
         layerName: 'L1',
@@ -158,6 +207,13 @@ void main() {
       final firstEmission = await stream.first;
       expect(firstEmission, isEmpty);
 
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const worker = WorkerDefinition(
         name: 'watched',
         layerName: 'L1',

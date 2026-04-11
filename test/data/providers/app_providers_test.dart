@@ -87,6 +87,15 @@ void main() {
     });
 
     test('saveWorker adds worker and refreshes list', () async {
+      await container
+          .read(layersProvider.notifier)
+          .saveLayer(
+            const LayerDefinition(
+              name: 'parse',
+              inputTypes: ['text'],
+              outputTypes: ['analysis'],
+            ),
+          );
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
         const WorkerDefinition(
@@ -103,6 +112,11 @@ void main() {
     });
 
     test('deleteWorker removes worker and refreshes list', () async {
+      await container
+          .read(layersProvider.notifier)
+          .saveLayer(
+            const LayerDefinition(name: 'tmp', inputTypes: [], outputTypes: []),
+          );
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
         const WorkerDefinition(
@@ -162,6 +176,29 @@ void main() {
 
     test('refresh with taskId filters logs', () async {
       final repo = container.read(repositoryProvider);
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await repo.tasks.saveTask(
+        AppTask(
+          id: 't1',
+          taskType: 'test',
+          payload: null,
+          priority: TaskPriority.low,
+          status: TaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await repo.tasks.saveTask(
+        AppTask(
+          id: 't2',
+          taskType: 'test',
+          payload: null,
+          priority: TaskPriority.low,
+          status: TaskStatus.pending,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
       await repo.logs.logExecution(taskId: 't1', status: 'done');
       await repo.logs.logExecution(taskId: 't2', status: 'running');
 

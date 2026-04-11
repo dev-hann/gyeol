@@ -37,21 +37,21 @@ void main() {
     });
 
     test('returns empty on malformed JSON', () async {
-      await db.saveJsonValue('graph_node_positions', 'not-valid-json{{{');
+      await db.saveUiState('graph_node_positions', 'not-valid-json{{{');
 
       final positions = await repo.loadNodePositions();
       expect(positions, isEmpty);
     });
 
     test('returns empty when stored value is not a map', () async {
-      await db.saveJsonValue('graph_node_positions', '"a_string"');
+      await db.saveUiState('graph_node_positions', '"a_string"');
 
       final positions = await repo.loadNodePositions();
       expect(positions, isEmpty);
     });
 
     test('skips entries where value is not a list', () async {
-      await db.saveJsonValue(
+      await db.saveUiState(
         'graph_node_positions',
         '{"good":[1.0,2.0],"bad":"not_a_list"}',
       );
@@ -62,7 +62,7 @@ void main() {
     });
 
     test('skips entries where list has fewer than 2 elements', () async {
-      await db.saveJsonValue(
+      await db.saveUiState(
         'graph_node_positions',
         '{"a":[1.0],"b":[],"c":[3.0,4.0]}',
       );
@@ -73,7 +73,7 @@ void main() {
     });
 
     test('skips entries where elements are not numbers', () async {
-      await db.saveJsonValue(
+      await db.saveUiState(
         'graph_node_positions',
         '{"a":["x","y"],"b":[1.0,2.0]}',
       );
@@ -97,7 +97,7 @@ void main() {
     test('stores empty map as valid JSON', () async {
       await repo.saveNodePositions({});
 
-      final raw = await db.getJsonValue('graph_node_positions');
+      final raw = await db.getUiState('graph_node_positions');
       expect(raw, isNotNull);
       expect(jsonDecode(raw!), isA<Map<String, dynamic>>());
     });
@@ -121,21 +121,21 @@ void main() {
     });
 
     test('returns empty on malformed JSON', () async {
-      await db.saveJsonValue('graph_removed_connections', '{bad json!!');
+      await db.saveUiState('graph_removed_connections', '{bad json!!');
 
       final connections = await repo.loadRemovedConnections();
       expect(connections, isEmpty);
     });
 
     test('returns empty when stored value is not a list', () async {
-      await db.saveJsonValue('graph_removed_connections', '{"k":"v"}');
+      await db.saveUiState('graph_removed_connections', '{"k":"v"}');
 
       final connections = await repo.loadRemovedConnections();
       expect(connections, isEmpty);
     });
 
     test('skips entries that are not string pairs', () async {
-      await db.saveJsonValue(
+      await db.saveUiState(
         'graph_removed_connections',
         '[["a","b"],[123,456],["c"]]',
       );
@@ -171,21 +171,21 @@ void main() {
     });
 
     test('returns default on malformed JSON', () async {
-      await db.saveJsonValue('graph_viewport', 'not-json{{{');
+      await db.saveUiState('graph_viewport', 'not-json{{{');
 
       final viewport = await repo.loadViewport();
       expect(viewport, (0.0, 0.0, 1.0));
     });
 
     test('returns default when stored value is not a map', () async {
-      await db.saveJsonValue('graph_viewport', '42');
+      await db.saveUiState('graph_viewport', '42');
 
       final viewport = await repo.loadViewport();
       expect(viewport, (0.0, 0.0, 1.0));
     });
 
     test('uses defaults for missing or non-numeric fields', () async {
-      await db.saveJsonValue('graph_viewport', '{"x":"bad","y":null}');
+      await db.saveUiState('graph_viewport', '{"x":"bad","y":null}');
 
       final viewport = await repo.loadViewport();
       expect(viewport.$1, 0.0);

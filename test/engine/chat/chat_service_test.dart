@@ -365,6 +365,13 @@ void main() {
     });
 
     test('executeTool run_thread triggers scheduler', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: ['analysis'],
+        ),
+      );
       await repo.threads.saveThread(
         const ThreadDefinition(
           name: 'T1',
@@ -416,6 +423,13 @@ void main() {
     });
 
     test('update_thread updates path and contextPrompt', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       await repo.threads.saveThread(
         const ThreadDefinition(
           name: 'T1',
@@ -450,6 +464,13 @@ void main() {
     });
 
     test('delete_thread removes thread', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       await repo.threads.saveThread(
         const ThreadDefinition(
           name: 'ToDelete',
@@ -489,6 +510,13 @@ void main() {
     });
 
     test('update_worker with temperature and maxTokens', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'W1',
@@ -550,6 +578,9 @@ void main() {
 
     test('assign_worker adds worker to layer', () async {
       await repo.layers.saveLayer(
+        const LayerDefinition(name: '', inputTypes: [], outputTypes: []),
+      );
+      await repo.layers.saveLayer(
         const LayerDefinition(
           name: 'L1',
           inputTypes: ['text'],
@@ -602,6 +633,9 @@ void main() {
     });
 
     test('unassign_worker removes worker from layer', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(name: '', inputTypes: [], outputTypes: []),
+      );
       await repo.layers.saveLayer(
         const LayerDefinition(
           name: 'L1',
@@ -949,6 +983,28 @@ void main() {
           model: 'gpt-4',
           temperature: 0.7,
           maxTokens: 4096,
+        ),
+      );
+      await repo.tasks.saveTask(
+        AppTask(
+          id: 'task1',
+          taskType: 'test',
+          payload: null,
+          priority: TaskPriority.low,
+          status: TaskStatus.done,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          updatedAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+      await repo.tasks.saveTask(
+        AppTask(
+          id: 'task2',
+          taskType: 'test',
+          payload: null,
+          priority: TaskPriority.low,
+          status: TaskStatus.done,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          updatedAt: DateTime.now().millisecondsSinceEpoch,
         ),
       );
       await repo.logs.logExecution(

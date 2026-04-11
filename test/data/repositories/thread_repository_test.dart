@@ -1,7 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/database/database.dart';
-import 'package:gyeol/data/models/thread_models.dart';
+import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
 void main() {
@@ -19,6 +19,20 @@ void main() {
 
   group('ThreadRepository saveThread + getThread', () {
     test('round-trips a thread with required fields only', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'parse',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'analyze',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const thread = ThreadDefinition(
         name: 'pipeline-1',
         path: '/root/child',
@@ -37,6 +51,27 @@ void main() {
     });
 
     test('round-trips a thread with all optional fields', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'extract',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'transform',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'load',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const thread = ThreadDefinition(
         name: 'pipeline-2',
         path: '/a/b/c',
@@ -70,6 +105,20 @@ void main() {
     });
 
     test('returns all saved threads', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L2',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const t1 = ThreadDefinition(
         name: 'alpha',
         path: '/a',
@@ -88,6 +137,13 @@ void main() {
 
   group('ThreadRepository deleteThread', () {
     test('removes a saved thread', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const thread = ThreadDefinition(
         name: 'to_delete',
         path: '/x',
@@ -115,6 +171,13 @@ void main() {
       final firstEmission = await stream.first;
       expect(firstEmission, isEmpty);
 
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const thread = ThreadDefinition(
         name: 'watched',
         path: '/w',

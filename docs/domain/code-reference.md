@@ -21,7 +21,9 @@
 | Layer | `LayerDefinition` | `lib/data/models/app_models.dart` | `Layers` (PK: name) |
 | Worker | `WorkerDefinition` | `lib/data/models/app_models.dart` | `Workers` (PK: name) |
 | Thread | `ThreadDefinition` | `lib/data/models/app_models.dart` | `Threads` (PK: name) |
+| Thread-Layer 조인 | `ThreadLayer` | `lib/data/database/app_database.dart` | `ThreadLayers` (PK: threadName, layerName) |
 | Provider 설정 | `ProviderSettings` | `lib/data/models/app_models.dart` | `Settings` (key-value JSON) |
+| UI 상태 | `UiStateRow` | `lib/data/database/app_database.dart` | `UiStates` (PK: key) |
 | 워커 실행 결과 | `WorkerResult` | `lib/data/models/app_models.dart` | — |
 | 평가 결과 | `EvaluationResult` | `lib/data/models/app_models.dart` | — |
 | 대화 | `ChatConversation` | `lib/data/models/app_models.dart` | `ChatConversations` (PK: id) |
@@ -55,4 +57,7 @@
 |------|-------------|------|
 | v1 | `Tasks`, `Layers`, `Workers`, `Settings`, `ExecutionLogs` | 초기 스키마 |
 | v2 | `Threads` | 스레드 기능 추가 |
+| v3 | — | `threads.context_prompt`, `layers.layer_prompt` 컬럼 추가 |
 | v4 | `ChatConversations`, `ChatMessages` | 채팅 기능 추가 |
+| v5 | — | `layers.worker_names` 컬럼 제거 (테이블 재생성) |
+| v6 | `ThreadLayers`, `UiStates` | FK 제약조건, 인덱스, `ThreadLayers` 조인 테이블, `UiStates` 분리, 타임스탬프 일관성 |

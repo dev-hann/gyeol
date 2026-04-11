@@ -9,9 +9,15 @@ class Tasks extends Table {
   IntColumn get retryCount => integer().withDefault(const Constant(0))();
   IntColumn get maxRetries => integer().withDefault(const Constant(3))();
   IntColumn get depth => integer().withDefault(const Constant(0))();
-  TextColumn get parentTaskId => text().nullable()();
-  TextColumn get layerName => text().nullable()();
-  TextColumn get workerName => text().nullable()();
+  TextColumn get parentTaskId => text().nullable().customConstraint(
+    'REFERENCES tasks(id) ON DELETE CASCADE',
+  )();
+  TextColumn get layerName => text().nullable().customConstraint(
+    'REFERENCES layers(name) ON DELETE SET NULL',
+  )();
+  TextColumn get workerName => text().nullable().customConstraint(
+    'REFERENCES workers(name) ON DELETE SET NULL',
+  )();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
 
@@ -26,6 +32,8 @@ class Layers extends Table {
   TextColumn get layerPrompt => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
+  IntColumn get createdAt => integer().withDefault(const Constant(0))();
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {name};
@@ -33,12 +41,16 @@ class Layers extends Table {
 
 class Workers extends Table {
   TextColumn get name => text()();
-  TextColumn get layerName => text()();
+  TextColumn get layerName => text().customConstraint(
+    'NOT NULL REFERENCES layers(name) ON DELETE CASCADE',
+  )();
   TextColumn get systemPrompt => text()();
   TextColumn get model => text().nullable()();
   RealColumn get temperature => real().nullable()();
   IntColumn get maxTokens => integer().nullable()();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
+  IntColumn get createdAt => integer().withDefault(const Constant(0))();
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {name};
@@ -55,18 +67,35 @@ class Settings extends Table {
 class Threads extends Table {
   TextColumn get name => text()();
   TextColumn get path => text()();
-  TextColumn get layerNames => text()();
   TextColumn get contextPrompt => text().nullable()();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
   TextColumn get status => text().withDefault(const Constant('idle'))();
+  IntColumn get createdAt => integer().withDefault(const Constant(0))();
+  IntColumn get updatedAt => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {name};
 }
 
+@DataClassName('ThreadLayer')
+class ThreadLayers extends Table {
+  TextColumn get threadName => text().customConstraint(
+    'NOT NULL REFERENCES threads(name) ON DELETE CASCADE',
+  )();
+  TextColumn get layerName => text().customConstraint(
+    'NOT NULL REFERENCES layers(name) ON DELETE CASCADE',
+  )();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {threadName, layerName};
+}
+
 class ExecutionLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get taskId => text()();
+  TextColumn get taskId => text().customConstraint(
+    'NOT NULL REFERENCES tasks(id) ON DELETE CASCADE',
+  )();
   TextColumn get workerName => text().nullable()();
   TextColumn get status => text()();
   TextColumn get message => text().nullable()();
@@ -87,7 +116,9 @@ class ChatConversations extends Table {
 @DataClassName('ChatMessageRow')
 class ChatMessages extends Table {
   TextColumn get id => text()();
-  TextColumn get conversationId => text()();
+  TextColumn get conversationId => text().customConstraint(
+    'NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE',
+  )();
   TextColumn get role => text()();
   TextColumn get content => text()();
   TextColumn get toolName => text().nullable()();
@@ -96,4 +127,13 @@ class ChatMessages extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('UiStateRow')
+class UiStates extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
 }

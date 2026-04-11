@@ -8,7 +8,7 @@ class GraphRepository {
   final AppDatabase _db;
 
   Future<Map<String, Offset>> loadNodePositions() async {
-    final json = await _db.getJsonValue('graph_node_positions');
+    final json = await _db.getUiState('graph_node_positions');
     if (json == null) return {};
     try {
       final decoded = jsonDecode(json);
@@ -34,7 +34,7 @@ class GraphRepository {
     final encoded = jsonEncode(
       positions.map((k, v) => MapEntry(k, [v.dx, v.dy])),
     );
-    return _db.saveJsonValue('graph_node_positions', encoded);
+    return _db.saveUiState('graph_node_positions', encoded);
   }
 
   Future<Set<(String, String)>> loadRemovedConnections() =>
@@ -44,7 +44,7 @@ class GraphRepository {
       _saveStringPairSet('graph_removed_connections', connections);
 
   Future<(double, double, double)> loadViewport() async {
-    final json = await _db.getJsonValue('graph_viewport');
+    final json = await _db.getUiState('graph_viewport');
     if (json == null) return (0.0, 0.0, 1.0);
     try {
       final decoded = jsonDecode(json);
@@ -62,14 +62,14 @@ class GraphRepository {
   }
 
   Future<void> saveViewport(double x, double y, double zoom) {
-    return _db.saveJsonValue(
+    return _db.saveUiState(
       'graph_viewport',
       jsonEncode({'x': x, 'y': y, 'zoom': zoom}),
     );
   }
 
   Future<Set<(String, String)>> _loadStringPairSet(String key) async {
-    final json = await _db.getJsonValue(key);
+    final json = await _db.getUiState(key);
     if (json == null) return {};
     try {
       final decoded = jsonDecode(json);
@@ -91,6 +91,6 @@ class GraphRepository {
     Set<(String, String)> connections,
   ) {
     final encoded = jsonEncode(connections.map((c) => [c.$1, c.$2]).toList());
-    return _db.saveJsonValue(key, encoded);
+    return _db.saveUiState(key, encoded);
   }
 }

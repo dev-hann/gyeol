@@ -173,6 +173,13 @@ void main() {
 
   group('worker operations', () {
     test('saveWorker inserts and getWorker retrieves', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'parse',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
+      );
       await db.saveWorker(
         WorkersCompanion.insert(
           name: 'parser',
@@ -194,6 +201,12 @@ void main() {
     });
 
     test('listWorkers returns all workers', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'l1', inputTypes: '[]', outputTypes: '[]'),
+      );
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'l2', inputTypes: '[]', outputTypes: '[]'),
+      );
       await db.saveWorker(
         WorkersCompanion.insert(name: 'a', layerName: 'l1', systemPrompt: 'p1'),
       );
@@ -206,6 +219,9 @@ void main() {
     });
 
     test('deleteWorker removes worker', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'l', inputTypes: '[]', outputTypes: '[]'),
+      );
       await db.saveWorker(
         WorkersCompanion.insert(
           name: 'doomed',
@@ -222,6 +238,17 @@ void main() {
 
   group('execution log operations', () {
     test('logExecution inserts and listExecutionLogs retrieves', () async {
+      await db.saveTask(
+        TasksCompanion.insert(
+          id: 't1',
+          taskType: 'text',
+          payload: '{}',
+          priority: 'low',
+          status: 'pending',
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      );
       await db.logExecution(
         taskId: 't1',
         workerName: 'w1',
@@ -238,6 +265,28 @@ void main() {
     });
 
     test('listExecutionLogs filters by taskId', () async {
+      await db.saveTask(
+        TasksCompanion.insert(
+          id: 't1',
+          taskType: 'text',
+          payload: '{}',
+          priority: 'low',
+          status: 'pending',
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      );
+      await db.saveTask(
+        TasksCompanion.insert(
+          id: 't2',
+          taskType: 'text',
+          payload: '{}',
+          priority: 'low',
+          status: 'pending',
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      );
       await db.logExecution(taskId: 't1', status: 'done');
       await db.logExecution(taskId: 't2', status: 'done');
 
@@ -248,6 +297,19 @@ void main() {
 
     test('listExecutionLogs respects limit', () async {
       for (var i = 0; i < 5; i++) {
+        await db.saveTask(
+          TasksCompanion.insert(
+            id: 't$i',
+            taskType: 'text',
+            payload: '{}',
+            priority: 'low',
+            status: 'pending',
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        );
+      }
+      for (var i = 0; i < 5; i++) {
         await db.logExecution(taskId: 't$i', status: 'ok');
       }
 
@@ -256,6 +318,19 @@ void main() {
     });
 
     test('listExecutionLogs ordered by createdAt desc', () async {
+      for (var i = 0; i < 3; i++) {
+        await db.saveTask(
+          TasksCompanion.insert(
+            id: 't$i',
+            taskType: 'text',
+            payload: '{}',
+            priority: 'low',
+            status: 'pending',
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        );
+      }
       for (var i = 0; i < 3; i++) {
         await db.logExecution(taskId: 't$i', status: 'ok');
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -298,21 +373,36 @@ void main() {
 
   group('thread operations', () {
     test('saveThread inserts and getThread retrieves', () async {
-      await db.saveThread(
-        ThreadsCompanion.insert(
-          name: 'thread1',
-          path: '/path/to/file.dart',
-          layerNames: '["parse","analyze"]',
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'parse',
+          inputTypes: '[]',
+          outputTypes: '[]',
         ),
       );
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'analyze',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
+      );
+      await db.saveThread(
+        ThreadsCompanion.insert(name: 'thread1', path: '/path/to/file.dart'),
+      );
+      await db.saveThreadLayers('thread1', ['parse', 'analyze']);
 
       final thread = await db.getThread('thread1');
       expect(thread, isNotNull);
       expect(thread!.name, 'thread1');
       expect(thread.path, '/path/to/file.dart');
-      expect(thread.layerNames, '["parse","analyze"]');
       expect(thread.enabled, isTrue);
       expect(thread.status, 'idle');
+
+      final layers = await db.listThreadLayers('thread1');
+      expect(layers, hasLength(2));
+      expect(layers[0].layerName, 'parse');
+      expect(layers[1].layerName, 'analyze');
     });
 
     test('getThread returns null for missing name', () async {
@@ -320,46 +410,48 @@ void main() {
     });
 
     test('saveThread upserts on conflict', () async {
-      await db.saveThread(
-        ThreadsCompanion.insert(
-          name: 'thread1',
-          path: '/old/path',
-          layerNames: '["a"]',
-        ),
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'a', inputTypes: '[]', outputTypes: '[]'),
+      );
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'b', inputTypes: '[]', outputTypes: '[]'),
       );
       await db.saveThread(
-        ThreadsCompanion.insert(
-          name: 'thread1',
-          path: '/new/path',
-          layerNames: '["b"]',
-        ),
+        ThreadsCompanion.insert(name: 'thread1', path: '/old/path'),
       );
+      await db.saveThreadLayers('thread1', ['a']);
+      await db.saveThread(
+        ThreadsCompanion.insert(name: 'thread1', path: '/new/path'),
+      );
+      await db.saveThreadLayers('thread1', ['b']);
 
       final thread = await db.getThread('thread1');
       expect(thread!.path, '/new/path');
-      expect(thread.layerNames, '["b"]');
+
+      final layers = await db.listThreadLayers('thread1');
+      expect(layers, hasLength(1));
+      expect(layers[0].layerName, 'b');
     });
 
     test('listThreads returns all threads', () async {
-      await db.saveThread(
-        ThreadsCompanion.insert(name: 'a', path: '/a', layerNames: '[]'),
-      );
-      await db.saveThread(
-        ThreadsCompanion.insert(name: 'b', path: '/b', layerNames: '[]'),
-      );
+      await db.saveThread(ThreadsCompanion.insert(name: 'a', path: '/a'));
+      await db.saveThread(ThreadsCompanion.insert(name: 'b', path: '/b'));
 
       final threads = await db.listThreads();
       expect(threads, hasLength(2));
     });
 
-    test('deleteThread removes thread', () async {
-      await db.saveThread(
-        ThreadsCompanion.insert(name: 'doomed', path: '/x', layerNames: '[]'),
+    test('deleteThread removes thread and layers', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'L1', inputTypes: '[]', outputTypes: '[]'),
       );
+      await db.saveThread(ThreadsCompanion.insert(name: 'doomed', path: '/x'));
+      await db.saveThreadLayers('doomed', ['L1']);
       expect(await db.getThread('doomed'), isNotNull);
 
       await db.deleteThread('doomed');
       expect(await db.getThread('doomed'), isNull);
+      expect(await db.listThreadLayers('doomed'), isEmpty);
     });
   });
 }

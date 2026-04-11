@@ -66,6 +66,23 @@ void main() {
           ),
         );
 
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['raw'],
+          outputTypes: ['parsed'],
+          order: 1,
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L2',
+          inputTypes: ['parsed'],
+          outputTypes: ['done'],
+          order: 2,
+        ),
+      );
+
       await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'w1',
@@ -125,6 +142,24 @@ void main() {
           ),
         );
 
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['raw'],
+          outputTypes: ['parsed'],
+          order: 1,
+          enabled: false,
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L2',
+          inputTypes: ['raw'],
+          outputTypes: ['done'],
+          order: 2,
+        ),
+      );
+
       await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'w2',
@@ -158,6 +193,15 @@ void main() {
 
     test('includes path context in task payload', () async {
       registry.register(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['raw'],
+          outputTypes: ['parsed'],
+          order: 1,
+        ),
+      );
+
+      await repo.layers.saveLayer(
         const LayerDefinition(
           name: 'L1',
           inputTypes: ['raw'],
@@ -208,6 +252,15 @@ void main() {
 
     test('executes multiple threads sequentially', () async {
       registry.register(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['raw'],
+          outputTypes: ['done'],
+          order: 1,
+        ),
+      );
+
+      await repo.layers.saveLayer(
         const LayerDefinition(
           name: 'L1',
           inputTypes: ['raw'],

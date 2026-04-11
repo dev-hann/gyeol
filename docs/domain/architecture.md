@@ -10,7 +10,7 @@ Flutter/Dart 데스크톱 애플리케이션. 다중 LLM 제공자를 사용한 
 | 영역 | 기술 |
 |------|------|
 | 프레임워크 | Flutter/Dart (^3.11.3) |
-| 데이터베이스 | Drift ORM (SQLite), `gyeol.db`, schema v4 |
+| 데이터베이스 | Drift ORM (SQLite), `gyeol.db`, schema v6 |
 | 상태관리 | Riverpod (`flutter_riverpod`) |
 | 그래프 에디터 | `vyuh_node_flow` |
 | LLM 통신 | `http` 패키지 |
@@ -49,8 +49,8 @@ lib/
 │       └── app_theme.dart                 # AppColors + buildAppTheme() (다크 테마, seed #6d5acf)
 ├── data/
 │   ├── database/
-│   │   ├── app_database.dart              # Drift 테이블 정의 (8개)
-│   │   ├── database.dart                  # AppDatabase 클래스 (schema v4, migrations, CRUD)
+│   │   ├── app_database.dart              # Drift 테이블 정의 (10개)
+│   │   ├── database.dart                  # AppDatabase 클래스 (schema v6, migrations, CRUD)
 │   │   └── database.g.dart                # 자동 생성
 │   ├── models/
 │   │   └── app_models.dart                # 전체 도메인 모델 (486줄)

@@ -371,6 +371,10 @@ void main() {
         const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
       );
 
+      await repo.layers.saveLayer(
+        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
+      );
+
       scheduler.submit(AppTask.create('text', null, TaskPriority.high));
 
       expect(scheduler.queueLength, 1);
@@ -380,6 +384,10 @@ void main() {
 
     test('drains queue and processes task with db workers', () async {
       registry.register(
+        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
+      );
+
+      await repo.layers.saveLayer(
         const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
       );
 

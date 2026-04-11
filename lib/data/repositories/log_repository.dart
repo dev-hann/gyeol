@@ -31,4 +31,8 @@ class LogRepository {
   }) {
     return _db.watchExecutionLogs(taskId: taskId, limit: limit);
   }
+
+  Future<int> deleteOldLogs({int olderThanMs = 86400000}) {
+    return _db.deleteOldExecutionLogs(olderThanMs: olderThanMs);
+  }
 }

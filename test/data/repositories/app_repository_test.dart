@@ -135,6 +135,20 @@ void main() {
 
   group('thread CRUD', () {
     test('saveThread and listThreads round-trip', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'parse',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'analyze',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const thread = ThreadDefinition(
         name: 'review',
         path: '/home/user/project',
@@ -157,6 +171,13 @@ void main() {
     });
 
     test('getThread returns saved thread', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'compile',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       const thread = ThreadDefinition(
         name: 'build',
         path: '/src',
@@ -182,6 +203,12 @@ void main() {
     });
 
     test('saveThread upserts existing thread', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(name: 'A', inputTypes: ['text'], outputTypes: []),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(name: 'B', inputTypes: ['text'], outputTypes: []),
+      );
       await repo.threads.saveThread(
         const ThreadDefinition(name: 't1', path: '/old', layerNames: ['A']),
       );
@@ -202,6 +229,13 @@ void main() {
     });
 
     test('round-trips contextPrompt', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       await repo.threads.saveThread(
         const ThreadDefinition(
           name: 'ctx_test',
@@ -217,6 +251,13 @@ void main() {
     });
 
     test('contextPrompt defaults to null', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
       await repo.threads.saveThread(
         const ThreadDefinition(
           name: 'no_ctx',
@@ -270,16 +311,20 @@ void main() {
       expect(layers.first.inputTypes, ['valid', 'also_valid']);
     });
 
-    test('filters non-string elements from thread layerNames', () async {
-      await db
-          .into(db.threads)
-          .insertOnConflictUpdate(
-            ThreadsCompanion.insert(
-              name: 'mixed-thread',
-              path: '/mixed',
-              layerNames: '["a", 1, null, "b"]',
-            ),
-          );
+    test('thread layers are persisted via join table', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(name: 'a', inputTypes: ['text'], outputTypes: []),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(name: 'b', inputTypes: ['text'], outputTypes: []),
+      );
+      await repo.threads.saveThread(
+        const ThreadDefinition(
+          name: 'join-test',
+          path: '/join',
+          layerNames: ['a', 'b'],
+        ),
+      );
 
       final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
@@ -323,58 +368,64 @@ void main() {
     });
   });
 
-  group('listThreads corrupted JSON', () {
-    test('returns empty layerNames for malformed JSON', () async {
-      await db
-          .into(db.threads)
-          .insertOnConflictUpdate(
-            ThreadsCompanion.insert(
-              name: 'ok',
-              path: '/ok',
-              layerNames: 'broken-json}}}',
-            ),
-          );
+  group('thread layers via join table', () {
+    test('empty layerNames for thread with no layers', () async {
+      await repo.threads.saveThread(
+        const ThreadDefinition(name: 'empty', path: '/empty', layerNames: []),
+      );
 
       final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
-      expect(threads.first.name, 'ok');
+      expect(threads.first.name, 'empty');
       expect(threads.first.layerNames, isEmpty);
     });
 
-    test('returns empty layerNames for non-list JSON', () async {
-      await db
-          .into(db.threads)
-          .insertOnConflictUpdate(
-            ThreadsCompanion.insert(
-              name: 'nonlist',
-              path: '/p',
-              layerNames: '"not_a_list"',
-            ),
-          );
+    test('layerNames populated from join table', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L2',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.threads.saveThread(
+        const ThreadDefinition(
+          name: 'with-layers',
+          path: '/p',
+          layerNames: ['L1', 'L2'],
+        ),
+      );
 
       final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
-      expect(threads.first.layerNames, isEmpty);
+      expect(threads.first.layerNames, ['L1', 'L2']);
     });
   });
 
   group('graph state error handling', () {
     test('loadNodePositions returns empty on type mismatch', () async {
-      await db.saveJsonValue('graph_node_positions', '{"node1": "not_a_list"}');
+      await db.saveUiState('graph_node_positions', '{"node1": "not_a_list"}');
 
       final positions = await repo.graph.loadNodePositions();
       expect(positions, isEmpty);
     });
 
     test('loadRemovedConnections returns empty on type mismatch', () async {
-      await db.saveJsonValue('graph_removed_connections', '[123, 456]');
+      await db.saveUiState('graph_removed_connections', '[123, 456]');
 
       final connections = await repo.graph.loadRemovedConnections();
       expect(connections, isEmpty);
     });
 
     test('loadViewport returns default on type mismatch', () async {
-      await db.saveJsonValue('graph_viewport', '{"x": "not_a_number"}');
+      await db.saveUiState('graph_viewport', '{"x": "not_a_number"}');
 
       final viewport = await repo.graph.loadViewport();
       expect(viewport, (0.0, 0.0, 1.0));

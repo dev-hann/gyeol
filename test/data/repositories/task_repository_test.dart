@@ -93,6 +93,20 @@ void main() {
 
   group('TaskRepository saveTask', () {
     test('updates existing task status and fields', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.workers.saveWorker(
+        const WorkerDefinition(
+          name: 'w1',
+          layerName: 'L1',
+          systemPrompt: 'test',
+        ),
+      );
       final id = await repo.tasks.createTask('parse', {
         'data': 'x',
       }, TaskPriority.high);
@@ -131,15 +145,20 @@ void main() {
     });
 
     test('updates task with depth and parentTaskId', () async {
+      final parentId = await repo.tasks.createTask(
+        'parent',
+        null,
+        TaskPriority.low,
+      );
       final id = await repo.tasks.createTask('child', null, TaskPriority.low);
 
       var task = await repo.tasks.getTask(id);
-      final updated = task!.copyWith(depth: 3, parentTaskId: 'parent-123');
+      final updated = task!.copyWith(depth: 3, parentTaskId: parentId);
       await repo.tasks.saveTask(updated);
 
       task = await repo.tasks.getTask(id);
       expect(task!.depth, 3);
-      expect(task.parentTaskId, 'parent-123');
+      expect(task.parentTaskId, parentId);
     });
 
     test('preserves payload through update', () async {
@@ -190,6 +209,20 @@ void main() {
     });
 
     test('create → run → fail with retry', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      await repo.workers.saveWorker(
+        const WorkerDefinition(
+          name: 'w1',
+          layerName: 'L1',
+          systemPrompt: 'test',
+        ),
+      );
       final id = await repo.tasks.createTask(
         'retry_test',
         null,
