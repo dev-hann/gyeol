@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/core_providers.dart';
+import 'package:gyeol/data/providers/logs_provider.dart';
+import 'package:gyeol/data/providers/scheduler_run_provider.dart';
 import 'package:gyeol/data/providers/settings_provider.dart';
+import 'package:gyeol/data/providers/tasks_provider.dart';
 import 'package:gyeol/engine/chat/chat_service.dart';
 import 'package:gyeol/providers/anthropic_provider.dart';
 import 'package:gyeol/providers/custom_provider.dart';
@@ -124,5 +128,33 @@ final chatServiceProvider = Provider<ChatService>((ref) {
   final repo = ref.watch(repositoryProvider);
   final settings = settingsAsync.valueOrNull ?? const ProviderSettings();
   final provider = _createLlmProvider(settings);
-  return ChatService(provider: provider, repo: repo);
+  return ChatService(
+    provider: provider,
+    repo: repo,
+    onRunThread: (threadName) async {
+      final scheduler = ref.read(schedulerProvider);
+      final thread = await repo.threads.getThread(threadName);
+      if (thread == null) {
+        return jsonEncode({'error': 'Thread "$threadName" not found'});
+      }
+      final results = await scheduler.runThread(thread);
+      ref
+        ..invalidate(tasksProvider)
+        ..invalidate(queueSizeProvider)
+        ..invalidate(logsProvider);
+      return jsonEncode({
+        'success': true,
+        'thread': threadName,
+        'results': results
+            .map(
+              (r) => <String, dynamic>{
+                'success': r.success,
+                'error': r.error,
+                'outputTasks': r.outputTasks.length,
+              },
+            )
+            .toList(),
+      });
+    },
+  );
 });

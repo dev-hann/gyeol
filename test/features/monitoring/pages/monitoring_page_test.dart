@@ -60,6 +60,32 @@ List<ExecutionLog> fakeLogs() => [
   ),
 ];
 
+List<ExecutionLog> fakeLogsWithBoth() => [
+  ExecutionLog(
+    id: 1,
+    taskId: 't1',
+    workerName: 'writer-1',
+    status: 'success',
+    message: 'Generated draft',
+    createdAt: DateTime(2026, 1, 1, 12).millisecondsSinceEpoch,
+  ),
+  ExecutionLog(
+    id: 2,
+    taskId: 't2',
+    status: 'error',
+    message: 'Timeout',
+    createdAt: DateTime(2026, 1, 1, 12, 1).millisecondsSinceEpoch,
+  ),
+  ExecutionLog(
+    id: 3,
+    taskId: 't3',
+    workerName: 'reviewer-1',
+    status: 'success',
+    message: 'Reviewed content',
+    createdAt: DateTime(2026, 1, 1, 12, 2).millisecondsSinceEpoch,
+  ),
+];
+
 void main() {
   Future<void> pumpMonitoringPage(
     WidgetTester tester, {
@@ -200,6 +226,114 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.textContaining('Error:'), findsOneWidget);
+    });
+  });
+
+  group('MonitoringPage filter tabs', () {
+    testWidgets('shows All filter tab', (tester) async {
+      await pumpMonitoringPage(tester);
+      expect(find.text('All'), findsOneWidget);
+    });
+
+    testWidgets('shows Success filter tab', (tester) async {
+      await pumpMonitoringPage(tester);
+      expect(find.text('Success'), findsOneWidget);
+    });
+
+    testWidgets('shows Failed filter tab', (tester) async {
+      await pumpMonitoringPage(tester);
+      expect(find.text('Failed'), findsOneWidget);
+    });
+
+    testWidgets('shows all logs by default', (tester) async {
+      await pumpMonitoringPage(tester, logs: fakeLogsWithBoth());
+      expect(find.text('writer-1'), findsOneWidget);
+      expect(find.text('reviewer-1'), findsOneWidget);
+    });
+
+    testWidgets('filters logs to success only when Success tab tapped', (
+      tester,
+    ) async {
+      await pumpMonitoringPage(tester, logs: fakeLogsWithBoth());
+      await tester.tap(find.text('Success'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('writer-1'), findsOneWidget);
+      expect(find.text('reviewer-1'), findsOneWidget);
+      expect(find.text('System'), findsNothing);
+    });
+
+    testWidgets('filters logs to failed only when Failed tab tapped', (
+      tester,
+    ) async {
+      await pumpMonitoringPage(tester, logs: fakeLogsWithBoth());
+      await tester.tap(find.text('Failed'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('System'), findsOneWidget);
+      expect(find.text('writer-1'), findsNothing);
+      expect(find.text('reviewer-1'), findsNothing);
+    });
+
+    testWidgets('restores all logs when All tab tapped after filtering', (
+      tester,
+    ) async {
+      await pumpMonitoringPage(tester, logs: fakeLogsWithBoth());
+      await tester.tap(find.text('Failed'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('All'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('writer-1'), findsOneWidget);
+      expect(find.text('reviewer-1'), findsOneWidget);
+      expect(find.text('System'), findsOneWidget);
+    });
+  });
+
+  group('MonitoringPage task detail expansion', () {
+    testWidgets('expands task detail on tap', (tester) async {
+      await pumpMonitoringPage(tester);
+      await tester.tap(find.text('generate'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining('Task ID:'), findsOneWidget);
+    });
+
+    testWidgets('shows full task id in expanded detail', (tester) async {
+      await pumpMonitoringPage(tester);
+      await tester.tap(find.text('generate'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining('t1'), findsAtLeast(1));
+    });
+
+    testWidgets('shows layer name in expanded detail', (tester) async {
+      await pumpMonitoringPage(tester);
+      await tester.tap(find.text('generate'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining('Draft'), findsAtLeast(1));
+    });
+
+    testWidgets('shows retry count in expanded detail', (tester) async {
+      await pumpMonitoringPage(tester);
+      await tester.tap(find.text('generate'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining('Retry'), findsAtLeast(1));
+    });
+
+    testWidgets('collapses task detail on second tap', (tester) async {
+      await pumpMonitoringPage(tester);
+      await tester.tap(find.text('generate'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining('Task ID:'), findsOneWidget);
+      await tester.tap(find.text('generate'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining('Task ID:'), findsNothing);
     });
   });
 }

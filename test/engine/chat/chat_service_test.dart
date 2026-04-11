@@ -47,9 +47,9 @@ class FakeLlmProvider implements LlmProvider {
 
 void main() {
   group('ToolRegistry', () {
-    test('getAllTools returns 29 tools', () {
+    test('getAllTools returns 30 tools', () {
       final tools = ToolRegistry.getAllTools();
-      expect(tools, hasLength(29));
+      expect(tools, hasLength(30));
       for (final tool in tools) {
         expect(tool.name, isNotEmpty);
         expect(tool.description, isNotEmpty);
@@ -84,6 +84,7 @@ void main() {
         'clear_conversation',
         'export_conversation',
         'get_worker_details',
+        'submit_task',
       ];
       for (final name in expectedNames) {
         final tool = ToolRegistry.getToolByName(name);

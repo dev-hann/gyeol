@@ -46,10 +46,43 @@ List<AppTask> fakeTasks() => [
   ),
 ];
 
+List<WorkerDefinition> fakeWorkers() => [
+  const WorkerDefinition(
+    name: 'writer-1',
+    layerName: 'Draft',
+    systemPrompt: 'You are a writer',
+    model: 'gpt-4o',
+  ),
+  const WorkerDefinition(
+    name: 'reviewer-1',
+    layerName: 'Review',
+    systemPrompt: 'You are a reviewer',
+    model: 'claude-sonnet-4-20250514',
+  ),
+  const WorkerDefinition(
+    name: 'disabled-worker',
+    layerName: 'Draft',
+    systemPrompt: 'You are disabled',
+    model: 'gpt-4o-mini',
+    enabled: false,
+  ),
+];
+
+ProviderSettings fakeSettings() => const ProviderSettings(
+  configs: {
+    ProviderType.openAI: OpenAIConfig(apiKey: 'sk-test-key'),
+    ProviderType.anthropic: AnthropicConfig(),
+    ProviderType.ollama: OllamaConfig(baseUrl: 'http://localhost:11434'),
+    ProviderType.custom: CustomConfig(),
+  },
+);
+
 void main() {
   Future<void> pumpDashboard(
     WidgetTester tester, {
     List<AppTask>? tasks,
+    List<WorkerDefinition>? workers,
+    ProviderSettings? settings,
     int queueSize = 2,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
@@ -61,6 +94,12 @@ void main() {
             () => _FakeTasksNotifier(tasks ?? fakeTasks()),
           ),
           queueSizeProvider.overrideWith((ref) async => queueSize),
+          workersProvider.overrideWith(
+            () => _FakeWorkersNotifier(workers ?? fakeWorkers()),
+          ),
+          settingsProvider.overrideWith(
+            () => _FakeSettingsNotifier(settings ?? fakeSettings()),
+          ),
         ],
         child: const MaterialApp(home: DashboardPage()),
       ),
@@ -141,7 +180,7 @@ void main() {
       await pumpDashboard(tester);
       expect(
         find.byWidgetPredicate((w) => w is Text && w.data == 'writer-1'),
-        findsOneWidget,
+        findsAtLeast(1),
       );
     });
 
@@ -169,12 +208,88 @@ void main() {
           overrides: [
             tasksProvider.overrideWith(_ErrorTasksNotifier.new),
             queueSizeProvider.overrideWith((ref) async => 0),
+            workersProvider.overrideWith(
+              () => _FakeWorkersNotifier(fakeWorkers()),
+            ),
+            settingsProvider.overrideWith(
+              () => _FakeSettingsNotifier(fakeSettings()),
+            ),
           ],
           child: const MaterialApp(home: DashboardPage()),
         ),
       );
       await tester.pumpAndSettle();
       expect(find.textContaining('Error:'), findsOneWidget);
+    });
+  });
+
+  group('DashboardPage Workers section', () {
+    testWidgets('shows Workers section header', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('Workers'), findsOneWidget);
+    });
+
+    testWidgets('shows total workers count', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('3 total'), findsOneWidget);
+    });
+
+    testWidgets('shows worker names as chips', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('writer-1'), findsAtLeast(1));
+      expect(find.text('reviewer-1'), findsOneWidget);
+      expect(find.text('disabled-worker'), findsOneWidget);
+    });
+
+    testWidgets('shows worker models', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('gpt-4o'), findsOneWidget);
+      expect(find.text('claude-sonnet-4-20250514'), findsOneWidget);
+      expect(find.text('gpt-4o-mini'), findsOneWidget);
+    });
+
+    testWidgets('shows worker enabled/disabled status', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('Enabled'), findsAtLeast(1));
+      expect(find.text('Disabled'), findsOneWidget);
+    });
+
+    testWidgets('shows layer grouping for workers', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('Draft'), findsAtLeast(1));
+      expect(find.text('Review'), findsAtLeast(1));
+    });
+
+    testWidgets('shows no workers message when empty', (tester) async {
+      await pumpDashboard(tester, workers: []);
+      expect(find.text('No workers configured'), findsOneWidget);
+    });
+  });
+
+  group('DashboardPage Provider status section', () {
+    testWidgets('shows Providers section header', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('Providers'), findsOneWidget);
+    });
+
+    testWidgets('shows provider type names', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('OpenAI'), findsOneWidget);
+      expect(find.text('Anthropic'), findsOneWidget);
+      expect(find.text('Ollama'), findsOneWidget);
+      expect(find.text('Custom'), findsOneWidget);
+    });
+
+    testWidgets('shows configured provider indicator', (tester) async {
+      await pumpDashboard(tester);
+      expect(find.text('Active'), findsOneWidget);
+    });
+
+    testWidgets('shows all providers as unconfigured when defaults', (
+      tester,
+    ) async {
+      await pumpDashboard(tester, settings: const ProviderSettings());
+      expect(find.text('Not configured'), findsAtLeast(1));
     });
   });
 }
@@ -185,6 +300,22 @@ class _FakeTasksNotifier extends TasksNotifier {
 
   @override
   Future<List<AppTask>> build() async => _tasks;
+}
+
+class _FakeWorkersNotifier extends WorkersNotifier {
+  _FakeWorkersNotifier(this._workers);
+  final List<WorkerDefinition> _workers;
+
+  @override
+  Future<List<WorkerDefinition>> build() async => _workers;
+}
+
+class _FakeSettingsNotifier extends SettingsNotifier {
+  _FakeSettingsNotifier(this._settings);
+  final ProviderSettings _settings;
+
+  @override
+  Future<ProviderSettings> build() async => _settings;
 }
 
 class _ErrorTasksNotifier extends TasksNotifier {

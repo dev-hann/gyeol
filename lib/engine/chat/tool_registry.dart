@@ -51,6 +51,7 @@ class ToolRegistry {
         'clear_conversation' => _clearConversation(args, repo),
         'export_conversation' => _exportConversation(args, repo),
         'get_worker_details' => _getWorkerDetails(args, repo),
+        'submit_task' => _submitTask(args, repo),
         _ => jsonEncode({'error': 'Unknown tool: $name'}),
       };
     } on Exception catch (e) {
@@ -1008,6 +1009,31 @@ class ToolRegistry {
         'required': ['name'],
       },
     ),
+    const ToolDefinition(
+      name: 'submit_task',
+      description:
+          'Submit a custom task to the processing queue. '
+          'The task will be picked up by workers assigned to matching layers.',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'taskType': {
+            'type': 'string',
+            'description': 'The type of task (e.g. "analysis", "review")',
+          },
+          'payload': {
+            'type': 'object',
+            'description': 'JSON object with task data',
+          },
+          'priority': {
+            'type': 'string',
+            'description':
+                'Priority level: "low", "medium", "high" (default: "medium")',
+          },
+        },
+        'required': ['taskType', 'payload'],
+      },
+    ),
   ];
 
   static Future<String> _renameConversation(
@@ -1187,5 +1213,22 @@ class ToolRegistry {
     }
 
     return const JsonEncoder.withIndent('  ').convert(results);
+  }
+
+  static Future<String> _submitTask(
+    Map<String, dynamic> args,
+    AppRepository repo,
+  ) async {
+    final taskType = args['taskType'] as String;
+    final payload = (args['payload'] as Map).cast<String, dynamic>();
+    final priorityStr = args['priority'] as String? ?? 'medium';
+    final priority = TaskPriority.values.firstWhere(
+      (p) => p.name == priorityStr,
+      orElse: () => TaskPriority.medium,
+    );
+
+    final task = AppTask.create(taskType, payload, priority);
+    await repo.tasks.saveTask(task);
+    return jsonEncode({'success': true, 'taskId': task.id, 'status': 'queued'});
   }
 }

@@ -244,9 +244,9 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
   void _exportConversation() {
     final messages = _localMessages;
     if (messages.isEmpty) return;
-    final buffer = StringBuffer();
-    buffer.writeln('# 대화 내보내기');
-    buffer.writeln();
+    final buffer = StringBuffer()
+      ..writeln('# 대화 내보내기')
+      ..writeln();
     for (final msg in messages) {
       final role = switch (msg.role) {
         'user' => '## 사용자',
@@ -254,10 +254,11 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
         'tool' => '## 도구 (${msg.toolName ?? "unknown"})',
         _ => '## ${msg.role}',
       };
-      buffer.writeln(role);
-      buffer.writeln();
-      buffer.writeln(msg.content);
-      buffer.writeln();
+      buffer
+        ..writeln(role)
+        ..writeln()
+        ..writeln(msg.content)
+        ..writeln();
     }
     Clipboard.setData(ClipboardData(text: buffer.toString()));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -271,7 +272,7 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
   void _clearConversation() {
     final convId = ref.read(selectedConversationIdProvider);
     if (convId == null) return;
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
@@ -305,7 +306,7 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
   }
 
   void _showConversationSearchDialog(List<ChatConversation> conversations) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => _ConversationSearchDialog(
         conversations: conversations,
