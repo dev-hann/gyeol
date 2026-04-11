@@ -24,43 +24,12 @@ color: "#f59e0b"
 
 ## 프로젝트 컨텍스트
 
-Gyeol — AI Multi-Layer Worker System
-- Flutter/Dart 프론트엔드+엔진 통합 (lib/)
-- Drift ORM (SQLite) 영속성 (lib/data/database/)
-- Riverpod 상태관리 (lib/data/providers/)
-- LLM Provider 인터페이스 (lib/providers/)
-- 엔진: Scheduler, TaskQueue, LayerRegistry, MessageBus (lib/engine/)
-
-## 프로젝트 구조
-
-```
-lib/
-├── core/theme/          # 앱 테마 (app_theme.dart)
-├── data/
-│   ├── database/        # Drift ORM 테이블 정의 + Database 클래스
-│   ├── models/          # AppTask, LayerDefinition, WorkerDefinition, ProviderSettings
-│   ├── repositories/    # AppRepository (DB 래퍼)
-│   └── providers/       # Riverpod Providers (상태관리)
-├── engine/
-│   ├── scheduler.dart   # Scheduler, LayerRegistry, MessageBus
-│   └── queue/           # TaskQueue (우선순위 큐)
-├── features/            # UI 페이지 (layers, dashboard, workers, monitoring, settings)
-│   ├── layers/          # 그래프 에디터 (FlowCanvas, LayerNode, GraphUtils)
-│   ├── dashboard/       # 대시보드
-│   ├── workers/         # 워커 관리
-│   ├── monitoring/      # 실행 모니터링
-│   └── settings/        # 설정
-├── providers/           # LLM Provider (OpenAI, Anthropic, Ollama)
-├── shared/widgets/      # 공통 위젯 (AppShell, StatusBadge, EmptyState, PageHeader)
-└── main.dart
-
-test/
-├── engine/              # 엔진 테스트
-├── data/                # 데이터 레이어 테스트
-├── providers/           # LLM Provider 테스트
-├── features/            # 위젯 테스트
-└── shared/              # 공통 위젯 테스트
-```
+아래 문서를 읽고 프로젝트 구조/개념/컨벤션 파악:
+- 용어 사전: `docs/domain/glossary.md`
+- 도메인 개념: `docs/domain/concepts/*.md` (task, layer, worker, thread, provider, pipeline, chat)
+- 코드 매핑: `docs/domain/code-reference.md`
+- 아키텍처: `docs/domain/architecture.md`
+- 코드 컨벤션: `docs/domain/conventions.md`
 
 ## 분석 절차
 

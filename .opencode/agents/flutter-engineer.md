@@ -22,36 +22,12 @@ Flutter UI/위젯 전문 엔지니어. 아래 영역만 수정:
 - `lib/shared/widgets/` — 공통 위젯 (AppShell, StatusBadge, EmptyState, PageHeader)
 - `lib/core/theme/` — 앱 테마
 
-## 기술 스택
+## 기술 스택 및 프로젝트 구조
 
-- Flutter SDK ^3.11.3
-- Riverpod (상태관리)
-- go_router (라우팅)
-- google_fonts (타이포그래피)
-- flutter_flow_chart (그래프 에디터)
-- Material Design 3
-
-## 프로젝트 구조
-
-```
-lib/
-├── core/theme/app_theme.dart        # ThemeData, ColorScheme 정의
-├── features/
-│   ├── layers/
-│   │   ├── pages/layers_page.dart   # 레이어 관리 페이지
-│   │   └── graph/                   # 그래프 에디터 (FlowCanvas, LayerNode, GraphUtils)
-│   ├── dashboard/                   # 대시보드
-│   ├── workers/                     # 워커 관리
-│   ├── monitoring/                  # 실행 모니터링
-│   └── settings/                    # 설정 페이지
-├── shared/widgets/
-│   ├── app_shell.dart               # 앱 셸 (네비게이션)
-│   ├── status_badge.dart            # 상태 뱃지
-│   ├── empty_state.dart             # 빈 상태 위젯
-│   ├── page_header.dart             # 페이지 헤더
-│   └── stat_card.dart               # 통계 카드
-└── main.dart
-```
+아래 문서를 읽고 기술 스택/개념/컨벤션 파악:
+- 용어 사전: `docs/domain/glossary.md`
+- 아키텍처: `docs/domain/architecture.md`
+- 코드 컨벤션: `docs/domain/conventions.md`
 
 ## TDD 절차 (Red-Green-Refactor)
 
@@ -93,25 +69,13 @@ lib/
 
 ## 디자인 규칙
 
-### 색상
-- 항상 `Theme.of(context).colorScheme.*` 사용 — 하드코딩 색상 금지
-- 상태색: `colorScheme.primary`, `colorScheme.error`, `colorScheme.tertiary` 등
-- 배경: `colorScheme.surface`, `colorScheme.surfaceContainerHighest`
+색상/테마 매핑은 `docs/domain/conventions.md` 참조.
 
-### 컴포넌트
+### 기본 원칙
+- 항상 `Theme.of(context).colorScheme.*` 사용 — 하드코딩 색상 금지
 - Material Design 3 컴포넌트 사용 (Card, FilledButton, OutlinedButton 등)
 - 기존 공통 위젯 재사용: StatusBadge, EmptyState, PageHeader, StatCard
 - 새 위젯은 `lib/shared/widgets/` 에만 생성
-
-### 테마 토큰 매핑
-
-| 하드코딩 | 올바른 사용 |
-|----------|-------------|
-| `Colors.red` | `colorScheme.error` |
-| `Colors.green` | `colorScheme.primary` (또는 커스텀 success) |
-| `Colors.blue` | `colorScheme.primary` |
-| `Colors.grey` | `colorScheme.outline` / `colorScheme.onSurfaceVariant` |
-| `Colors.amber` | `colorScheme.tertiary` (또는 커스텀 warning) |
 
 ## 검증 절차
 

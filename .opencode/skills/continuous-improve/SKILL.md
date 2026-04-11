@@ -50,17 +50,26 @@ Task(
   수정 완료 후 Task(quality-guard) 호출하여 전체 검증. 회귀 시 즉시 원복.
   금지: pubspec.yaml 의존성 추가, .g.dart 수동 수정, Drift 스키마 변경.
 
-  Phase 4 — 커밋:
+  Phase 4 — 도메인 문서 동기화:
+  수정된 파일이 아래 경로에 해당하면 docs/domain/ 문서 업데이트:
+  - lib/data/models/ 또는 lib/data/database/ 변경 → 관련 concepts/*.md + glossary.md + code-reference.md
+  - lib/engine/, lib/providers/ 변경 → 관련 concepts/*.md
+  - lib/features/ 신규 디렉토리 → architecture.md
+  - analysis_options.yaml 또는 테마/컨벤션 변경 → conventions.md
+  개념 문서는 비즈니스 관점 우선, 코드 매핑은 맨 아래만. 변경분만 정확히 반영.
+
+  Phase 5 — 커밋:
   3사이클마다 git add + commit/push.
 
-  Phase 5 — 완료:
+  Phase 6 — 완료:
   `date '+%Y-%m-%d %H:%M:%S'` 실행.
 
   출력 포맷:
   [Phase 1] {분석요약} | {후보수}개 | 테스트커버리지: {N}/{M}모듈
   [Phase 2] {파일} | {이슈} | P{등급}
   [Phase 3] {에이전트} | {TDD단계} | {변경내용} | analyze:{결과} test:{통과/총수}
-  [Phase 4] C{N}: {WHAT} — {WHY}
+  [Phase 4] {동기화된문서} | {변경요약} 또는 변경 없음
+  [Phase 5] C{N}: {WHAT} — {WHY}
   [DONE C{N}] {YYYY-MM-DD HH:MM:SS}
   "
 )

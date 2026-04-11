@@ -130,20 +130,7 @@ Sub 결과 수신 → 즉시 같은 Task 다시 호출.
 
 ## 색상 매핑 참조
 
-| 이전 (하드코딩) | 이후 (Material 3 토큰) |
-|-----------------|------------------------|
-| `Colors.red` | `colorScheme.error` |
-| `Colors.green` | `colorScheme.primary` |
-| `Colors.blue` | `colorScheme.primary` |
-| `Colors.amber` | `colorScheme.tertiary` |
-| `Colors.grey` | `colorScheme.outline` / `colorScheme.onSurfaceVariant` |
-| `Colors.orange` | `colorScheme.tertiary` |
-| `Colors.purple` | `colorScheme.secondary` |
-| `Colors.white` | `colorScheme.onPrimary` / `colorScheme.surface` |
-| `Colors.black` | `colorScheme.onSurface` |
-| `TextStyle(fontSize: 14, fontWeight: FontWeight.w600)` | `textTheme.titleSmall!` |
-| `TextStyle(fontSize: 16, fontWeight: FontWeight.w400)` | `textTheme.bodyLarge!` |
-| `TextStyle(fontSize: 24, fontWeight: FontWeight.bold)` | `textTheme.headlineSmall!` |
+`docs/domain/conventions.md`의 색상 매핑 테이블 참조.
 
 ## 검증 체크리스트 (quality-guard)
 

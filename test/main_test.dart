@@ -42,6 +42,11 @@ class _FakeLogsNotifier extends LogsNotifier {
   Future<List<ExecutionLog>> build() async => [];
 }
 
+class _FakeConversationsNotifier extends ConversationsNotifier {
+  @override
+  Future<List<ChatConversation>> build() async => [];
+}
+
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1200, 900);
@@ -56,6 +61,9 @@ void main() {
           settingsProvider.overrideWith(_FakeSettingsNotifier.new),
           logsProvider.overrideWith(_FakeLogsNotifier.new),
           queueSizeProvider.overrideWith((ref) async => 0),
+          conversationsProvider.overrideWith(_FakeConversationsNotifier.new),
+          chatSendingProvider.overrideWith((ref) => false),
+          selectedConversationIdProvider.overrideWith((ref) => null),
         ],
         child: const GyeolApp(),
       ),

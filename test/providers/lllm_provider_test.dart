@@ -50,6 +50,20 @@ class _FakeLlmProvider extends LlmProvider {
       'system: $system user: $user';
 
   @override
+  Future<ChatResponse> generateChat({
+    required List<ChatMessageForApi> messages,
+    List<ToolDefinition>? tools,
+  }) async => const ChatResponse(content: 'fake');
+
+  @override
+  Stream<ChatStreamDelta> generateChatStream({
+    required List<ChatMessageForApi> messages,
+    List<ToolDefinition>? tools,
+  }) async* {
+    yield const ChatStreamDelta(content: 'fake-stream', done: true);
+  }
+
+  @override
   void close() {
     closeCalled = true;
   }

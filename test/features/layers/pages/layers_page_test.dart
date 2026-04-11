@@ -204,13 +204,6 @@ class _LoadingLayersNotifier extends LayersNotifier {
 }
 
 class _FakeGraphStateNotifier extends GraphStateNotifier {
-  final List<Set<(String, String)>> savedManual = [];
-
   @override
   Future<GraphState> build() async => const GraphState();
-
-  @override
-  Future<void> saveManualConnections(Set<(String, String)> conns) async {
-    savedManual.add(conns);
-  }
 }

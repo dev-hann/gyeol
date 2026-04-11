@@ -98,8 +98,17 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Thread "${thread.name}" completed'),
-          backgroundColor: AppColors.success,
+          content: Row(
+            children: [
+              const Icon(
+                Icons.check_circle,
+                size: 16,
+                color: AppColors.success,
+              ),
+              const SizedBox(width: 8),
+              Text('Thread "${thread.name}" completed'),
+            ],
+          ),
         ),
       );
     }
@@ -136,6 +145,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
   void _showAddThreadDialog(BuildContext context) {
     final nameCtl = TextEditingController();
     final pathCtl = TextEditingController();
+    final promptCtl = TextEditingController();
     final selectedLayers = <String>[];
 
     _showThreadDialog(
@@ -143,6 +153,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
       title: 'New Thread',
       nameCtl: nameCtl,
       pathCtl: pathCtl,
+      promptCtl: promptCtl,
       selectedLayers: selectedLayers,
       onConfirm: () async {
         if (nameCtl.text.isEmpty || pathCtl.text.isEmpty) return;
@@ -150,6 +161,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
           name: nameCtl.text,
           path: pathCtl.text,
           layerNames: List.from(selectedLayers),
+          contextPrompt: promptCtl.text.isEmpty ? null : promptCtl.text,
         );
         await ref.read(threadsProvider.notifier).saveThread(thread);
         if (context.mounted) Navigator.pop(context);
@@ -164,6 +176,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
   ) {
     final nameCtl = TextEditingController(text: thread.name);
     final pathCtl = TextEditingController(text: thread.path);
+    final promptCtl = TextEditingController(text: thread.contextPrompt ?? '');
     final selectedLayers = List<String>.from(thread.layerNames);
 
     _showThreadDialog(
@@ -171,12 +184,14 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
       title: 'Edit Thread',
       nameCtl: nameCtl,
       pathCtl: pathCtl,
+      promptCtl: promptCtl,
       selectedLayers: selectedLayers,
       onConfirm: () async {
         if (nameCtl.text.isEmpty || pathCtl.text.isEmpty) return;
         final updated = thread.copyWith(
           path: pathCtl.text,
           layerNames: List.from(selectedLayers),
+          contextPrompt: promptCtl.text.isEmpty ? null : promptCtl.text,
         );
         await ref.read(threadsProvider.notifier).saveThread(updated);
         if (context.mounted) Navigator.pop(context);
@@ -189,6 +204,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     required String title,
     required TextEditingController nameCtl,
     required TextEditingController pathCtl,
+    required TextEditingController promptCtl,
     required List<String> selectedLayers,
     required VoidCallback onConfirm,
   }) {
@@ -244,6 +260,20 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
                           tooltip: 'Browse',
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: promptCtl,
+                      decoration: const InputDecoration(
+                        labelText: 'Context Prompt',
+                        hintText: 'Global context for all workers (optional)',
+                        alignLabelWithHint: true,
+                      ),
+                      maxLines: 3,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text(

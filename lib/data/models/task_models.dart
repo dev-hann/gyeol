@@ -1,0 +1,135 @@
+// ignore_for_file: avoid_equals_and_hash_code_on_mutable_classes
+import 'package:uuid/uuid.dart';
+
+enum TaskPriority { low, medium, high }
+
+enum TaskStatus { pending, running, done, failed }
+
+class AppTask {
+  const AppTask({
+    required this.id,
+    required this.taskType,
+    required this.payload,
+    required this.priority,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.retryCount = 0,
+    this.maxRetries = 3,
+    this.depth = 0,
+    this.parentTaskId,
+    this.layerName,
+    this.workerName,
+  });
+
+  factory AppTask.create(
+    String taskType,
+    Object? payload,
+    TaskPriority priority,
+  ) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return AppTask(
+      id: const Uuid().v4(),
+      taskType: taskType,
+      payload: payload,
+      priority: priority,
+      status: TaskStatus.pending,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+  final String id;
+  final String taskType;
+  final Object? payload;
+  final TaskPriority priority;
+  final TaskStatus status;
+  final int retryCount;
+  final int maxRetries;
+  final int depth;
+  final String? parentTaskId;
+  final String? layerName;
+  final String? workerName;
+  final int createdAt;
+  final int updatedAt;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is AppTask && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  AppTask copyWith({
+    TaskStatus? status,
+    String? layerName,
+    String? workerName,
+    int? retryCount,
+    int? depth,
+    String? parentTaskId,
+    int? updatedAt,
+  }) {
+    return AppTask(
+      id: id,
+      taskType: taskType,
+      payload: payload,
+      priority: priority,
+      status: status ?? this.status,
+      retryCount: retryCount ?? this.retryCount,
+      maxRetries: maxRetries,
+      depth: depth ?? this.depth,
+      parentTaskId: parentTaskId ?? this.parentTaskId,
+      layerName: layerName ?? this.layerName,
+      workerName: workerName ?? this.workerName,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  String get priorityLabel {
+    switch (priority) {
+      case TaskPriority.high:
+        return 'High';
+      case TaskPriority.medium:
+        return 'Medium';
+      case TaskPriority.low:
+        return 'Low';
+    }
+  }
+
+  String get statusLabel {
+    switch (status) {
+      case TaskStatus.pending:
+        return 'Pending';
+      case TaskStatus.running:
+        return 'Running';
+      case TaskStatus.done:
+        return 'Done';
+      case TaskStatus.failed:
+        return 'Failed';
+    }
+  }
+}
+
+class WorkerResult {
+  const WorkerResult({
+    required this.success,
+    this.outputTasks = const [],
+    this.error,
+    this.metadata,
+  });
+  final bool success;
+  final List<AppTask> outputTasks;
+  final String? error;
+  final Map<String, dynamic>? metadata;
+}
+
+class EvaluationResult {
+  const EvaluationResult({
+    required this.passed,
+    required this.score,
+    required this.reasons,
+  });
+  final bool passed;
+  final double score;
+  final List<String> reasons;
+}

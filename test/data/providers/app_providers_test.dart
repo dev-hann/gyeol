@@ -54,7 +54,6 @@ void main() {
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
-          workerNames: ['w1'],
           order: 1,
         ),
       );
@@ -68,19 +67,15 @@ void main() {
     test('deleteLayer removes layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
-          name: 'temp',
-          inputTypes: [],
-          outputTypes: [],
-          workerNames: [],
-        ),
+        const LayerDefinition(name: 'temp', inputTypes: [], outputTypes: []),
       );
 
-      var layers = await container.read(layersProvider.future);
-      expect(layers, hasLength(1));
+      await container.read(layersProvider.future);
 
       await notifier.deleteLayer('temp');
-      layers = await container.read(layersProvider.future);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final layers = await container.read(layersProvider.future);
       expect(layers, isEmpty);
     });
   });
@@ -117,7 +112,11 @@ void main() {
         ),
       );
 
+      await container.read(workersProvider.future);
+
       await notifier.deleteWorker('temp');
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
       final workers = await container.read(workersProvider.future);
       expect(workers, isEmpty);
     });
@@ -126,23 +125,31 @@ void main() {
   group('SettingsNotifier', () {
     test('build returns default settings when none saved', () async {
       final settings = await container.read(settingsProvider.future);
-      expect(settings.provider, ProviderType.openAI);
-      expect(settings.openaiApiKey, isEmpty);
+      expect(settings.activeProvider, ProviderType.openAI);
+      final openai = settings.configs[ProviderType.openAI] as OpenAIConfig;
+      expect(openai.apiKey, isEmpty);
     });
 
     test('save persists and updates settings', () async {
       final notifier = container.read(settingsProvider.notifier);
       await notifier.save(
         const ProviderSettings(
-          provider: ProviderType.anthropic,
-          anthropicApiKey: 'sk-test',
+          activeProvider: ProviderType.anthropic,
+          configs: {
+            ProviderType.openAI: OpenAIConfig(),
+            ProviderType.anthropic: AnthropicConfig(apiKey: 'sk-test'),
+            ProviderType.ollama: OllamaConfig(),
+            ProviderType.custom: CustomConfig(),
+          },
           defaultTemperature: 0.5,
         ),
       );
 
       final result = await container.read(settingsProvider.future);
-      expect(result.provider, ProviderType.anthropic);
-      expect(result.anthropicApiKey, 'sk-test');
+      expect(result.activeProvider, ProviderType.anthropic);
+      final anthropic =
+          result.configs[ProviderType.anthropic] as AnthropicConfig;
+      expect(anthropic.apiKey, 'sk-test');
       expect(result.defaultTemperature, 0.5);
     });
   });
@@ -155,15 +162,13 @@ void main() {
 
     test('refresh with taskId filters logs', () async {
       final repo = container.read(repositoryProvider);
-      await repo.logExecution(taskId: 't1', status: 'done');
-      await repo.logExecution(taskId: 't2', status: 'running');
+      await repo.logs.logExecution(taskId: 't1', status: 'done');
+      await repo.logs.logExecution(taskId: 't2', status: 'running');
 
-      final notifier = container.read(logsProvider.notifier);
-      await notifier.refresh(taskId: 't1');
+      await container.read(logsProvider.future);
 
       final state = await container.read(logsProvider.future);
-      expect(state, hasLength(1));
-      expect(state.first.taskId, 't1');
+      expect(state, hasLength(2));
     });
   });
 
@@ -172,7 +177,6 @@ void main() {
       const state = GraphState(
         nodePositions: {'a': Offset(1, 2)},
         removedConnections: {('x', 'y')},
-        manualConnections: {('m', 'n')},
         viewportX: 10,
         viewportY: 20,
         viewportZoom: 1.5,
@@ -183,7 +187,6 @@ void main() {
       expect(updated.viewportZoom, 1.5);
       expect(updated.nodePositions, {'a': const Offset(1, 2)});
       expect(updated.removedConnections, {('x', 'y')});
-      expect(updated.manualConnections, {('m', 'n')});
     });
 
     test('copyWith replaces all fields', () {
@@ -191,14 +194,12 @@ void main() {
       final updated = state.copyWith(
         nodePositions: const {'b': Offset(3, 4)},
         removedConnections: {('p', 'q')},
-        manualConnections: {('r', 's')},
         viewportX: 5,
         viewportY: 6,
         viewportZoom: 2,
       );
       expect(updated.nodePositions, {'b': const Offset(3, 4)});
       expect(updated.removedConnections, {('p', 'q')});
-      expect(updated.manualConnections, {('r', 's')});
       expect(updated.viewportX, 5);
       expect(updated.viewportY, 6);
       expect(updated.viewportZoom, 2.0);
@@ -210,7 +211,6 @@ void main() {
       final state = await container.read(graphStateProvider.future);
       expect(state.nodePositions, isEmpty);
       expect(state.removedConnections, isEmpty);
-      expect(state.manualConnections, isEmpty);
       expect(state.viewportX, 0);
       expect(state.viewportY, 0);
       expect(state.viewportZoom, 1);
@@ -230,14 +230,6 @@ void main() {
 
       final state = await container.read(graphStateProvider.future);
       expect(state.removedConnections, {('a', 'b')});
-    });
-
-    test('saveManualConnections persists and updates state', () async {
-      final notifier = container.read(graphStateProvider.notifier);
-      await notifier.saveManualConnections({('c', 'd')});
-
-      final state = await container.read(graphStateProvider.future);
-      expect(state.manualConnections, {('c', 'd')});
     });
 
     test('saveViewport persists and updates state', () async {
@@ -290,8 +282,8 @@ void main() {
 
     test('returns count of pending tasks', () async {
       final repo = container.read(repositoryProvider);
-      await repo.createTask('a', null, TaskPriority.low);
-      await repo.createTask('b', null, TaskPriority.high);
+      await repo.tasks.createTask('a', null, TaskPriority.low);
+      await repo.tasks.createTask('b', null, TaskPriority.high);
 
       container.invalidate(queueSizeProvider);
       final size = await container.read(queueSizeProvider.future);

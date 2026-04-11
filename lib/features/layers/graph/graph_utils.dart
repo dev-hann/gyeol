@@ -12,14 +12,14 @@ class LayerGraphData {
     required this.layerName,
     required this.inputTypes,
     required this.outputTypes,
-    required this.workerNames,
+    required this.workerCount,
     required this.enabled,
     this.runningTasks = 0,
   });
   final String layerName;
   final List<String> inputTypes;
   final List<String> outputTypes;
-  final List<String> workerNames;
+  final int workerCount;
   final bool enabled;
   final int runningTasks;
 }
@@ -27,6 +27,7 @@ class LayerGraphData {
 List<Node<LayerGraphData>> buildNodes(
   List<LayerDefinition> layers,
   List<AppTask> tasks,
+  List<WorkerDefinition> workers,
 ) {
   if (layers.isEmpty) return [];
 
@@ -38,12 +39,12 @@ List<Node<LayerGraphData>> buildNodes(
     }
   }
 
-  final sorted = List<LayerDefinition>.from(layers)
-    ..sort((a, b) => a.order.compareTo(b.order));
+  final positions = layoutGraph(layers);
 
-  final positions = _layoutLR(sorted);
-
-  return sorted.map((layer) {
+  return layers.map((layer) {
+    final layerWorkerCount = workers
+        .where((w) => w.layerName == layer.name)
+        .length;
     return Node<LayerGraphData>(
       id: layer.name,
       type: 'layer',
@@ -53,7 +54,7 @@ List<Node<LayerGraphData>> buildNodes(
         layerName: layer.name,
         inputTypes: layer.inputTypes,
         outputTypes: layer.outputTypes,
-        workerNames: layer.workerNames,
+        workerCount: layerWorkerCount,
         enabled: layer.enabled,
         runningTasks: runningByLayer[layer.name] ?? 0,
       ),
@@ -117,21 +118,103 @@ List<Connection<void>> buildConnections(
   return connections;
 }
 
-Map<String, Offset> _layoutLR(List<LayerDefinition> sorted) {
-  final result = <String, Offset>{};
-  final byDepth = <int, List<LayerDefinition>>{};
+Map<String, Offset> layoutGraph(List<LayerDefinition> layers) {
+  if (layers.isEmpty) return {};
 
-  for (final layer in sorted) {
-    byDepth.putIfAbsent(layer.order, () => []).add(layer);
+  final names = layers.map((l) => l.name).toSet();
+  final edges = <(String, String)>[];
+  for (final src in layers) {
+    for (final dst in layers) {
+      if (src.name == dst.name) continue;
+      if (src.outputTypes
+          .toSet()
+          .intersection(dst.inputTypes.toSet())
+          .isNotEmpty) {
+        edges.add((src.name, dst.name));
+      }
+    }
   }
 
-  final depths = byDepth.keys.toList()..sort();
-  for (final depth in depths) {
-    final group = byDepth[depth]!;
+  final incoming = <String, Set<String>>{};
+  final outgoing = <String, Set<String>>{};
+  for (final name in names) {
+    incoming[name] = {};
+    outgoing[name] = {};
+  }
+  for (final (src, dst) in edges) {
+    if (names.contains(src) && names.contains(dst)) {
+      outgoing[src]!.add(dst);
+      incoming[dst]!.add(src);
+    }
+  }
+
+  final rank = <String, int>{};
+  final visited = <String>{};
+
+  void assignRank(String node, int r) {
+    if (visited.contains(node)) return;
+    visited.add(node);
+    rank[node] = r;
+    for (final child in outgoing[node]!) {
+      assignRank(child, r + 1);
+    }
+  }
+
+  final sources = names.where((n) => incoming[n]!.isEmpty).toList()..sort();
+  for (final s in sources) {
+    assignRank(s, 0);
+  }
+  for (final name in names) {
+    if (!visited.contains(name)) {
+      rank[name] = 0;
+    }
+  }
+
+  final byRank = <int, List<String>>{};
+  for (final entry in rank.entries) {
+    byRank.putIfAbsent(entry.value, () => []).add(entry.key);
+  }
+
+  final sortedRanks = byRank.keys.toList()..sort();
+  final baryCenter = <String, double>{};
+
+  for (final r in sortedRanks) {
+    final nodesInRank = byRank[r]!;
+    if (r == sortedRanks.first) {
+      for (var i = 0; i < nodesInRank.length; i++) {
+        baryCenter[nodesInRank[i]] = i.toDouble();
+      }
+      continue;
+    }
+
+    final prevRank = sortedRanks[sortedRanks.indexOf(r) - 1];
+    final prevNodes = byRank[prevRank]!;
+    final prevIndex = <String, int>{};
+    for (var i = 0; i < prevNodes.length; i++) {
+      prevIndex[prevNodes[i]] = i;
+    }
+
+    for (final node in nodesInRank) {
+      final preds = incoming[node]!.where(prevIndex.containsKey).toList();
+      if (preds.isEmpty) {
+        baryCenter[node] = nodesInRank.indexOf(node).toDouble();
+      } else {
+        baryCenter[node] =
+            preds.map((p) => prevIndex[p]!.toDouble()).reduce((a, b) => a + b) /
+            preds.length;
+      }
+    }
+
+    nodesInRank.sort((a, b) => baryCenter[a]!.compareTo(baryCenter[b]!));
+  }
+
+  final result = <String, Offset>{};
+  for (final r in sortedRanks) {
+    final group = byRank[r]!;
     for (var i = 0; i < group.length; i++) {
-      final x = 80.0 + (depths.indexOf(depth) * (kNodeWidth + kRankSep));
+      final x = 80.0 + (r * (kNodeWidth + kRankSep));
       final y = 80.0 + (i * (kNodeHeight + kNodeSep));
-      result[group[i].name] = Offset(x, y);
+      result[group[i]] = Offset(x, y);
     }
   }
 

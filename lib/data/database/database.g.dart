@@ -794,16 +794,16 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _workerNamesMeta = const VerificationMeta(
-    'workerNames',
+  static const VerificationMeta _layerPromptMeta = const VerificationMeta(
+    'layerPrompt',
   );
   @override
-  late final GeneratedColumn<String> workerNames = GeneratedColumn<String>(
-    'worker_names',
+  late final GeneratedColumn<String> layerPrompt = GeneratedColumn<String>(
+    'layer_prompt',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
@@ -837,7 +837,7 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
     name,
     inputTypes,
     outputTypes,
-    workerNames,
+    layerPrompt,
     sortOrder,
     enabled,
   ];
@@ -880,16 +880,14 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
     } else if (isInserting) {
       context.missing(_outputTypesMeta);
     }
-    if (data.containsKey('worker_names')) {
+    if (data.containsKey('layer_prompt')) {
       context.handle(
-        _workerNamesMeta,
-        workerNames.isAcceptableOrUnknown(
-          data['worker_names']!,
-          _workerNamesMeta,
+        _layerPromptMeta,
+        layerPrompt.isAcceptableOrUnknown(
+          data['layer_prompt']!,
+          _layerPromptMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_workerNamesMeta);
     }
     if (data.containsKey('sort_order')) {
       context.handle(
@@ -924,10 +922,10 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
         DriftSqlType.string,
         data['${effectivePrefix}output_types'],
       )!,
-      workerNames: attachedDatabase.typeMapping.read(
+      layerPrompt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}worker_names'],
-      )!,
+        data['${effectivePrefix}layer_prompt'],
+      ),
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -949,14 +947,14 @@ class Layer extends DataClass implements Insertable<Layer> {
   final String name;
   final String inputTypes;
   final String outputTypes;
-  final String workerNames;
+  final String? layerPrompt;
   final int sortOrder;
   final bool enabled;
   const Layer({
     required this.name,
     required this.inputTypes,
     required this.outputTypes,
-    required this.workerNames,
+    this.layerPrompt,
     required this.sortOrder,
     required this.enabled,
   });
@@ -966,7 +964,9 @@ class Layer extends DataClass implements Insertable<Layer> {
     map['name'] = Variable<String>(name);
     map['input_types'] = Variable<String>(inputTypes);
     map['output_types'] = Variable<String>(outputTypes);
-    map['worker_names'] = Variable<String>(workerNames);
+    if (!nullToAbsent || layerPrompt != null) {
+      map['layer_prompt'] = Variable<String>(layerPrompt);
+    }
     map['sort_order'] = Variable<int>(sortOrder);
     map['enabled'] = Variable<bool>(enabled);
     return map;
@@ -977,7 +977,9 @@ class Layer extends DataClass implements Insertable<Layer> {
       name: Value(name),
       inputTypes: Value(inputTypes),
       outputTypes: Value(outputTypes),
-      workerNames: Value(workerNames),
+      layerPrompt: layerPrompt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(layerPrompt),
       sortOrder: Value(sortOrder),
       enabled: Value(enabled),
     );
@@ -992,7 +994,7 @@ class Layer extends DataClass implements Insertable<Layer> {
       name: serializer.fromJson<String>(json['name']),
       inputTypes: serializer.fromJson<String>(json['inputTypes']),
       outputTypes: serializer.fromJson<String>(json['outputTypes']),
-      workerNames: serializer.fromJson<String>(json['workerNames']),
+      layerPrompt: serializer.fromJson<String?>(json['layerPrompt']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       enabled: serializer.fromJson<bool>(json['enabled']),
     );
@@ -1004,7 +1006,7 @@ class Layer extends DataClass implements Insertable<Layer> {
       'name': serializer.toJson<String>(name),
       'inputTypes': serializer.toJson<String>(inputTypes),
       'outputTypes': serializer.toJson<String>(outputTypes),
-      'workerNames': serializer.toJson<String>(workerNames),
+      'layerPrompt': serializer.toJson<String?>(layerPrompt),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'enabled': serializer.toJson<bool>(enabled),
     };
@@ -1014,14 +1016,14 @@ class Layer extends DataClass implements Insertable<Layer> {
     String? name,
     String? inputTypes,
     String? outputTypes,
-    String? workerNames,
+    Value<String?> layerPrompt = const Value.absent(),
     int? sortOrder,
     bool? enabled,
   }) => Layer(
     name: name ?? this.name,
     inputTypes: inputTypes ?? this.inputTypes,
     outputTypes: outputTypes ?? this.outputTypes,
-    workerNames: workerNames ?? this.workerNames,
+    layerPrompt: layerPrompt.present ? layerPrompt.value : this.layerPrompt,
     sortOrder: sortOrder ?? this.sortOrder,
     enabled: enabled ?? this.enabled,
   );
@@ -1034,9 +1036,9 @@ class Layer extends DataClass implements Insertable<Layer> {
       outputTypes: data.outputTypes.present
           ? data.outputTypes.value
           : this.outputTypes,
-      workerNames: data.workerNames.present
-          ? data.workerNames.value
-          : this.workerNames,
+      layerPrompt: data.layerPrompt.present
+          ? data.layerPrompt.value
+          : this.layerPrompt,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
     );
@@ -1048,7 +1050,7 @@ class Layer extends DataClass implements Insertable<Layer> {
           ..write('name: $name, ')
           ..write('inputTypes: $inputTypes, ')
           ..write('outputTypes: $outputTypes, ')
-          ..write('workerNames: $workerNames, ')
+          ..write('layerPrompt: $layerPrompt, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('enabled: $enabled')
           ..write(')'))
@@ -1060,7 +1062,7 @@ class Layer extends DataClass implements Insertable<Layer> {
     name,
     inputTypes,
     outputTypes,
-    workerNames,
+    layerPrompt,
     sortOrder,
     enabled,
   );
@@ -1071,7 +1073,7 @@ class Layer extends DataClass implements Insertable<Layer> {
           other.name == this.name &&
           other.inputTypes == this.inputTypes &&
           other.outputTypes == this.outputTypes &&
-          other.workerNames == this.workerNames &&
+          other.layerPrompt == this.layerPrompt &&
           other.sortOrder == this.sortOrder &&
           other.enabled == this.enabled);
 }
@@ -1080,7 +1082,7 @@ class LayersCompanion extends UpdateCompanion<Layer> {
   final Value<String> name;
   final Value<String> inputTypes;
   final Value<String> outputTypes;
-  final Value<String> workerNames;
+  final Value<String?> layerPrompt;
   final Value<int> sortOrder;
   final Value<bool> enabled;
   final Value<int> rowid;
@@ -1088,7 +1090,7 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     this.name = const Value.absent(),
     this.inputTypes = const Value.absent(),
     this.outputTypes = const Value.absent(),
-    this.workerNames = const Value.absent(),
+    this.layerPrompt = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.enabled = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1097,19 +1099,18 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     required String name,
     required String inputTypes,
     required String outputTypes,
-    required String workerNames,
+    this.layerPrompt = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.enabled = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name),
        inputTypes = Value(inputTypes),
-       outputTypes = Value(outputTypes),
-       workerNames = Value(workerNames);
+       outputTypes = Value(outputTypes);
   static Insertable<Layer> custom({
     Expression<String>? name,
     Expression<String>? inputTypes,
     Expression<String>? outputTypes,
-    Expression<String>? workerNames,
+    Expression<String>? layerPrompt,
     Expression<int>? sortOrder,
     Expression<bool>? enabled,
     Expression<int>? rowid,
@@ -1118,7 +1119,7 @@ class LayersCompanion extends UpdateCompanion<Layer> {
       if (name != null) 'name': name,
       if (inputTypes != null) 'input_types': inputTypes,
       if (outputTypes != null) 'output_types': outputTypes,
-      if (workerNames != null) 'worker_names': workerNames,
+      if (layerPrompt != null) 'layer_prompt': layerPrompt,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (enabled != null) 'enabled': enabled,
       if (rowid != null) 'rowid': rowid,
@@ -1129,7 +1130,7 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     Value<String>? name,
     Value<String>? inputTypes,
     Value<String>? outputTypes,
-    Value<String>? workerNames,
+    Value<String?>? layerPrompt,
     Value<int>? sortOrder,
     Value<bool>? enabled,
     Value<int>? rowid,
@@ -1138,7 +1139,7 @@ class LayersCompanion extends UpdateCompanion<Layer> {
       name: name ?? this.name,
       inputTypes: inputTypes ?? this.inputTypes,
       outputTypes: outputTypes ?? this.outputTypes,
-      workerNames: workerNames ?? this.workerNames,
+      layerPrompt: layerPrompt ?? this.layerPrompt,
       sortOrder: sortOrder ?? this.sortOrder,
       enabled: enabled ?? this.enabled,
       rowid: rowid ?? this.rowid,
@@ -1157,8 +1158,8 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     if (outputTypes.present) {
       map['output_types'] = Variable<String>(outputTypes.value);
     }
-    if (workerNames.present) {
-      map['worker_names'] = Variable<String>(workerNames.value);
+    if (layerPrompt.present) {
+      map['layer_prompt'] = Variable<String>(layerPrompt.value);
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
@@ -1178,7 +1179,7 @@ class LayersCompanion extends UpdateCompanion<Layer> {
           ..write('name: $name, ')
           ..write('inputTypes: $inputTypes, ')
           ..write('outputTypes: $outputTypes, ')
-          ..write('workerNames: $workerNames, ')
+          ..write('layerPrompt: $layerPrompt, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('enabled: $enabled, ')
           ..write('rowid: $rowid')
@@ -2304,6 +2305,17 @@ class $ThreadsTable extends Threads with TableInfo<$ThreadsTable, Thread> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _contextPromptMeta = const VerificationMeta(
+    'contextPrompt',
+  );
+  @override
+  late final GeneratedColumn<String> contextPrompt = GeneratedColumn<String>(
+    'context_prompt',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _enabledMeta = const VerificationMeta(
     'enabled',
   );
@@ -2334,6 +2346,7 @@ class $ThreadsTable extends Threads with TableInfo<$ThreadsTable, Thread> {
     name,
     path,
     layerNames,
+    contextPrompt,
     enabled,
     status,
   ];
@@ -2373,6 +2386,15 @@ class $ThreadsTable extends Threads with TableInfo<$ThreadsTable, Thread> {
     } else if (isInserting) {
       context.missing(_layerNamesMeta);
     }
+    if (data.containsKey('context_prompt')) {
+      context.handle(
+        _contextPromptMeta,
+        contextPrompt.isAcceptableOrUnknown(
+          data['context_prompt']!,
+          _contextPromptMeta,
+        ),
+      );
+    }
     if (data.containsKey('enabled')) {
       context.handle(
         _enabledMeta,
@@ -2406,6 +2428,10 @@ class $ThreadsTable extends Threads with TableInfo<$ThreadsTable, Thread> {
         DriftSqlType.string,
         data['${effectivePrefix}layer_names'],
       )!,
+      contextPrompt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}context_prompt'],
+      ),
       enabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}enabled'],
@@ -2427,12 +2453,14 @@ class Thread extends DataClass implements Insertable<Thread> {
   final String name;
   final String path;
   final String layerNames;
+  final String? contextPrompt;
   final bool enabled;
   final String status;
   const Thread({
     required this.name,
     required this.path,
     required this.layerNames,
+    this.contextPrompt,
     required this.enabled,
     required this.status,
   });
@@ -2442,6 +2470,9 @@ class Thread extends DataClass implements Insertable<Thread> {
     map['name'] = Variable<String>(name);
     map['path'] = Variable<String>(path);
     map['layer_names'] = Variable<String>(layerNames);
+    if (!nullToAbsent || contextPrompt != null) {
+      map['context_prompt'] = Variable<String>(contextPrompt);
+    }
     map['enabled'] = Variable<bool>(enabled);
     map['status'] = Variable<String>(status);
     return map;
@@ -2452,6 +2483,9 @@ class Thread extends DataClass implements Insertable<Thread> {
       name: Value(name),
       path: Value(path),
       layerNames: Value(layerNames),
+      contextPrompt: contextPrompt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contextPrompt),
       enabled: Value(enabled),
       status: Value(status),
     );
@@ -2466,6 +2500,7 @@ class Thread extends DataClass implements Insertable<Thread> {
       name: serializer.fromJson<String>(json['name']),
       path: serializer.fromJson<String>(json['path']),
       layerNames: serializer.fromJson<String>(json['layerNames']),
+      contextPrompt: serializer.fromJson<String?>(json['contextPrompt']),
       enabled: serializer.fromJson<bool>(json['enabled']),
       status: serializer.fromJson<String>(json['status']),
     );
@@ -2477,6 +2512,7 @@ class Thread extends DataClass implements Insertable<Thread> {
       'name': serializer.toJson<String>(name),
       'path': serializer.toJson<String>(path),
       'layerNames': serializer.toJson<String>(layerNames),
+      'contextPrompt': serializer.toJson<String?>(contextPrompt),
       'enabled': serializer.toJson<bool>(enabled),
       'status': serializer.toJson<String>(status),
     };
@@ -2486,12 +2522,16 @@ class Thread extends DataClass implements Insertable<Thread> {
     String? name,
     String? path,
     String? layerNames,
+    Value<String?> contextPrompt = const Value.absent(),
     bool? enabled,
     String? status,
   }) => Thread(
     name: name ?? this.name,
     path: path ?? this.path,
     layerNames: layerNames ?? this.layerNames,
+    contextPrompt: contextPrompt.present
+        ? contextPrompt.value
+        : this.contextPrompt,
     enabled: enabled ?? this.enabled,
     status: status ?? this.status,
   );
@@ -2502,6 +2542,9 @@ class Thread extends DataClass implements Insertable<Thread> {
       layerNames: data.layerNames.present
           ? data.layerNames.value
           : this.layerNames,
+      contextPrompt: data.contextPrompt.present
+          ? data.contextPrompt.value
+          : this.contextPrompt,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
       status: data.status.present ? data.status.value : this.status,
     );
@@ -2513,6 +2556,7 @@ class Thread extends DataClass implements Insertable<Thread> {
           ..write('name: $name, ')
           ..write('path: $path, ')
           ..write('layerNames: $layerNames, ')
+          ..write('contextPrompt: $contextPrompt, ')
           ..write('enabled: $enabled, ')
           ..write('status: $status')
           ..write(')'))
@@ -2520,7 +2564,8 @@ class Thread extends DataClass implements Insertable<Thread> {
   }
 
   @override
-  int get hashCode => Object.hash(name, path, layerNames, enabled, status);
+  int get hashCode =>
+      Object.hash(name, path, layerNames, contextPrompt, enabled, status);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2528,6 +2573,7 @@ class Thread extends DataClass implements Insertable<Thread> {
           other.name == this.name &&
           other.path == this.path &&
           other.layerNames == this.layerNames &&
+          other.contextPrompt == this.contextPrompt &&
           other.enabled == this.enabled &&
           other.status == this.status);
 }
@@ -2536,6 +2582,7 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
   final Value<String> name;
   final Value<String> path;
   final Value<String> layerNames;
+  final Value<String?> contextPrompt;
   final Value<bool> enabled;
   final Value<String> status;
   final Value<int> rowid;
@@ -2543,6 +2590,7 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
     this.name = const Value.absent(),
     this.path = const Value.absent(),
     this.layerNames = const Value.absent(),
+    this.contextPrompt = const Value.absent(),
     this.enabled = const Value.absent(),
     this.status = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2551,6 +2599,7 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
     required String name,
     required String path,
     required String layerNames,
+    this.contextPrompt = const Value.absent(),
     this.enabled = const Value.absent(),
     this.status = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2561,6 +2610,7 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
     Expression<String>? name,
     Expression<String>? path,
     Expression<String>? layerNames,
+    Expression<String>? contextPrompt,
     Expression<bool>? enabled,
     Expression<String>? status,
     Expression<int>? rowid,
@@ -2569,6 +2619,7 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
       if (name != null) 'name': name,
       if (path != null) 'path': path,
       if (layerNames != null) 'layer_names': layerNames,
+      if (contextPrompt != null) 'context_prompt': contextPrompt,
       if (enabled != null) 'enabled': enabled,
       if (status != null) 'status': status,
       if (rowid != null) 'rowid': rowid,
@@ -2579,6 +2630,7 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
     Value<String>? name,
     Value<String>? path,
     Value<String>? layerNames,
+    Value<String?>? contextPrompt,
     Value<bool>? enabled,
     Value<String>? status,
     Value<int>? rowid,
@@ -2587,6 +2639,7 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
       name: name ?? this.name,
       path: path ?? this.path,
       layerNames: layerNames ?? this.layerNames,
+      contextPrompt: contextPrompt ?? this.contextPrompt,
       enabled: enabled ?? this.enabled,
       status: status ?? this.status,
       rowid: rowid ?? this.rowid,
@@ -2604,6 +2657,9 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
     }
     if (layerNames.present) {
       map['layer_names'] = Variable<String>(layerNames.value);
+    }
+    if (contextPrompt.present) {
+      map['context_prompt'] = Variable<String>(contextPrompt.value);
     }
     if (enabled.present) {
       map['enabled'] = Variable<bool>(enabled.value);
@@ -2623,8 +2679,792 @@ class ThreadsCompanion extends UpdateCompanion<Thread> {
           ..write('name: $name, ')
           ..write('path: $path, ')
           ..write('layerNames: $layerNames, ')
+          ..write('contextPrompt: $contextPrompt, ')
           ..write('enabled: $enabled, ')
           ..write('status: $status, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ChatConversationsTable extends ChatConversations
+    with TableInfo<$ChatConversationsTable, ChatConversationRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ChatConversationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, title, createdAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'chat_conversations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ChatConversationRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ChatConversationRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ChatConversationRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ChatConversationsTable createAlias(String alias) {
+    return $ChatConversationsTable(attachedDatabase, alias);
+  }
+}
+
+class ChatConversationRow extends DataClass
+    implements Insertable<ChatConversationRow> {
+  final String id;
+  final String title;
+  final int createdAt;
+  final int updatedAt;
+  const ChatConversationRow({
+    required this.id,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  ChatConversationsCompanion toCompanion(bool nullToAbsent) {
+    return ChatConversationsCompanion(
+      id: Value(id),
+      title: Value(title),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ChatConversationRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ChatConversationRow(
+      id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  ChatConversationRow copyWith({
+    String? id,
+    String? title,
+    int? createdAt,
+    int? updatedAt,
+  }) => ChatConversationRow(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ChatConversationRow copyWithCompanion(ChatConversationsCompanion data) {
+    return ChatConversationRow(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChatConversationRow(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, title, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ChatConversationRow &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ChatConversationsCompanion extends UpdateCompanion<ChatConversationRow> {
+  final Value<String> id;
+  final Value<String> title;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> rowid;
+  const ChatConversationsCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ChatConversationsCompanion.insert({
+    required String id,
+    required String title,
+    required int createdAt,
+    required int updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       title = Value(title),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ChatConversationRow> custom({
+    Expression<String>? id,
+    Expression<String>? title,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ChatConversationsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? title,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ChatConversationsCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChatConversationsCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ChatMessagesTable extends ChatMessages
+    with TableInfo<$ChatMessagesTable, ChatMessageRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ChatMessagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _conversationIdMeta = const VerificationMeta(
+    'conversationId',
+  );
+  @override
+  late final GeneratedColumn<String> conversationId = GeneratedColumn<String>(
+    'conversation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toolNameMeta = const VerificationMeta(
+    'toolName',
+  );
+  @override
+  late final GeneratedColumn<String> toolName = GeneratedColumn<String>(
+    'tool_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _toolCallIdMeta = const VerificationMeta(
+    'toolCallId',
+  );
+  @override
+  late final GeneratedColumn<String> toolCallId = GeneratedColumn<String>(
+    'tool_call_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    conversationId,
+    role,
+    content,
+    toolName,
+    toolCallId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'chat_messages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ChatMessageRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('conversation_id')) {
+      context.handle(
+        _conversationIdMeta,
+        conversationId.isAcceptableOrUnknown(
+          data['conversation_id']!,
+          _conversationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_conversationIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('tool_name')) {
+      context.handle(
+        _toolNameMeta,
+        toolName.isAcceptableOrUnknown(data['tool_name']!, _toolNameMeta),
+      );
+    }
+    if (data.containsKey('tool_call_id')) {
+      context.handle(
+        _toolCallIdMeta,
+        toolCallId.isAcceptableOrUnknown(
+          data['tool_call_id']!,
+          _toolCallIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ChatMessageRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ChatMessageRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      conversationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}conversation_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      toolName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tool_name'],
+      ),
+      toolCallId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tool_call_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ChatMessagesTable createAlias(String alias) {
+    return $ChatMessagesTable(attachedDatabase, alias);
+  }
+}
+
+class ChatMessageRow extends DataClass implements Insertable<ChatMessageRow> {
+  final String id;
+  final String conversationId;
+  final String role;
+  final String content;
+  final String? toolName;
+  final String? toolCallId;
+  final int createdAt;
+  const ChatMessageRow({
+    required this.id,
+    required this.conversationId,
+    required this.role,
+    required this.content,
+    this.toolName,
+    this.toolCallId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['conversation_id'] = Variable<String>(conversationId);
+    map['role'] = Variable<String>(role);
+    map['content'] = Variable<String>(content);
+    if (!nullToAbsent || toolName != null) {
+      map['tool_name'] = Variable<String>(toolName);
+    }
+    if (!nullToAbsent || toolCallId != null) {
+      map['tool_call_id'] = Variable<String>(toolCallId);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  ChatMessagesCompanion toCompanion(bool nullToAbsent) {
+    return ChatMessagesCompanion(
+      id: Value(id),
+      conversationId: Value(conversationId),
+      role: Value(role),
+      content: Value(content),
+      toolName: toolName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toolName),
+      toolCallId: toolCallId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toolCallId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ChatMessageRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ChatMessageRow(
+      id: serializer.fromJson<String>(json['id']),
+      conversationId: serializer.fromJson<String>(json['conversationId']),
+      role: serializer.fromJson<String>(json['role']),
+      content: serializer.fromJson<String>(json['content']),
+      toolName: serializer.fromJson<String?>(json['toolName']),
+      toolCallId: serializer.fromJson<String?>(json['toolCallId']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'conversationId': serializer.toJson<String>(conversationId),
+      'role': serializer.toJson<String>(role),
+      'content': serializer.toJson<String>(content),
+      'toolName': serializer.toJson<String?>(toolName),
+      'toolCallId': serializer.toJson<String?>(toolCallId),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  ChatMessageRow copyWith({
+    String? id,
+    String? conversationId,
+    String? role,
+    String? content,
+    Value<String?> toolName = const Value.absent(),
+    Value<String?> toolCallId = const Value.absent(),
+    int? createdAt,
+  }) => ChatMessageRow(
+    id: id ?? this.id,
+    conversationId: conversationId ?? this.conversationId,
+    role: role ?? this.role,
+    content: content ?? this.content,
+    toolName: toolName.present ? toolName.value : this.toolName,
+    toolCallId: toolCallId.present ? toolCallId.value : this.toolCallId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ChatMessageRow copyWithCompanion(ChatMessagesCompanion data) {
+    return ChatMessageRow(
+      id: data.id.present ? data.id.value : this.id,
+      conversationId: data.conversationId.present
+          ? data.conversationId.value
+          : this.conversationId,
+      role: data.role.present ? data.role.value : this.role,
+      content: data.content.present ? data.content.value : this.content,
+      toolName: data.toolName.present ? data.toolName.value : this.toolName,
+      toolCallId: data.toolCallId.present
+          ? data.toolCallId.value
+          : this.toolCallId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChatMessageRow(')
+          ..write('id: $id, ')
+          ..write('conversationId: $conversationId, ')
+          ..write('role: $role, ')
+          ..write('content: $content, ')
+          ..write('toolName: $toolName, ')
+          ..write('toolCallId: $toolCallId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    conversationId,
+    role,
+    content,
+    toolName,
+    toolCallId,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ChatMessageRow &&
+          other.id == this.id &&
+          other.conversationId == this.conversationId &&
+          other.role == this.role &&
+          other.content == this.content &&
+          other.toolName == this.toolName &&
+          other.toolCallId == this.toolCallId &&
+          other.createdAt == this.createdAt);
+}
+
+class ChatMessagesCompanion extends UpdateCompanion<ChatMessageRow> {
+  final Value<String> id;
+  final Value<String> conversationId;
+  final Value<String> role;
+  final Value<String> content;
+  final Value<String?> toolName;
+  final Value<String?> toolCallId;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const ChatMessagesCompanion({
+    this.id = const Value.absent(),
+    this.conversationId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.content = const Value.absent(),
+    this.toolName = const Value.absent(),
+    this.toolCallId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ChatMessagesCompanion.insert({
+    required String id,
+    required String conversationId,
+    required String role,
+    required String content,
+    this.toolName = const Value.absent(),
+    this.toolCallId = const Value.absent(),
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       conversationId = Value(conversationId),
+       role = Value(role),
+       content = Value(content),
+       createdAt = Value(createdAt);
+  static Insertable<ChatMessageRow> custom({
+    Expression<String>? id,
+    Expression<String>? conversationId,
+    Expression<String>? role,
+    Expression<String>? content,
+    Expression<String>? toolName,
+    Expression<String>? toolCallId,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (conversationId != null) 'conversation_id': conversationId,
+      if (role != null) 'role': role,
+      if (content != null) 'content': content,
+      if (toolName != null) 'tool_name': toolName,
+      if (toolCallId != null) 'tool_call_id': toolCallId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ChatMessagesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? conversationId,
+    Value<String>? role,
+    Value<String>? content,
+    Value<String?>? toolName,
+    Value<String?>? toolCallId,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ChatMessagesCompanion(
+      id: id ?? this.id,
+      conversationId: conversationId ?? this.conversationId,
+      role: role ?? this.role,
+      content: content ?? this.content,
+      toolName: toolName ?? this.toolName,
+      toolCallId: toolCallId ?? this.toolCallId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (conversationId.present) {
+      map['conversation_id'] = Variable<String>(conversationId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (toolName.present) {
+      map['tool_name'] = Variable<String>(toolName.value);
+    }
+    if (toolCallId.present) {
+      map['tool_call_id'] = Variable<String>(toolCallId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChatMessagesCompanion(')
+          ..write('id: $id, ')
+          ..write('conversationId: $conversationId, ')
+          ..write('role: $role, ')
+          ..write('content: $content, ')
+          ..write('toolName: $toolName, ')
+          ..write('toolCallId: $toolCallId, ')
+          ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2640,6 +3480,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final $ExecutionLogsTable executionLogs = $ExecutionLogsTable(this);
   late final $ThreadsTable threads = $ThreadsTable(this);
+  late final $ChatConversationsTable chatConversations =
+      $ChatConversationsTable(this);
+  late final $ChatMessagesTable chatMessages = $ChatMessagesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2651,6 +3494,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     settings,
     executionLogs,
     threads,
+    chatConversations,
+    chatMessages,
   ];
 }
 
@@ -3012,7 +3857,7 @@ typedef $$LayersTableCreateCompanionBuilder =
       required String name,
       required String inputTypes,
       required String outputTypes,
-      required String workerNames,
+      Value<String?> layerPrompt,
       Value<int> sortOrder,
       Value<bool> enabled,
       Value<int> rowid,
@@ -3022,7 +3867,7 @@ typedef $$LayersTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> inputTypes,
       Value<String> outputTypes,
-      Value<String> workerNames,
+      Value<String?> layerPrompt,
       Value<int> sortOrder,
       Value<bool> enabled,
       Value<int> rowid,
@@ -3052,8 +3897,8 @@ class $$LayersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get workerNames => $composableBuilder(
-    column: $table.workerNames,
+  ColumnFilters<String> get layerPrompt => $composableBuilder(
+    column: $table.layerPrompt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3092,8 +3937,8 @@ class $$LayersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get workerNames => $composableBuilder(
-    column: $table.workerNames,
+  ColumnOrderings<String> get layerPrompt => $composableBuilder(
+    column: $table.layerPrompt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3130,8 +3975,8 @@ class $$LayersTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get workerNames => $composableBuilder(
-    column: $table.workerNames,
+  GeneratedColumn<String> get layerPrompt => $composableBuilder(
+    column: $table.layerPrompt,
     builder: (column) => column,
   );
 
@@ -3173,7 +4018,7 @@ class $$LayersTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> inputTypes = const Value.absent(),
                 Value<String> outputTypes = const Value.absent(),
-                Value<String> workerNames = const Value.absent(),
+                Value<String?> layerPrompt = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3181,7 +4026,7 @@ class $$LayersTableTableManager
                 name: name,
                 inputTypes: inputTypes,
                 outputTypes: outputTypes,
-                workerNames: workerNames,
+                layerPrompt: layerPrompt,
                 sortOrder: sortOrder,
                 enabled: enabled,
                 rowid: rowid,
@@ -3191,7 +4036,7 @@ class $$LayersTableTableManager
                 required String name,
                 required String inputTypes,
                 required String outputTypes,
-                required String workerNames,
+                Value<String?> layerPrompt = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3199,7 +4044,7 @@ class $$LayersTableTableManager
                 name: name,
                 inputTypes: inputTypes,
                 outputTypes: outputTypes,
-                workerNames: workerNames,
+                layerPrompt: layerPrompt,
                 sortOrder: sortOrder,
                 enabled: enabled,
                 rowid: rowid,
@@ -3815,6 +4660,7 @@ typedef $$ThreadsTableCreateCompanionBuilder =
       required String name,
       required String path,
       required String layerNames,
+      Value<String?> contextPrompt,
       Value<bool> enabled,
       Value<String> status,
       Value<int> rowid,
@@ -3824,6 +4670,7 @@ typedef $$ThreadsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> path,
       Value<String> layerNames,
+      Value<String?> contextPrompt,
       Value<bool> enabled,
       Value<String> status,
       Value<int> rowid,
@@ -3850,6 +4697,11 @@ class $$ThreadsTableFilterComposer
 
   ColumnFilters<String> get layerNames => $composableBuilder(
     column: $table.layerNames,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contextPrompt => $composableBuilder(
+    column: $table.contextPrompt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3888,6 +4740,11 @@ class $$ThreadsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get contextPrompt => $composableBuilder(
+    column: $table.contextPrompt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get enabled => $composableBuilder(
     column: $table.enabled,
     builder: (column) => ColumnOrderings(column),
@@ -3916,6 +4773,11 @@ class $$ThreadsTableAnnotationComposer
 
   GeneratedColumn<String> get layerNames => $composableBuilder(
     column: $table.layerNames,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contextPrompt => $composableBuilder(
+    column: $table.contextPrompt,
     builder: (column) => column,
   );
 
@@ -3957,6 +4819,7 @@ class $$ThreadsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> path = const Value.absent(),
                 Value<String> layerNames = const Value.absent(),
+                Value<String?> contextPrompt = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3964,6 +4827,7 @@ class $$ThreadsTableTableManager
                 name: name,
                 path: path,
                 layerNames: layerNames,
+                contextPrompt: contextPrompt,
                 enabled: enabled,
                 status: status,
                 rowid: rowid,
@@ -3973,6 +4837,7 @@ class $$ThreadsTableTableManager
                 required String name,
                 required String path,
                 required String layerNames,
+                Value<String?> contextPrompt = const Value.absent(),
                 Value<bool> enabled = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3980,6 +4845,7 @@ class $$ThreadsTableTableManager
                 name: name,
                 path: path,
                 layerNames: layerNames,
+                contextPrompt: contextPrompt,
                 enabled: enabled,
                 status: status,
                 rowid: rowid,
@@ -4006,6 +4872,442 @@ typedef $$ThreadsTableProcessedTableManager =
       Thread,
       PrefetchHooks Function()
     >;
+typedef $$ChatConversationsTableCreateCompanionBuilder =
+    ChatConversationsCompanion Function({
+      required String id,
+      required String title,
+      required int createdAt,
+      required int updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ChatConversationsTableUpdateCompanionBuilder =
+    ChatConversationsCompanion Function({
+      Value<String> id,
+      Value<String> title,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$ChatConversationsTableFilterComposer
+    extends Composer<_$AppDatabase, $ChatConversationsTable> {
+  $$ChatConversationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ChatConversationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChatConversationsTable> {
+  $$ChatConversationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ChatConversationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChatConversationsTable> {
+  $$ChatConversationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ChatConversationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ChatConversationsTable,
+          ChatConversationRow,
+          $$ChatConversationsTableFilterComposer,
+          $$ChatConversationsTableOrderingComposer,
+          $$ChatConversationsTableAnnotationComposer,
+          $$ChatConversationsTableCreateCompanionBuilder,
+          $$ChatConversationsTableUpdateCompanionBuilder,
+          (
+            ChatConversationRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ChatConversationsTable,
+              ChatConversationRow
+            >,
+          ),
+          ChatConversationRow,
+          PrefetchHooks Function()
+        > {
+  $$ChatConversationsTableTableManager(
+    _$AppDatabase db,
+    $ChatConversationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ChatConversationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ChatConversationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ChatConversationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ChatConversationsCompanion(
+                id: id,
+                title: title,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String title,
+                required int createdAt,
+                required int updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ChatConversationsCompanion.insert(
+                id: id,
+                title: title,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ChatConversationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ChatConversationsTable,
+      ChatConversationRow,
+      $$ChatConversationsTableFilterComposer,
+      $$ChatConversationsTableOrderingComposer,
+      $$ChatConversationsTableAnnotationComposer,
+      $$ChatConversationsTableCreateCompanionBuilder,
+      $$ChatConversationsTableUpdateCompanionBuilder,
+      (
+        ChatConversationRow,
+        BaseReferences<
+          _$AppDatabase,
+          $ChatConversationsTable,
+          ChatConversationRow
+        >,
+      ),
+      ChatConversationRow,
+      PrefetchHooks Function()
+    >;
+typedef $$ChatMessagesTableCreateCompanionBuilder =
+    ChatMessagesCompanion Function({
+      required String id,
+      required String conversationId,
+      required String role,
+      required String content,
+      Value<String?> toolName,
+      Value<String?> toolCallId,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$ChatMessagesTableUpdateCompanionBuilder =
+    ChatMessagesCompanion Function({
+      Value<String> id,
+      Value<String> conversationId,
+      Value<String> role,
+      Value<String> content,
+      Value<String?> toolName,
+      Value<String?> toolCallId,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ChatMessagesTableFilterComposer
+    extends Composer<_$AppDatabase, $ChatMessagesTable> {
+  $$ChatMessagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toolName => $composableBuilder(
+    column: $table.toolName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toolCallId => $composableBuilder(
+    column: $table.toolCallId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ChatMessagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChatMessagesTable> {
+  $$ChatMessagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toolName => $composableBuilder(
+    column: $table.toolName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toolCallId => $composableBuilder(
+    column: $table.toolCallId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ChatMessagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChatMessagesTable> {
+  $$ChatMessagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get toolName =>
+      $composableBuilder(column: $table.toolName, builder: (column) => column);
+
+  GeneratedColumn<String> get toolCallId => $composableBuilder(
+    column: $table.toolCallId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ChatMessagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ChatMessagesTable,
+          ChatMessageRow,
+          $$ChatMessagesTableFilterComposer,
+          $$ChatMessagesTableOrderingComposer,
+          $$ChatMessagesTableAnnotationComposer,
+          $$ChatMessagesTableCreateCompanionBuilder,
+          $$ChatMessagesTableUpdateCompanionBuilder,
+          (
+            ChatMessageRow,
+            BaseReferences<_$AppDatabase, $ChatMessagesTable, ChatMessageRow>,
+          ),
+          ChatMessageRow,
+          PrefetchHooks Function()
+        > {
+  $$ChatMessagesTableTableManager(_$AppDatabase db, $ChatMessagesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ChatMessagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ChatMessagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ChatMessagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> conversationId = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String?> toolName = const Value.absent(),
+                Value<String?> toolCallId = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ChatMessagesCompanion(
+                id: id,
+                conversationId: conversationId,
+                role: role,
+                content: content,
+                toolName: toolName,
+                toolCallId: toolCallId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String conversationId,
+                required String role,
+                required String content,
+                Value<String?> toolName = const Value.absent(),
+                Value<String?> toolCallId = const Value.absent(),
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ChatMessagesCompanion.insert(
+                id: id,
+                conversationId: conversationId,
+                role: role,
+                content: content,
+                toolName: toolName,
+                toolCallId: toolCallId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ChatMessagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ChatMessagesTable,
+      ChatMessageRow,
+      $$ChatMessagesTableFilterComposer,
+      $$ChatMessagesTableOrderingComposer,
+      $$ChatMessagesTableAnnotationComposer,
+      $$ChatMessagesTableCreateCompanionBuilder,
+      $$ChatMessagesTableUpdateCompanionBuilder,
+      (
+        ChatMessageRow,
+        BaseReferences<_$AppDatabase, $ChatMessagesTable, ChatMessageRow>,
+      ),
+      ChatMessageRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4022,4 +5324,8 @@ class $AppDatabaseManager {
       $$ExecutionLogsTableTableManager(_db, _db.executionLogs);
   $$ThreadsTableTableManager get threads =>
       $$ThreadsTableTableManager(_db, _db.threads);
+  $$ChatConversationsTableTableManager get chatConversations =>
+      $$ChatConversationsTableTableManager(_db, _db.chatConversations);
+  $$ChatMessagesTableTableManager get chatMessages =>
+      $$ChatMessagesTableTableManager(_db, _db.chatMessages);
 }

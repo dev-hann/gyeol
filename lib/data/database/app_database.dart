@@ -23,7 +23,7 @@ class Layers extends Table {
   TextColumn get name => text()();
   TextColumn get inputTypes => text()();
   TextColumn get outputTypes => text()();
-  TextColumn get workerNames => text()();
+  TextColumn get layerPrompt => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
 
@@ -56,6 +56,7 @@ class Threads extends Table {
   TextColumn get name => text()();
   TextColumn get path => text()();
   TextColumn get layerNames => text()();
+  TextColumn get contextPrompt => text().nullable()();
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
   TextColumn get status => text().withDefault(const Constant('idle'))();
 
@@ -70,4 +71,29 @@ class ExecutionLogs extends Table {
   TextColumn get status => text()();
   TextColumn get message => text().nullable()();
   IntColumn get createdAt => integer()();
+}
+
+@DataClassName('ChatConversationRow')
+class ChatConversations extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('ChatMessageRow')
+class ChatMessages extends Table {
+  TextColumn get id => text()();
+  TextColumn get conversationId => text()();
+  TextColumn get role => text()();
+  TextColumn get content => text()();
+  TextColumn get toolName => text().nullable()();
+  TextColumn get toolCallId => text().nullable()();
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

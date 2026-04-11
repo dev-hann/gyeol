@@ -10,12 +10,14 @@ class FlowCanvas extends StatelessWidget {
     required this.onNodeTap,
     this.onNodeDragEnd,
     this.onConnectionCreated,
+    this.onViewportChanged,
     super.key,
   });
   final NodeFlowController<LayerGraphData, void> controller;
   final void Function(String layerName) onNodeTap;
   final VoidCallback? onNodeDragEnd;
   final VoidCallback? onConnectionCreated;
+  final VoidCallback? onViewportChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +32,8 @@ class FlowCanvas extends StatelessWidget {
             selectedColor: AppColors.infoBright,
             strokeWidth: 3,
             selectedStrokeWidth: 3,
-            bezierCurvature: 1,
-            cornerRadius: 10,
+            bezierCurvature: 0.5,
+            cornerRadius: 50,
           ),
           temporaryConnectionTheme: ConnectionTheme.dark.copyWith(
             style: ConnectionStyles.bezier,
@@ -51,17 +53,20 @@ class FlowCanvas extends StatelessWidget {
           connection: ConnectionEvents<LayerGraphData, void>(
             onCreated: (_) => onConnectionCreated?.call(),
           ),
+          viewport: ViewportEvents(onMoveEnd: (_) => onViewportChanged?.call()),
         ),
         nodeBuilder: (context, node) {
           final data = node.data;
+          final selected = controller.selectedNodeIds.contains(node.id);
           return GestureDetector(
             onTap: () => onNodeTap(data.layerName),
             child: LayerNodeWidget(
               name: data.layerName,
               enabled: data.enabled,
-              workerCount: data.workerNames.length,
+              workerCount: data.workerCount,
               outputTypes: data.outputTypes,
               runningTasks: data.runningTasks,
+              isSelected: selected,
             ),
           );
         },

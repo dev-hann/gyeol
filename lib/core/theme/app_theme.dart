@@ -36,6 +36,21 @@ ThemeData buildAppTheme() {
       error: AppColors.error,
       onError: AppColors.foreground,
     ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.card,
+      contentTextStyle: const TextStyle(
+        color: AppColors.foreground,
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      behavior: SnackBarBehavior.floating,
+      elevation: 4,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.card,
       foregroundColor: AppColors.foreground,

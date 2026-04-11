@@ -25,12 +25,11 @@ Dart 엔진/데이터 전문 엔지니어. 아래 영역만 수정:
 
 ## 기술 스택
 
-- Dart SDK ^3.11.3
-- Drift (SQLite ORM) + drift_flutter
-- Riverpod (상태관리)
-- http 패키지 (LLM API 호출)
-- mockito (테스트 Mock)
-- uuid (ID 생성)
+아래 문서를 읽고 기술 스택/개념/컨벤션 파악:
+- 용어 사전: `docs/domain/glossary.md`
+- 도메인 개념: `docs/domain/concepts/*.md`
+- 코드 매핑: `docs/domain/code-reference.md`
+- 코드 컨벤션: `docs/domain/conventions.md`
 
 ## TDD 절차 (Red-Green-Refactor)
 

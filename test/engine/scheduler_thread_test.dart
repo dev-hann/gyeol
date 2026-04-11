@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
+import 'package:gyeol/engine/layer_registry.dart';
+import 'package:gyeol/engine/message_bus.dart';
 import 'package:gyeol/engine/queue/task_queue.dart';
 import 'package:gyeol/engine/scheduler.dart';
 
@@ -52,7 +54,6 @@ void main() {
             name: 'L1',
             inputTypes: ['raw'],
             outputTypes: ['parsed'],
-            workerNames: ['w1'],
             order: 1,
           ),
         )
@@ -61,27 +62,36 @@ void main() {
             name: 'L2',
             inputTypes: ['parsed'],
             outputTypes: ['done'],
-            workerNames: ['w2'],
             order: 2,
           ),
         );
 
-      await repo.saveWorker(
+      await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'w1',
           layerName: 'L1',
           systemPrompt: 'parse the input',
         ),
       );
-      await repo.saveWorker(
+      await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'w2',
           layerName: 'L2',
           systemPrompt: 'analyze the parsed data',
         ),
       );
-      await repo.saveSettings(
-        const ProviderSettings(provider: ProviderType.ollama),
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          activeProvider: ProviderType.ollama,
+          configs: {
+            ProviderType.openAI: OpenAIConfig(),
+            ProviderType.anthropic: AnthropicConfig(),
+            ProviderType.ollama: OllamaConfig(
+              baseUrl: 'http://localhost:11434',
+            ),
+            ProviderType.custom: CustomConfig(),
+          },
+        ),
       );
 
       const thread = ThreadDefinition(
@@ -102,7 +112,6 @@ void main() {
             name: 'L1',
             inputTypes: ['raw'],
             outputTypes: ['parsed'],
-            workerNames: ['w1'],
             order: 1,
             enabled: false,
           ),
@@ -112,20 +121,29 @@ void main() {
             name: 'L2',
             inputTypes: ['raw'],
             outputTypes: ['done'],
-            workerNames: ['w2'],
             order: 2,
           ),
         );
 
-      await repo.saveWorker(
+      await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'w2',
           layerName: 'L2',
           systemPrompt: 'run me',
         ),
       );
-      await repo.saveSettings(
-        const ProviderSettings(provider: ProviderType.ollama),
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          activeProvider: ProviderType.ollama,
+          configs: {
+            ProviderType.openAI: OpenAIConfig(),
+            ProviderType.anthropic: AnthropicConfig(),
+            ProviderType.ollama: OllamaConfig(
+              baseUrl: 'http://localhost:11434',
+            ),
+            ProviderType.custom: CustomConfig(),
+          },
+        ),
       );
 
       const thread = ThreadDefinition(
@@ -144,20 +162,29 @@ void main() {
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
-          workerNames: ['w1'],
           order: 1,
         ),
       );
 
-      await repo.saveWorker(
+      await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'w1',
           layerName: 'L1',
           systemPrompt: 'process files',
         ),
       );
-      await repo.saveSettings(
-        const ProviderSettings(provider: ProviderType.ollama),
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          activeProvider: ProviderType.ollama,
+          configs: {
+            ProviderType.openAI: OpenAIConfig(),
+            ProviderType.anthropic: AnthropicConfig(),
+            ProviderType.ollama: OllamaConfig(
+              baseUrl: 'http://localhost:11434',
+            ),
+            ProviderType.custom: CustomConfig(),
+          },
+        ),
       );
 
       const thread = ThreadDefinition(
@@ -168,7 +195,7 @@ void main() {
 
       await scheduler.runThread(thread);
 
-      final logs = await repo.listExecutionLogs();
+      final logs = await repo.logs.listExecutionLogs();
       expect(logs, isNotEmpty);
     });
   });
@@ -185,20 +212,29 @@ void main() {
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['done'],
-          workerNames: ['w1'],
           order: 1,
         ),
       );
 
-      await repo.saveWorker(
+      await repo.workers.saveWorker(
         const WorkerDefinition(
           name: 'w1',
           layerName: 'L1',
           systemPrompt: 'do work',
         ),
       );
-      await repo.saveSettings(
-        const ProviderSettings(provider: ProviderType.ollama),
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          activeProvider: ProviderType.ollama,
+          configs: {
+            ProviderType.openAI: OpenAIConfig(),
+            ProviderType.anthropic: AnthropicConfig(),
+            ProviderType.ollama: OllamaConfig(
+              baseUrl: 'http://localhost:11434',
+            ),
+            ProviderType.custom: CustomConfig(),
+          },
+        ),
       );
 
       const threads = [

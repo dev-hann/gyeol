@@ -114,6 +114,20 @@ void main() {
       expect(find.text('Disabled'), findsOneWidget);
     });
 
+    testWidgets('shows temperature and maxTokens for worker', (tester) async {
+      await pumpWorkersPage(tester);
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Text &&
+              w.data != null &&
+              w.data!.contains('T:0.7') &&
+              w.data!.contains('M:4096'),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('shows unassigned group for orphan workers', (tester) async {
       await pumpWorkersPage(tester);
       expect(find.text('Unassigned'), findsOneWidget);

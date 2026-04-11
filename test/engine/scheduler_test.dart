@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
+import 'package:gyeol/engine/layer_registry.dart';
+import 'package:gyeol/engine/message_bus.dart';
 import 'package:gyeol/engine/queue/task_queue.dart';
 import 'package:gyeol/engine/scheduler.dart';
 
@@ -14,7 +16,6 @@ void main() {
         name: 'L1',
         inputTypes: ['text'],
         outputTypes: ['analysis'],
-        workerNames: ['w1'],
         order: 1,
       );
       registry.register(layer);
@@ -31,7 +32,6 @@ void main() {
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: ['analysis'],
-            workerNames: ['w1'],
             order: 1,
           ),
         )
@@ -40,14 +40,13 @@ void main() {
             name: 'L1',
             inputTypes: ['text', 'json'],
             outputTypes: ['analysis'],
-            workerNames: ['w2'],
             order: 2,
           ),
         );
 
       final found = registry.findByInputType('text');
       expect(found, hasLength(1));
-      expect(found.first.workerNames, ['w2']);
+      expect(found.first.outputTypes, ['analysis']);
     });
 
     test('sorts by order ascending', () {
@@ -57,7 +56,6 @@ void main() {
             name: 'B',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
             order: 2,
           ),
         )
@@ -66,7 +64,6 @@ void main() {
             name: 'A',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
             order: 1,
           ),
         );
@@ -85,7 +82,6 @@ void main() {
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
           ),
         )
         ..remove('L1');
@@ -100,7 +96,6 @@ void main() {
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
           ),
         )
         ..remove('nonexistent');
@@ -117,7 +112,6 @@ void main() {
             name: 'old',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
           ),
         )
         ..setAll([
@@ -125,14 +119,12 @@ void main() {
             name: 'new1',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
             order: 2,
           ),
           const LayerDefinition(
             name: 'new2',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
             order: 1,
           ),
         ]);
@@ -152,7 +144,6 @@ void main() {
             name: 'enabled',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
           ),
         )
         ..register(
@@ -160,7 +151,6 @@ void main() {
             name: 'disabled',
             inputTypes: ['text'],
             outputTypes: [],
-            workerNames: [],
             enabled: false,
           ),
         );
@@ -177,7 +167,6 @@ void main() {
             name: 'L1',
             inputTypes: ['image'],
             outputTypes: [],
-            workerNames: [],
           ),
         );
 
@@ -312,17 +301,19 @@ void main() {
     late LayerRegistry registry;
     late MessageBus bus;
     late AppDatabase db;
+    late AppRepository repo;
 
     setUp(() {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       queue = TaskQueue();
       registry = LayerRegistry();
       bus = MessageBus();
+      repo = AppRepository(db);
       scheduler = Scheduler(
         queue: queue,
         layerRegistry: registry,
         messageBus: bus,
-        repo: AppRepository(db),
+        repo: repo,
       );
     });
 
@@ -348,7 +339,6 @@ void main() {
           name: 'deep',
           inputTypes: ['deep'],
           outputTypes: [],
-          workerNames: ['w1'],
         ),
       );
       final task = AppTask.create(
@@ -368,7 +358,6 @@ void main() {
           name: 'off',
           inputTypes: ['text'],
           outputTypes: [],
-          workerNames: ['w1'],
           enabled: false,
         ),
       );
@@ -377,35 +366,9 @@ void main() {
       expect(results, isEmpty);
     });
 
-    test('returns failed result when worker not found', () async {
+    test('drains queue when layer has no workers in db', () async {
       registry.register(
-        const LayerDefinition(
-          name: 'L',
-          inputTypes: ['text'],
-          outputTypes: [],
-          workerNames: ['missing_worker'],
-        ),
-      );
-
-      scheduler.submit(
-        AppTask.create('text', {'data': 'x'}, TaskPriority.high),
-      );
-
-      final results = await scheduler.runOnce();
-      expect(results, hasLength(1));
-      expect(results.first.success, false);
-      expect(results.first.error, contains('missing_worker'));
-      expect(scheduler.queueLength, 0);
-    });
-
-    test('drains queue after processing valid task', () async {
-      registry.register(
-        const LayerDefinition(
-          name: 'L',
-          inputTypes: ['text'],
-          outputTypes: [],
-          workerNames: ['w1'],
-        ),
+        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
       );
 
       scheduler.submit(AppTask.create('text', null, TaskPriority.high));
@@ -413,6 +376,27 @@ void main() {
       expect(scheduler.queueLength, 1);
       await scheduler.runOnce();
       expect(scheduler.queueLength, 0);
+    });
+
+    test('drains queue and processes task with db workers', () async {
+      registry.register(
+        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
+      );
+
+      await repo.workers.saveWorker(
+        const WorkerDefinition(
+          name: 'w1',
+          layerName: 'L',
+          systemPrompt: 'test',
+        ),
+      );
+
+      scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+      expect(scheduler.queueLength, 1);
+
+      final results = await scheduler.runOnce();
+      expect(scheduler.queueLength, 0);
+      expect(results, isEmpty);
     });
   });
 }

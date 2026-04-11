@@ -28,8 +28,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
+  Future<void> openConfigDialog(WidgetTester tester) async {
+    await tester.tap(find.text('Add Provider'));
+    await tester.pumpAndSettle();
+  }
+
   group('SettingsPage', () {
-    testWidgets('renders PageHeader with Settings title', (tester) async {
+    testWidgets('renders Settings title', (tester) async {
       await pumpSettingsPage(tester);
       expect(find.text('Settings'), findsOneWidget);
     });
@@ -42,96 +47,137 @@ void main() {
       );
     });
 
-    testWidgets('renders Save Settings button', (tester) async {
-      await pumpSettingsPage(tester);
-      expect(find.text('Save Settings'), findsOneWidget);
-    });
-
     testWidgets('renders AI Provider section', (tester) async {
       await pumpSettingsPage(tester);
       expect(find.text('AI Provider'), findsOneWidget);
     });
 
-    testWidgets('renders OpenAI section', (tester) async {
+    testWidgets('renders Add Provider button', (tester) async {
       await pumpSettingsPage(tester);
-      expect(find.text('OpenAI'), findsAtLeast(1));
+      expect(find.text('Add Provider'), findsOneWidget);
     });
 
-    testWidgets('renders Anthropic section', (tester) async {
+    testWidgets('renders Generation Defaults section', (tester) async {
       await pumpSettingsPage(tester);
-      expect(find.text('Anthropic'), findsOneWidget);
-    });
-
-    testWidgets('renders Ollama section', (tester) async {
-      await pumpSettingsPage(tester);
-      expect(find.text('Ollama (Local)'), findsOneWidget);
-    });
-
-    testWidgets('renders Defaults section', (tester) async {
-      await pumpSettingsPage(tester);
-      expect(find.text('Defaults'), findsOneWidget);
-    });
-
-    testWidgets('renders Active Provider dropdown', (tester) async {
-      await pumpSettingsPage(tester);
-      expect(find.text('Active Provider'), findsOneWidget);
+      expect(find.text('Generation Defaults'), findsOneWidget);
     });
 
     testWidgets('renders default temperature field', (tester) async {
       await pumpSettingsPage(tester);
-      expect(find.text('Default Temperature'), findsOneWidget);
+      await tester.tap(find.text('Generation Defaults'));
+      await tester.pumpAndSettle();
+      expect(find.text('Temperature'), findsOneWidget);
     });
 
     testWidgets('renders default max tokens field', (tester) async {
       await pumpSettingsPage(tester);
-      expect(find.text('Default Max Tokens'), findsOneWidget);
+      await tester.tap(find.text('Generation Defaults'));
+      await tester.pumpAndSettle();
+      expect(find.text('Max Tokens'), findsOneWidget);
     });
 
-    testWidgets('renders API Key label in OpenAI section', (tester) async {
+    testWidgets('shows OpenAI as default active provider', (tester) async {
       await pumpSettingsPage(tester);
-      final apiKeyLabels = find.text('API Key');
-      expect(apiKeyLabels, findsAtLeast(2));
+      expect(find.text('OpenAI'), findsOneWidget);
     });
 
-    testWidgets('renders Model labels for providers', (tester) async {
+    testWidgets('shows Not configured for empty API key', (tester) async {
       await pumpSettingsPage(tester);
-      final modelLabels = find.text('Model');
-      expect(modelLabels, findsAtLeast(3));
+      expect(find.text('Not configured'), findsOneWidget);
     });
 
-    testWidgets('renders Base URL labels for Ollama and Custom', (
+    testWidgets('shows Connected when API key is set', (tester) async {
+      await pumpSettingsPage(
+        tester,
+        settings: const ProviderSettings(
+          configs: {
+            ProviderType.openAI: OpenAIConfig(apiKey: 'sk-test'),
+            ProviderType.anthropic: AnthropicConfig(),
+            ProviderType.ollama: OllamaConfig(),
+            ProviderType.custom: CustomConfig(),
+          },
+        ),
+      );
+      expect(find.text('Connected'), findsOneWidget);
+    });
+
+    testWidgets('opens config modal on Add Provider tap', (tester) async {
+      await pumpSettingsPage(tester);
+      await openConfigDialog(tester);
+      expect(find.text('Configure Provider'), findsOneWidget);
+      expect(find.text('Platform'), findsOneWidget);
+      expect(find.text('API Key'), findsOneWidget);
+      expect(find.text('Register'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+    });
+
+    testWidgets('modal has Platform dropdown with all providers', (
       tester,
     ) async {
       await pumpSettingsPage(tester);
-      expect(find.text('Base URL'), findsNWidgets(2));
-    });
-
-    testWidgets('renders Custom section', (tester) async {
-      await pumpSettingsPage(tester);
+      await openConfigDialog(tester);
+      await tester.tap(find.byType(DropdownButton<ProviderType>));
+      await tester.pumpAndSettle();
+      expect(find.text('OpenAI'), findsWidgets);
+      expect(find.text('Anthropic'), findsOneWidget);
+      expect(find.text('Ollama'), findsOneWidget);
       expect(find.text('Custom'), findsOneWidget);
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
     });
 
-    testWidgets('renders API Format dropdown in Custom section', (
+    testWidgets('modal does not show Model selector', (tester) async {
+      await pumpSettingsPage(tester);
+      await openConfigDialog(tester);
+      expect(find.text('Model'), findsNothing);
+    });
+
+    testWidgets('cancel dismisses modal', (tester) async {
+      await pumpSettingsPage(tester);
+      await openConfigDialog(tester);
+      expect(find.text('Configure Provider'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.text('Configure Provider'), findsNothing);
+    });
+
+    testWidgets('switches to Anthropic hides Base URL shows API Key', (
       tester,
     ) async {
       await pumpSettingsPage(tester);
-      expect(find.text('API Format'), findsOneWidget);
+      await openConfigDialog(tester);
+      await tester.tap(find.byType(DropdownButton<ProviderType>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Anthropic').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Base URL'), findsNothing);
+      expect(find.text('API Key'), findsOneWidget);
     });
 
-    testWidgets('renders API Key (optional) label in Custom section', (
+    testWidgets('switches to Ollama shows Base URL hides API Key', (
       tester,
     ) async {
       await pumpSettingsPage(tester);
-      expect(find.text('API Key (optional)'), findsOneWidget);
+      await openConfigDialog(tester);
+      await tester.tap(find.byType(DropdownButton<ProviderType>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ollama').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Base URL'), findsOneWidget);
+      expect(find.text('API Key'), findsNothing);
     });
 
-    testWidgets('save button triggers snackbar', (tester) async {
+    testWidgets('switches to Custom shows Base URL and API Key', (
+      tester,
+    ) async {
       await pumpSettingsPage(tester);
-      final saveBtn = find.text('Save Settings');
-      expect(saveBtn, findsOneWidget);
-      await tester.tap(saveBtn);
-      await tester.pump();
-      expect(find.text('Settings saved'), findsOneWidget);
+      await openConfigDialog(tester);
+      await tester.tap(find.byType(DropdownButton<ProviderType>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Custom').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Base URL'), findsOneWidget);
+      expect(find.text('API Key'), findsOneWidget);
     });
 
     testWidgets('shows error on provider error', (tester) async {

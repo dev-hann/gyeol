@@ -9,12 +9,14 @@ class LayerNodeWidget extends StatelessWidget {
     required this.outputTypes,
     super.key,
     this.runningTasks = 0,
+    this.isSelected = false,
   });
   final String name;
   final bool enabled;
   final int workerCount;
   final List<String> outputTypes;
   final int runningTasks;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +29,22 @@ class LayerNodeWidget extends StatelessWidget {
           color: AppColors.card,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: enabled ? AppColors.primary : AppColors.textMuted,
-            width: 2,
+            color: isSelected
+                ? AppColors.infoBright
+                : enabled
+                ? AppColors.primary
+                : AppColors.textMuted,
+            width: isSelected ? 3 : 2,
           ),
-          boxShadow: runningTasks > 0
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.infoBright.withValues(alpha: 0.25),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : runningTasks > 0
               ? [
                   BoxShadow(
                     color: AppColors.info.withValues(alpha: 0.3),

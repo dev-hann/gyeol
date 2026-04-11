@@ -44,34 +44,19 @@ class _LayersPageState extends ConsumerState<LayersPage> {
         positions[id] = node.position.value;
       }
     }
-    if (positions.isNotEmpty && mounted) {
-      ref.read(graphStateProvider.notifier).savePositions(positions);
+    if (!mounted) return;
+    final notifier = ref.read(graphStateProvider.notifier);
+    if (positions.isNotEmpty) {
+      notifier.savePositions(positions);
     }
+    final pan = _controller.currentPan;
+    notifier.saveViewport(pan.dx, pan.dy, _controller.currentZoom);
   }
 
-  void _saveManualConnections() {
-    if (!mounted) return;
-    final graphState = ref.read(graphStateProvider).valueOrNull;
-    final removedConnections = graphState?.removedConnections ?? {};
-    final savedManual = graphState?.manualConnections ?? {};
-
-    final layers = ref.read(layersProvider).valueOrNull ?? [];
-    final autoConnections = buildConnections(layers, removedConnections);
-    final autoConnSet = <(String, String)>{};
-    for (final conn in autoConnections) {
-      autoConnSet.add((conn.sourceNodeId, conn.targetNodeId));
-    }
-
-    final liveManual = <(String, String)>{};
-    for (final conn in _controller.connections) {
-      final pair = (conn.sourceNodeId, conn.targetNodeId);
-      if (!autoConnSet.contains(pair) && !removedConnections.contains(pair)) {
-        liveManual.add(pair);
-      }
-    }
-
-    final allManual = {...savedManual, ...liveManual};
-    ref.read(graphStateProvider.notifier).saveManualConnections(allManual);
+  Future<void> _arrangeLayout() async {
+    await ref.read(graphStateProvider.notifier).clearPositions();
+    _controller.clearGraph();
+    _syncController();
   }
 
   void _syncController() {
@@ -79,39 +64,12 @@ class _LayersPageState extends ConsumerState<LayersPage> {
 
     final layers = ref.read(layersProvider).valueOrNull ?? [];
     final tasks = ref.read(tasksProvider).valueOrNull ?? [];
+    final workers = ref.read(workersProvider).valueOrNull ?? [];
     final graphState = ref.read(graphStateProvider).valueOrNull;
     final removedConnections = graphState?.removedConnections ?? {};
     final savedPositions = graphState?.nodePositions ?? {};
-    final newNodes = buildNodes(layers, tasks);
+    final newNodes = buildNodes(layers, tasks, workers);
     final autoConnections = buildConnections(layers, removedConnections);
-
-    final autoConnSet = <(String, String)>{};
-    for (final conn in autoConnections) {
-      autoConnSet.add((conn.sourceNodeId, conn.targetNodeId));
-    }
-
-    final savedManual = graphState?.manualConnections ?? {};
-
-    final liveManualConnections = <(String, String)>[];
-    for (final conn in _controller.connections) {
-      final pair = (conn.sourceNodeId, conn.targetNodeId);
-      if (!autoConnSet.contains(pair) && !removedConnections.contains(pair)) {
-        liveManualConnections.add(pair);
-      }
-    }
-
-    final allManual = <(String, String)>{
-      ...savedManual,
-      ...liveManualConnections,
-    };
-
-    final manualConnections = <(String, String)>[];
-    for (final conn in _controller.connections) {
-      final pair = (conn.sourceNodeId, conn.targetNodeId);
-      if (!autoConnSet.contains(pair) && !removedConnections.contains(pair)) {
-        manualConnections.add(pair);
-      }
-    }
 
     final positionMap = <String, Offset>{};
     for (final id in _controller.nodeIds) {
@@ -122,6 +80,16 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     }
 
     _controller.clearGraph();
+
+    if (graphState != null) {
+      _controller.setViewport(
+        GraphViewport(
+          x: graphState.viewportX,
+          y: graphState.viewportY,
+          zoom: graphState.viewportZoom,
+        ),
+      );
+    }
 
     for (final node in newNodes) {
       final pos = positionMap[node.id] ?? savedPositions[node.id];
@@ -137,31 +105,6 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     for (final conn in autoConnections) {
       _controller.addConnection(conn);
     }
-
-    var idx = autoConnections.length;
-    for (final pair in allManual) {
-      if (autoConnSet.contains(pair)) continue;
-      final srcNode = _controller.getNode(pair.$1);
-      final destNode = _controller.getNode(pair.$2);
-      if (srcNode != null && destNode != null) {
-        _controller.addConnection(
-          Connection<void>(
-            id: 'conn-manual-${idx++}',
-            sourceNodeId: pair.$1,
-            sourcePortId: '${pair.$1}-out',
-            targetNodeId: pair.$2,
-            targetPortId: '${pair.$2}-in',
-          ),
-        );
-      }
-    }
-
-    _persistManualConnections(allManual);
-  }
-
-  void _persistManualConnections(Set<(String, String)> manualConns) {
-    if (!mounted) return;
-    ref.read(graphStateProvider.notifier).saveManualConnections(manualConns);
   }
 
   @override
@@ -200,10 +143,26 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               description:
                   'Graph editor — click nodes to view details, '
                   'drag to reposition',
-              action: OutlinedButton.icon(
-                onPressed: () => _showAddLayerDialog(context),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add Layer'),
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: _arrangeLayout,
+                    icon: const Icon(Icons.auto_fix_high, size: 18),
+                    tooltip: 'Auto Arrange',
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _showAddLayerDialog(context),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Layer'),
+                  ),
+                ],
               ),
             ),
           ),
@@ -249,7 +208,8 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               setState(() => _selectedLayerName = name);
             },
             onNodeDragEnd: _savePositions,
-            onConnectionCreated: _saveManualConnections,
+            onConnectionCreated: null,
+            onViewportChanged: _savePositions,
           ),
         ),
         if (_selectedLayerName != null)
@@ -273,7 +233,6 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     final nameCtl = TextEditingController();
     final inputCtl = TextEditingController();
     final outputCtl = TextEditingController();
-    final workerCtl = TextEditingController();
 
     showDialog<void>(
       context: context,
@@ -312,13 +271,6 @@ class _LayersPageState extends ConsumerState<LayersPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: workerCtl,
-                decoration: const InputDecoration(
-                  labelText: 'Worker Names',
-                  hintText: 'analyzer, planner',
-                ),
-              ),
             ],
           ),
         ),
@@ -334,7 +286,6 @@ class _LayersPageState extends ConsumerState<LayersPage> {
                 name: nameCtl.text,
                 inputTypes: _splitCSV(inputCtl.text),
                 outputTypes: _splitCSV(outputCtl.text),
-                workerNames: _splitCSV(workerCtl.text),
               );
               await ref.read(layersProvider.notifier).saveLayer(layer);
               if (ctx.mounted) Navigator.pop(ctx);

@@ -11,6 +11,7 @@ void main() {
       );
       expect(thread.enabled, true);
       expect(thread.status, ThreadStatus.idle);
+      expect(thread.contextPrompt, isNull);
     });
 
     test('holds all fields', () {
@@ -18,12 +19,14 @@ void main() {
         name: 'analysis',
         path: '/data/src',
         layerNames: ['parse', 'analyze'],
+        contextPrompt: 'Legal document analysis pipeline',
         enabled: false,
         status: ThreadStatus.completed,
       );
       expect(thread.name, 'analysis');
       expect(thread.path, '/data/src');
       expect(thread.layerNames, ['parse', 'analyze']);
+      expect(thread.contextPrompt, 'Legal document analysis pipeline');
       expect(thread.enabled, false);
       expect(thread.status, ThreadStatus.completed);
     });
@@ -33,6 +36,7 @@ void main() {
         name: 't1',
         path: '/old',
         layerNames: ['A'],
+        contextPrompt: 'old context',
       );
       final copied = thread.copyWith(
         path: '/new',
@@ -45,6 +49,18 @@ void main() {
       expect(copied.layerNames, ['A', 'B']);
       expect(copied.enabled, true);
       expect(copied.status, ThreadStatus.running);
+      expect(copied.contextPrompt, 'old context');
+    });
+
+    test('copyWith can update contextPrompt', () {
+      const thread = ThreadDefinition(
+        name: 't1',
+        path: '/old',
+        layerNames: ['A'],
+        contextPrompt: 'old context',
+      );
+      final copied = thread.copyWith(contextPrompt: 'new context');
+      expect(copied.contextPrompt, 'new context');
     });
 
     test('statusLabel returns correct labels', () {

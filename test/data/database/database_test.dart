@@ -274,7 +274,6 @@ void main() {
           name: 'parse',
           inputTypes: '["raw"]',
           outputTypes: '["parsed"]',
-          workerNames: '["w1"]',
         ),
       );
 
@@ -289,7 +288,6 @@ void main() {
           name: 'gone',
           inputTypes: '[]',
           outputTypes: '[]',
-          workerNames: '[]',
         ),
       );
 

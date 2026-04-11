@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/features/settings/pages/settings_page.dart';
+import 'package:gyeol/providers/model_fetcher.dart';
 import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
@@ -28,6 +31,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   late TextEditingController _inputCtl;
   late TextEditingController _outputCtl;
   late TextEditingController _orderCtl;
+  late TextEditingController _layerPromptCtl;
   bool _enabled = true;
 
   bool _showWorkerForm = false;
@@ -38,6 +42,9 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   late TextEditingController _wTokensCtl;
   late TextEditingController _wPromptCtl;
   bool _wEnabled = true;
+  ProviderType _wProviderType = ProviderType.openAI;
+  List<String> _wModels = [];
+  bool _wLoadingModels = false;
 
   @override
   void initState() {
@@ -45,6 +52,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
     _inputCtl = TextEditingController();
     _outputCtl = TextEditingController();
     _orderCtl = TextEditingController();
+    _layerPromptCtl = TextEditingController();
     _wNameCtl = TextEditingController();
     _wModelCtl = TextEditingController();
     _wTempCtl = TextEditingController(text: '0.7');
@@ -67,6 +75,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
     _inputCtl.text = layer.inputTypes.join(', ');
     _outputCtl.text = layer.outputTypes.join(', ');
     _orderCtl.text = layer.order.toString();
+    _layerPromptCtl.text = layer.layerPrompt ?? '';
     _enabled = layer.enabled;
   }
 
@@ -75,6 +84,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
     _inputCtl.dispose();
     _outputCtl.dispose();
     _orderCtl.dispose();
+    _layerPromptCtl.dispose();
     _wNameCtl.dispose();
     _wModelCtl.dispose();
     _wTempCtl.dispose();
@@ -197,6 +207,33 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
         const SizedBox(height: 12),
         _buildTypeRow('Output Types', layer.outputTypes, AppColors.success),
         const SizedBox(height: 12),
+        if (layer.layerPrompt != null && layer.layerPrompt!.isNotEmpty) ...[
+          const Text(
+            'Layer Prompt',
+            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.tertiary,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Text(
+              layer.layerPrompt!,
+              style: const TextStyle(
+                fontSize: 11,
+                fontFamily: 'monospace',
+                color: AppColors.textSecondary,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Row(
           children: [
             const Text(
@@ -280,6 +317,18 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
           controller: _orderCtl,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(labelText: 'Order', isDense: true),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _layerPromptCtl,
+          decoration: const InputDecoration(
+            labelText: 'Layer Prompt',
+            hintText: 'Purpose of this layer (optional)',
+            isDense: true,
+            alignLabelWithHint: true,
+          ),
+          maxLines: 3,
+          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
         ),
         const SizedBox(height: 12),
         Row(
@@ -494,6 +543,10 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
                 _wTokensCtl.text = '4096';
                 _wPromptCtl.clear();
                 _wEnabled = true;
+                final settings =
+                    ref.read(settingsProvider).valueOrNull ??
+                    const ProviderSettings();
+                _wProviderType = settings.activeProvider;
                 setState(() => _showWorkerForm = true);
               },
               icon: const Icon(Icons.add, size: 14),
@@ -606,6 +659,14 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   }
 
   Widget _buildWorkerForm() {
+    final settings =
+        ref.watch(settingsProvider).valueOrNull ?? const ProviderSettings();
+    final configured = PlatformConfig.configured(settings);
+    final validType = configured.any((p) => p.providerType == _wProviderType)
+        ? _wProviderType
+        : configured.isNotEmpty
+        ? configured.first.providerType
+        : null;
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 8),
@@ -628,30 +689,58 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _wNameCtl,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    isDense: true,
-                  ),
-                  enabled: _editingWorkerName == null,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _wModelCtl,
-                  decoration: const InputDecoration(
-                    labelText: 'Model',
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ],
+          TextField(
+            controller: _wNameCtl,
+            decoration: const InputDecoration(labelText: 'Name', isDense: true),
+            enabled: _editingWorkerName == null,
           ),
+          const SizedBox(height: 8),
+          if (configured.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No providers configured. Add one in Settings first.',
+                style: const TextStyle(fontSize: 11, color: AppColors.error),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<ProviderType>(
+                    value: validType,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Provider',
+                      isDense: true,
+                    ),
+                    items: configured
+                        .map(
+                          (p) => DropdownMenuItem(
+                            value: p.providerType,
+                            child: Text(
+                              p.name,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() {
+                          _wProviderType = v;
+                          _wModels = [];
+                          _wModelCtl.clear();
+                        });
+                        unawaited(_fetchWorkerModels());
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: _buildWorkerModelField()),
+              ],
+            ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -745,6 +834,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
       inputTypes: _splitCSV(_inputCtl.text),
       outputTypes: _splitCSV(_outputCtl.text),
       order: int.tryParse(_orderCtl.text) ?? 0,
+      layerPrompt: _layerPromptCtl.text.isEmpty ? null : _layerPromptCtl.text,
       enabled: _enabled,
     );
     ref.read(layersProvider.notifier).saveLayer(layer);
@@ -767,5 +857,99 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
       _showWorkerForm = false;
       _editingWorkerName = null;
     });
+  }
+
+  Future<void> _fetchWorkerModels() async {
+    if (_wLoadingModels) return;
+    setState(() => _wLoadingModels = true);
+
+    try {
+      final settings =
+          ref.read(settingsProvider).valueOrNull ?? const ProviderSettings();
+      String? apiKey;
+      String? baseUrl;
+      CustomApiFormat? format;
+
+      final cfg = settings.configs[_wProviderType];
+      if (cfg is OpenAIConfig) {
+        apiKey = cfg.apiKey;
+      } else if (cfg is OllamaConfig) {
+        baseUrl = cfg.baseUrl;
+      } else if (cfg is CustomConfig) {
+        baseUrl = cfg.baseUrl;
+        apiKey = cfg.apiKey;
+        format = cfg.apiFormat;
+      }
+
+      final models = await ModelFetcher.fetchModels(
+        provider: _wProviderType,
+        apiKey: apiKey,
+        baseUrl: baseUrl,
+        apiFormat: format,
+      );
+
+      if (mounted) {
+        setState(() {
+          _wModels = models;
+          _wLoadingModels = false;
+        });
+      }
+    } on Object {
+      if (mounted) setState(() => _wLoadingModels = false);
+    }
+  }
+
+  Widget _buildWorkerModelField() {
+    if (_wLoadingModels) {
+      return const TextField(
+        enabled: false,
+        decoration: InputDecoration(
+          labelText: 'Loading...',
+          isDense: true,
+          prefixIcon: SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    if (_wModels.isNotEmpty) {
+      return DropdownButtonFormField<String>(
+        value: _wModels.contains(_wModelCtl.text) ? _wModelCtl.text : null,
+        decoration: const InputDecoration(
+          labelText: 'Model',
+          isDense: true,
+          prefixIcon: Icon(Icons.model_training, size: 14),
+        ),
+        items: _wModels
+            .map(
+              (m) => DropdownMenuItem(
+                value: m,
+                child: Text(
+                  m,
+                  style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: (v) {
+          if (v != null) {
+            _wModelCtl.text = v;
+          }
+        },
+      );
+    }
+
+    return TextField(
+      controller: _wModelCtl,
+      decoration: InputDecoration(
+        labelText: 'Model',
+        isDense: true,
+        hintText: PlatformConfig.findByType(_wProviderType).defaultModel,
+      ),
+    );
   }
 }

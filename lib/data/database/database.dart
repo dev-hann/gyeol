@@ -6,7 +6,16 @@ import 'package:gyeol/data/database/app_database.dart';
 part 'database.g.dart';
 
 @DriftDatabase(
-  tables: [Tasks, Layers, Workers, Settings, ExecutionLogs, Threads],
+  tables: [
+    Tasks,
+    Layers,
+    Workers,
+    Settings,
+    ExecutionLogs,
+    Threads,
+    ChatConversations,
+    ChatMessages,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -18,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -26,6 +35,21 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.createTable(threads);
+      }
+      if (from < 3) {
+        await customStatement(
+          'ALTER TABLE threads ADD COLUMN context_prompt TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE layers ADD COLUMN layer_prompt TEXT',
+        );
+      }
+      if (from < 4) {
+        await m.createTable(chatConversations);
+        await m.createTable(chatMessages);
+      }
+      if (from < 5) {
+        await customStatement('ALTER TABLE layers DROP COLUMN worker_names');
       }
     },
   );
@@ -43,6 +67,13 @@ class AppDatabase extends _$AppDatabase {
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
           ..limit(limit, offset: offset))
         .get();
+  }
+
+  Stream<List<Task>> watchTasks({int limit = 100, int offset = 0}) {
+    return (select(tasks)
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit, offset: offset))
+        .watch();
   }
 
   Future<int> getQueueSize() async {
@@ -64,6 +95,12 @@ class AppDatabase extends _$AppDatabase {
     )..orderBy([(l) => OrderingTerm.asc(l.sortOrder)])).get();
   }
 
+  Stream<List<Layer>> watchLayers() {
+    return (select(
+      layers,
+    )..orderBy([(l) => OrderingTerm.asc(l.sortOrder)])).watch();
+  }
+
   Future<void> deleteLayer(String name) {
     return (delete(layers)..where((l) => l.name.equals(name))).go();
   }
@@ -80,6 +117,10 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<Worker>> listWorkers() {
     return select(workers).get();
+  }
+
+  Stream<List<Worker>> watchWorkers() {
+    return select(workers).watch();
   }
 
   Future<void> deleteWorker(String name) {
@@ -135,6 +176,10 @@ class AppDatabase extends _$AppDatabase {
     return select(threads).get();
   }
 
+  Stream<List<Thread>> watchThreads() {
+    return select(threads).watch();
+  }
+
   Future<Thread?> getThread(String name) {
     return (select(
       threads,
@@ -156,5 +201,66 @@ class AppDatabase extends _$AppDatabase {
       query.where((l) => l.taskId.equals(taskId));
     }
     return query.get();
+  }
+
+  Stream<List<ExecutionLog>> watchExecutionLogs({
+    String? taskId,
+    int limit = 200,
+  }) {
+    final query = select(executionLogs)
+      ..orderBy([(l) => OrderingTerm.desc(l.createdAt)])
+      ..limit(limit);
+    if (taskId != null) {
+      query.where((l) => l.taskId.equals(taskId));
+    }
+    return query.watch();
+  }
+
+  Future<void> saveChatConversation(ChatConversationsCompanion conv) {
+    return into(chatConversations).insertOnConflictUpdate(conv);
+  }
+
+  Future<List<ChatConversationRow>> listChatConversations() {
+    return (select(
+      chatConversations,
+    )..orderBy([(c) => OrderingTerm.desc(c.updatedAt)])).get();
+  }
+
+  Stream<List<ChatConversationRow>> watchChatConversations() {
+    return (select(
+      chatConversations,
+    )..orderBy([(c) => OrderingTerm.desc(c.updatedAt)])).watch();
+  }
+
+  Future<void> deleteChatConversation(String id) {
+    return (delete(chatConversations)..where((c) => c.id.equals(id))).go();
+  }
+
+  Future<void> saveChatMessage(ChatMessagesCompanion msg) {
+    return into(chatMessages).insertOnConflictUpdate(msg);
+  }
+
+  Future<List<ChatMessageRow>> listChatMessages(String conversationId) {
+    return (select(chatMessages)
+          ..where((m) => m.conversationId.equals(conversationId))
+          ..orderBy([(m) => OrderingTerm.asc(m.createdAt)]))
+        .get();
+  }
+
+  Stream<List<ChatMessageRow>> watchChatMessages(String conversationId) {
+    return (select(chatMessages)
+          ..where((m) => m.conversationId.equals(conversationId))
+          ..orderBy([(m) => OrderingTerm.asc(m.createdAt)]))
+        .watch();
+  }
+
+  Future<void> deleteChatMessage(String id) {
+    return (delete(chatMessages)..where((m) => m.id.equals(id))).go();
+  }
+
+  Future<void> deleteChatMessagesByConversation(String conversationId) {
+    return (delete(
+      chatMessages,
+    )..where((m) => m.conversationId.equals(conversationId))).go();
   }
 }

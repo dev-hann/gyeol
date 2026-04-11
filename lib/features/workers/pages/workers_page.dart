@@ -16,11 +16,6 @@ class WorkersPage extends ConsumerStatefulWidget {
 
 class _WorkersPageState extends ConsumerState<WorkersPage> {
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final workersAsync = ref.watch(workersProvider);
     final layersAsync = ref.watch(layersProvider);

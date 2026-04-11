@@ -25,22 +25,48 @@ void main() {
           name: 'parse',
           inputTypes: '["raw_text"]',
           outputTypes: '["parsed_doc"]',
-          workerNames: '["parser_a","parser_b"]',
           sortOrder: const Value(1),
           enabled: const Value(true),
         ),
       );
 
-      final layers = await repo.listLayers();
+      final layers = await repo.layers.listLayers();
 
       expect(layers, hasLength(1));
       final layer = layers.first;
       expect(layer.name, 'parse');
       expect(layer.inputTypes, ['raw_text']);
       expect(layer.outputTypes, ['parsed_doc']);
-      expect(layer.workerNames, ['parser_a', 'parser_b']);
       expect(layer.order, 1);
       expect(layer.enabled, true);
+    });
+
+    test('round-trips layerPrompt', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'with_prompt',
+          inputTypes: ['raw'],
+          outputTypes: ['parsed'],
+          layerPrompt: 'Extract key clauses from contracts',
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.layerPrompt, 'Extract key clauses from contracts');
+    });
+
+    test('layerPrompt defaults to null', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'no_prompt',
+          inputTypes: ['raw'],
+          outputTypes: ['parsed'],
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers.first.layerPrompt, isNull);
     });
   });
 
@@ -51,44 +77,45 @@ void main() {
           name: 'eval',
           inputTypes: '["parsed_doc"]',
           outputTypes: '["eval_result"]',
-          workerNames: '["evaluator"]',
           sortOrder: const Value(2),
         ),
       );
 
-      var layers = await repo.listLayers();
+      var layers = await repo.layers.listLayers();
       expect(layers, hasLength(1));
       expect(layers.first.name, 'eval');
 
-      await repo.deleteLayer('eval');
-      layers = await repo.listLayers();
+      await repo.layers.deleteLayer('eval');
+      layers = await repo.layers.listLayers();
       expect(layers, isEmpty);
     });
   });
 
   group('getSettings', () {
     test('returns default settings when no settings stored', () async {
-      final settings = await repo.getSettings();
+      final settings = await repo.settings.getSettings();
       expect(settings, equals(const ProviderSettings()));
     });
 
     test('returns parsed settings from valid JSON', () async {
       await db.saveSettings(
-        '{"provider":"Anthropic","openai_api_key":"k1","openai_model":"gpt-4o",'
-        '"anthropic_api_key":"","anthropic_model":"claude-sonnet-4-20250514",'
-        '"ollama_base_url":"http://localhost:11434","ollama_model":"llama3",'
+        '{"activeProvider":"Anthropic","configs":{"openAI":{"type":"openai","apiKey":"k1","model":"gpt-4o"},'
+        '"anthropic":{"type":"anthropic","apiKey":"","model":"claude-sonnet-4-20250514"},'
+        '"ollama":{"type":"ollama","baseUrl":"","model":"llama3"},'
+        '"custom":{"type":"custom","baseUrl":"","apiKey":"","model":"","apiFormat":"openai"}},'
         '"default_temperature":0.7,"default_max_tokens":4096}',
       );
 
-      final settings = await repo.getSettings();
-      expect(settings.provider, ProviderType.anthropic);
-      expect(settings.openaiApiKey, 'k1');
+      final settings = await repo.settings.getSettings();
+      expect(settings.activeProvider, ProviderType.anthropic);
+      final openai = settings.configs[ProviderType.openAI] as OpenAIConfig;
+      expect(openai.apiKey, 'k1');
     });
 
     test('returns default settings on malformed JSON', () async {
       await db.saveSettings('not-valid-json{{{');
 
-      final settings = await repo.getSettings();
+      final settings = await repo.settings.getSettings();
       expect(settings, equals(const ProviderSettings()));
     });
 
@@ -97,7 +124,7 @@ void main() {
       () async {
         await db.saveSettings('"just a string"');
 
-        final settings = await repo.getSettings();
+        final settings = await repo.settings.getSettings();
         expect(settings, equals(const ProviderSettings()));
       },
     );
@@ -110,9 +137,9 @@ void main() {
         path: '/home/user/project',
         layerNames: ['parse', 'analyze'],
       );
-      await repo.saveThread(thread);
+      await repo.threads.saveThread(thread);
 
-      final threads = await repo.listThreads();
+      final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
       expect(threads.first.name, 'review');
       expect(threads.first.path, '/home/user/project');
@@ -122,7 +149,7 @@ void main() {
     });
 
     test('getThread returns null when not found', () async {
-      final thread = await repo.getThread('nonexistent');
+      final thread = await repo.threads.getThread('nonexistent');
       expect(thread, isNull);
     });
 
@@ -133,29 +160,29 @@ void main() {
         layerNames: ['compile'],
         status: ThreadStatus.running,
       );
-      await repo.saveThread(thread);
+      await repo.threads.saveThread(thread);
 
-      final found = await repo.getThread('build');
+      final found = await repo.threads.getThread('build');
       expect(found, isNotNull);
       expect(found!.name, 'build');
       expect(found.status, ThreadStatus.running);
     });
 
     test('deleteThread removes thread', () async {
-      await repo.saveThread(
+      await repo.threads.saveThread(
         const ThreadDefinition(name: 'tmp', path: '/tmp', layerNames: []),
       );
-      expect(await repo.listThreads(), hasLength(1));
+      expect(await repo.threads.listThreads(), hasLength(1));
 
-      await repo.deleteThread('tmp');
-      expect(await repo.listThreads(), isEmpty);
+      await repo.threads.deleteThread('tmp');
+      expect(await repo.threads.listThreads(), isEmpty);
     });
 
     test('saveThread upserts existing thread', () async {
-      await repo.saveThread(
+      await repo.threads.saveThread(
         const ThreadDefinition(name: 't1', path: '/old', layerNames: ['A']),
       );
-      await repo.saveThread(
+      await repo.threads.saveThread(
         const ThreadDefinition(
           name: 't1',
           path: '/new',
@@ -164,21 +191,49 @@ void main() {
         ),
       );
 
-      final threads = await repo.listThreads();
+      final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
       expect(threads.first.path, '/new');
       expect(threads.first.layerNames, ['A', 'B']);
       expect(threads.first.enabled, false);
     });
+
+    test('round-trips contextPrompt', () async {
+      await repo.threads.saveThread(
+        const ThreadDefinition(
+          name: 'ctx_test',
+          path: '/project',
+          layerNames: ['L1'],
+          contextPrompt: 'Legal document analysis pipeline',
+        ),
+      );
+
+      final threads = await repo.threads.listThreads();
+      expect(threads, hasLength(1));
+      expect(threads.first.contextPrompt, 'Legal document analysis pipeline');
+    });
+
+    test('contextPrompt defaults to null', () async {
+      await repo.threads.saveThread(
+        const ThreadDefinition(
+          name: 'no_ctx',
+          path: '/project',
+          layerNames: ['L1'],
+        ),
+      );
+
+      final threads = await repo.threads.listThreads();
+      expect(threads.first.contextPrompt, isNull);
+    });
   });
 
   group('task CRUD', () {
     test('createTask stores and retrieves a task', () async {
-      final id = await repo.createTask('summarize', {
+      final id = await repo.tasks.createTask('summarize', {
         'text': 'hello',
       }, TaskPriority.high);
 
-      final task = await repo.getTask(id);
+      final task = await repo.tasks.getTask(id);
       expect(task, isNotNull);
       expect(task!.taskType, 'summarize');
       expect(task.payload, {'text': 'hello'});
@@ -187,11 +242,139 @@ void main() {
     });
 
     test('listTasks returns saved tasks', () async {
-      await repo.createTask('a', null, TaskPriority.low);
-      await repo.createTask('b', [1, 2], TaskPriority.medium);
+      await repo.tasks.createTask('a', null, TaskPriority.low);
+      await repo.tasks.createTask('b', [1, 2], TaskPriority.medium);
 
-      final tasks = await repo.listTasks();
+      final tasks = await repo.tasks.listTasks();
       expect(tasks, hasLength(2));
+    });
+  });
+
+  group('listLayers mixed-type JSON', () {
+    test('filters non-string elements from inputTypes', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'mixed-input',
+          inputTypes: '["valid", 123, true, null, "also_valid"]',
+          outputTypes: '[]',
+          sortOrder: const Value(1),
+          enabled: const Value(true),
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.inputTypes, ['valid', 'also_valid']);
+    });
+
+    test('filters non-string elements from thread layerNames', () async {
+      await db
+          .into(db.threads)
+          .insertOnConflictUpdate(
+            ThreadsCompanion.insert(
+              name: 'mixed-thread',
+              path: '/mixed',
+              layerNames: '["a", 1, null, "b"]',
+            ),
+          );
+
+      final threads = await repo.threads.listThreads();
+      expect(threads, hasLength(1));
+      expect(threads.first.layerNames, ['a', 'b']);
+    });
+  });
+
+  group('listLayers corrupted JSON', () {
+    test('returns empty inputTypes for malformed JSON', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'corrupt-input',
+          inputTypes: 'not-valid-json{{{',
+          outputTypes: '["ok"]',
+          sortOrder: const Value(1),
+          enabled: const Value(true),
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.name, 'corrupt-input');
+      expect(layers.first.inputTypes, isEmpty);
+      expect(layers.first.outputTypes, ['ok']);
+    });
+
+    test('returns empty outputTypes for non-list JSON', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'corrupt-output',
+          inputTypes: '[]',
+          outputTypes: '"a_string"',
+          sortOrder: const Value(1),
+          enabled: const Value(true),
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.outputTypes, isEmpty);
+    });
+  });
+
+  group('listThreads corrupted JSON', () {
+    test('returns empty layerNames for malformed JSON', () async {
+      await db
+          .into(db.threads)
+          .insertOnConflictUpdate(
+            ThreadsCompanion.insert(
+              name: 'ok',
+              path: '/ok',
+              layerNames: 'broken-json}}}',
+            ),
+          );
+
+      final threads = await repo.threads.listThreads();
+      expect(threads, hasLength(1));
+      expect(threads.first.name, 'ok');
+      expect(threads.first.layerNames, isEmpty);
+    });
+
+    test('returns empty layerNames for non-list JSON', () async {
+      await db
+          .into(db.threads)
+          .insertOnConflictUpdate(
+            ThreadsCompanion.insert(
+              name: 'nonlist',
+              path: '/p',
+              layerNames: '"not_a_list"',
+            ),
+          );
+
+      final threads = await repo.threads.listThreads();
+      expect(threads, hasLength(1));
+      expect(threads.first.layerNames, isEmpty);
+    });
+  });
+
+  group('graph state error handling', () {
+    test('loadNodePositions returns empty on type mismatch', () async {
+      await db.saveJsonValue('graph_node_positions', '{"node1": "not_a_list"}');
+
+      final positions = await repo.graph.loadNodePositions();
+      expect(positions, isEmpty);
+    });
+
+    test('loadRemovedConnections returns empty on type mismatch', () async {
+      await db.saveJsonValue('graph_removed_connections', '[123, 456]');
+
+      final connections = await repo.graph.loadRemovedConnections();
+      expect(connections, isEmpty);
+    });
+
+    test('loadViewport returns default on type mismatch', () async {
+      await db.saveJsonValue('graph_viewport', '{"x": "not_a_number"}');
+
+      final viewport = await repo.graph.loadViewport();
+      expect(viewport, (0.0, 0.0, 1.0));
     });
   });
 }
