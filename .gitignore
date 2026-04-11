@@ -22,3 +22,6 @@ coverage/
 
 # Logs
 *.log
+
+# Worktrees
+.worktrees/

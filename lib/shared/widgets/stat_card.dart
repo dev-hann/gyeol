@@ -23,14 +23,16 @@ class StatCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  label.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                    letterSpacing: 0.5,
+                Expanded(
+                  child: Text(
+                    label.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                      letterSpacing: 0.5,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
                 Icon(icon, size: 16, color: AppColors.textSecondary),

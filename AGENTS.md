@@ -74,6 +74,44 @@ dart run build_runner build --delete-conflicting-outputs  # Drift 코드 생성
 | `lib/engine/`, `lib/data/`, `lib/providers/` | dart-engineer |
 | `lib/features/`, `lib/shared/`, `lib/core/` | flutter-engineer |
 
+### Git Worktree 워크플로우
+
+모든 독립 작업은 메인 워킹 디렉토리(`master`)가 아닌 독립 워크트리에서 수행.
+작업 시작 시 워크트리 생성, 완료 후 머지 및 삭제.
+
+```bash
+# 생성
+git worktree add .worktrees/{작업명} -b {작업명}
+
+# 작업 중 — 모든 Task/Bash 호출에 workdir=".worktrees/{작업명}" 전달
+
+# 완료 후 메인에 머지
+git checkout master && git merge {작업명}
+
+# 워크트리 삭제
+git worktree remove .worktrees/{작업명} && git branch -d {작업명}
+```
+
+#### 명명 규칙
+
+| 작업 영역 | 워크트리 | 브랜치 |
+|-----------|---------|--------|
+| engine/data/providers | `.worktrees/engine-{N}` | `engine-{N}` |
+| features/shared/core | `.worktrees/ui-{N}` | `ui-{N}` |
+| DB 스키마 | `.worktrees/db-{N}` | `db-{N}` |
+
+#### 스킬 루프 통합
+
+- continuous-improve / design-improve 루프 시작 시 워크트리 1개 생성
+- 모든 Task/Bash 호출에 `workdir=".worktrees/{작업명}"` 전달
+- 루프 종료(stop 입력) 시 메인에 머지 후 워크트리 삭제
+
+#### 필수
+
+- 워크트리 생성 전 `git worktree list`로 충돌 확인
+- 머지 전 워크트리 내에서 `flutter analyze` + `flutter test`
+- 머지 후 워크트리 즉시 삭제
+
 ## 도메인 문서
 
 `docs/domain/` — 프로젝트의 도메인 개념, 용어, 아키텍처, 코드 매핑.
