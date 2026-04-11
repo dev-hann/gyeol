@@ -31,13 +31,13 @@ void main() {
     });
 
     test('returns conversations ordered by updatedAt descending', () async {
-      final older = ChatConversation(
+      const older = ChatConversation(
         id: 'conv-old',
         title: 'Older',
         createdAt: 1000,
         updatedAt: 1000,
       );
-      final newer = ChatConversation(
+      const newer = ChatConversation(
         id: 'conv-new',
         title: 'Newer',
         createdAt: 2000,
@@ -115,14 +115,14 @@ void main() {
     });
 
     test('returns messages ordered by createdAt ascending', () async {
-      final first = ChatMessage(
+      const first = ChatMessage(
         id: 'msg-1',
         conversationId: 'conv-1',
         role: 'user',
         content: 'first',
         createdAt: 1000,
       );
-      final second = ChatMessage(
+      const second = ChatMessage(
         id: 'msg-2',
         conversationId: 'conv-1',
         role: 'assistant',

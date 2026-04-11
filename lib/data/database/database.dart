@@ -263,4 +263,13 @@ class AppDatabase extends _$AppDatabase {
       chatMessages,
     )..where((m) => m.conversationId.equals(conversationId))).go();
   }
+
+  Future<void> updateChatConversationTitle(String id, String title) {
+    return (update(chatConversations)..where((c) => c.id.equals(id))).write(
+      ChatConversationsCompanion(
+        title: Value(title),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
 }

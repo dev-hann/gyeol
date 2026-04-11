@@ -105,4 +105,12 @@ class ChatRepository {
   Future<void> deleteMessage(String id) {
     return _db.deleteChatMessage(id);
   }
+
+  Future<void> updateConversationTitle(String id, String title) {
+    return _db.updateChatConversationTitle(id, title);
+  }
+
+  Future<void> clearMessages(String conversationId) {
+    return _db.deleteChatMessagesByConversation(conversationId);
+  }
 }

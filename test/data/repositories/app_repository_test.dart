@@ -99,16 +99,19 @@ void main() {
 
     test('returns parsed settings from valid JSON', () async {
       await db.saveSettings(
-        '{"activeProvider":"Anthropic","configs":{"openAI":{"type":"openai","apiKey":"k1","model":"gpt-4o"},'
-        '"anthropic":{"type":"anthropic","apiKey":"","model":"claude-sonnet-4-20250514"},'
+        '{"activeProvider":"Anthropic","configs":'
+        '{"openAI":{"type":"openai","apiKey":"k1","model":"gpt-4o"},'
+        '"anthropic":{"type":"anthropic","apiKey":"","'
+        'model":"claude-sonnet-4-20250514"},'
         '"ollama":{"type":"ollama","baseUrl":"","model":"llama3"},'
-        '"custom":{"type":"custom","baseUrl":"","apiKey":"","model":"","apiFormat":"openai"}},'
+        '"custom":{"type":"custom","baseUrl":"","apiKey":"",'
+        '"model":"","apiFormat":"openai"}},'
         '"default_temperature":0.7,"default_max_tokens":4096}',
       );
 
       final settings = await repo.settings.getSettings();
       expect(settings.activeProvider, ProviderType.anthropic);
-      final openai = settings.configs[ProviderType.openAI] as OpenAIConfig;
+      final openai = settings.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(openai.apiKey, 'k1');
     });
 

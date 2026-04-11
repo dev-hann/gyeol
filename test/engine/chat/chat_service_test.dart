@@ -47,9 +47,9 @@ class FakeLlmProvider implements LlmProvider {
 
 void main() {
   group('ToolRegistry', () {
-    test('getAllTools returns 24 tools', () {
+    test('getAllTools returns 29 tools', () {
       final tools = ToolRegistry.getAllTools();
-      expect(tools, hasLength(24));
+      expect(tools, hasLength(29));
       for (final tool in tools) {
         expect(tool.name, isNotEmpty);
         expect(tool.description, isNotEmpty);
@@ -79,6 +79,11 @@ void main() {
         'list_tasks',
         'get_queue_status',
         'switch_provider',
+        'rename_conversation',
+        'search_messages',
+        'clear_conversation',
+        'export_conversation',
+        'get_worker_details',
       ];
       for (final name in expectedNames) {
         final tool = ToolRegistry.getToolByName(name);
@@ -711,6 +716,271 @@ void main() {
     test('switch_provider rejects unknown provider', () async {
       final result = await ToolRegistry.executeTool('switch_provider', {
         'provider': 'unknown',
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded['error'], isNotNull);
+    });
+
+    test('rename_conversation updates title', () async {
+      final conv = ChatConversation.create('Old Title');
+      await repo.chat.saveConversation(conv);
+
+      final result = await ToolRegistry.executeTool('rename_conversation', {
+        'conversationId': conv.id,
+        'title': 'New Title',
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded['success'], isTrue);
+
+      final convs = await repo.chat.listConversations();
+      expect(convs.first.title, 'New Title');
+    });
+
+    test(
+      'rename_conversation returns error for missing conversation',
+      () async {
+        final result = await ToolRegistry.executeTool('rename_conversation', {
+          'conversationId': 'nonexistent-id',
+          'title': 'New Title',
+        }, repo);
+
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], isNotNull);
+      },
+    );
+
+    test('search_messages finds messages by keyword', () async {
+      final conv = ChatConversation.create('Test');
+      await repo.chat.saveConversation(conv);
+
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv.id,
+          role: 'user',
+          content: 'Hello world',
+        ),
+      );
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv.id,
+          role: 'assistant',
+          content: 'Hi there!',
+        ),
+      );
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv.id,
+          role: 'user',
+          content: 'Another message about Flutter',
+        ),
+      );
+
+      final result = await ToolRegistry.executeTool('search_messages', {
+        'query': 'Hello',
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded['messages'], isA<List<dynamic>>());
+      final messages = decoded['messages'] as List<dynamic>;
+      expect(messages, hasLength(1));
+      expect(
+        (messages.first as Map<String, dynamic>)['content'],
+        contains('Hello'),
+      );
+    });
+
+    test('search_messages filters by conversationId', () async {
+      final conv1 = ChatConversation.create('Conv1');
+      final conv2 = ChatConversation.create('Conv2');
+      await repo.chat.saveConversation(conv1);
+      await repo.chat.saveConversation(conv2);
+
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv1.id,
+          role: 'user',
+          content: 'Hello from conv1',
+        ),
+      );
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv2.id,
+          role: 'user',
+          content: 'Hello from conv2',
+        ),
+      );
+
+      final result = await ToolRegistry.executeTool('search_messages', {
+        'query': 'Hello',
+        'conversationId': conv1.id,
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      final messages = decoded['messages'] as List<dynamic>;
+      expect(messages, hasLength(1));
+      expect(
+        (messages.first as Map<String, dynamic>)['conversationId'],
+        conv1.id,
+      );
+    });
+
+    test('search_messages respects limit', () async {
+      final conv = ChatConversation.create('Test');
+      await repo.chat.saveConversation(conv);
+
+      for (var i = 0; i < 5; i++) {
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'user',
+            content: 'Hello message $i',
+          ),
+        );
+      }
+
+      final result = await ToolRegistry.executeTool('search_messages', {
+        'query': 'Hello',
+        'limit': 2,
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      final messages = decoded['messages'] as List;
+      expect(messages, hasLength(2));
+    });
+
+    test('search_messages returns empty for no matches', () async {
+      final result = await ToolRegistry.executeTool('search_messages', {
+        'query': 'nonexistent',
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded['messages'], isEmpty);
+    });
+
+    test('clear_conversation deletes all messages', () async {
+      final conv = ChatConversation.create('Test');
+      await repo.chat.saveConversation(conv);
+
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv.id,
+          role: 'user',
+          content: 'Message 1',
+        ),
+      );
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv.id,
+          role: 'assistant',
+          content: 'Message 2',
+        ),
+      );
+
+      final result = await ToolRegistry.executeTool('clear_conversation', {
+        'conversationId': conv.id,
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded['success'], isTrue);
+
+      final messages = await repo.chat.listMessages(conv.id);
+      expect(messages, isEmpty);
+    });
+
+    test('export_conversation returns markdown', () async {
+      final conv = ChatConversation.create('My Chat');
+      await repo.chat.saveConversation(conv);
+
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv.id,
+          role: 'user',
+          content: 'Hello!',
+        ),
+      );
+      await repo.chat.saveMessage(
+        ChatMessage.create(
+          conversationId: conv.id,
+          role: 'assistant',
+          content: 'Hi there!',
+        ),
+      );
+
+      final result = await ToolRegistry.executeTool('export_conversation', {
+        'conversationId': conv.id,
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded['markdown'], isA<String>());
+      final md = decoded['markdown'] as String;
+      expect(md, contains('My Chat'));
+      expect(md, contains('Hello!'));
+      expect(md, contains('Hi there!'));
+    });
+
+    test(
+      'export_conversation returns error for missing conversation',
+      () async {
+        final result = await ToolRegistry.executeTool('export_conversation', {
+          'conversationId': 'nonexistent-id',
+        }, repo);
+
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], isNotNull);
+      },
+    );
+
+    test('get_worker_details returns full worker info', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: ['json'],
+        ),
+      );
+      await repo.workers.saveWorker(
+        const WorkerDefinition(
+          name: 'W1',
+          layerName: 'L1',
+          systemPrompt: 'You are a helper',
+          model: 'gpt-4',
+          temperature: 0.7,
+          maxTokens: 4096,
+        ),
+      );
+      await repo.logs.logExecution(
+        taskId: 'task1',
+        workerName: 'W1',
+        status: 'completed',
+        message: 'Task done',
+      );
+      await repo.logs.logExecution(
+        taskId: 'task2',
+        workerName: 'W1',
+        status: 'completed',
+        message: 'Another task done',
+      );
+
+      final result = await ToolRegistry.executeTool('get_worker_details', {
+        'name': 'W1',
+      }, repo);
+
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded['name'], 'W1');
+      expect(decoded['layerName'], 'L1');
+      expect(decoded['systemPrompt'], 'You are a helper');
+      expect(decoded['model'], 'gpt-4');
+      expect(decoded['temperature'], 0.7);
+      expect(decoded['maxTokens'], 4096);
+      expect(decoded['recentLogs'], isA<List<dynamic>>());
+      expect(decoded['recentLogs'] as List<dynamic>, isNotEmpty);
+    });
+
+    test('get_worker_details returns error for missing worker', () async {
+      final result = await ToolRegistry.executeTool('get_worker_details', {
+        'name': 'NonExistent',
       }, repo);
 
       final decoded = jsonDecode(result) as Map<String, dynamic>;

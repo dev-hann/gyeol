@@ -13,7 +13,7 @@ import 'package:http/testing.dart';
 void main() {
   group('ChatMessageForApi', () {
     test('stores role and optional fields', () {
-      final msg = ChatMessageForApi(role: 'user', content: 'hello');
+      const msg = ChatMessageForApi(role: 'user', content: 'hello');
       expect(msg.role, 'user');
       expect(msg.content, 'hello');
       expect(msg.toolCalls, isNull);
@@ -21,10 +21,10 @@ void main() {
     });
 
     test('stores toolCalls for assistant messages', () {
-      final msg = ChatMessageForApi(
+      const msg = ChatMessageForApi(
         role: 'assistant',
         toolCalls: [
-          const ToolCall(
+          ToolCall(
             id: 'call_1',
             name: 'create_layer',
             arguments: '{"name": "L1"}',
@@ -38,7 +38,7 @@ void main() {
     });
 
     test('stores toolCallId for tool messages', () {
-      final msg = ChatMessageForApi(
+      const msg = ChatMessageForApi(
         role: 'tool',
         content: '{"status": "ok"}',
         toolCallId: 'call_1',
@@ -50,15 +50,15 @@ void main() {
 
   group('ChatResponse', () {
     test('stores content for text response', () {
-      final response = ChatResponse(content: 'Hello!');
+      const response = ChatResponse(content: 'Hello!');
       expect(response.content, 'Hello!');
       expect(response.toolCalls, isNull);
     });
 
     test('stores toolCalls for tool response', () {
-      final response = ChatResponse(
+      const response = ChatResponse(
         toolCalls: [
-          const ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
+          ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
         ],
       );
       expect(response.content, isNull);
@@ -66,10 +66,10 @@ void main() {
     });
 
     test('stores both content and toolCalls', () {
-      final response = ChatResponse(
+      const response = ChatResponse(
         content: 'I will create a layer.',
         toolCalls: [
-          const ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
+          ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
         ],
       );
       expect(response.content, 'I will create a layer.');
@@ -79,7 +79,7 @@ void main() {
 
   group('ToolDefinition', () {
     test('stores name, description, and parameters', () {
-      final tool = ToolDefinition(
+      const tool = ToolDefinition(
         name: 'create_layer',
         description: 'Creates a new layer',
         parameters: {
@@ -98,7 +98,7 @@ void main() {
 
   group('ToolCall', () {
     test('stores id, name, and arguments', () {
-      final call = ToolCall(
+      const call = ToolCall(
         id: 'call_abc',
         name: 'run_thread',
         arguments: '{"layerId": 1}',
@@ -189,7 +189,7 @@ void main() {
           const ChatMessageForApi(role: 'user', content: 'Create a layer'),
         ],
         tools: [
-          ToolDefinition(
+          const ToolDefinition(
             name: 'create_layer',
             description: 'Creates a layer',
             parameters: <String, dynamic>{
@@ -258,7 +258,7 @@ void main() {
           const ChatMessageForApi(role: 'user', content: 'Do stuff'),
         ],
         tools: [
-          ToolDefinition(
+          const ToolDefinition(
             name: 'run_thread',
             description: 'Runs a thread',
             parameters: <String, dynamic>{
@@ -569,7 +569,7 @@ void main() {
           const ChatMessageForApi(role: 'user', content: 'Create a layer'),
         ],
         tools: [
-          ToolDefinition(
+          const ToolDefinition(
             name: 'create_layer',
             description: 'Creates a layer',
             parameters: <String, dynamic>{
@@ -625,7 +625,7 @@ void main() {
       await provider.generateChat(
         messages: [const ChatMessageForApi(role: 'user', content: 'Run it')],
         tools: [
-          ToolDefinition(
+          const ToolDefinition(
             name: 'run_thread',
             description: 'Runs a thread',
             parameters: <String, dynamic>{
@@ -842,7 +842,7 @@ void main() {
           const ChatMessageForApi(role: 'user', content: 'Create layer'),
         ],
         tools: [
-          ToolDefinition(
+          const ToolDefinition(
             name: 'create_layer',
             description: 'Creates a layer',
             parameters: <String, dynamic>{
@@ -895,7 +895,7 @@ void main() {
       await provider.generateChat(
         messages: [const ChatMessageForApi(role: 'user', content: 'go')],
         tools: [
-          ToolDefinition(
+          const ToolDefinition(
             name: 'run_thread',
             description: 'Runs a thread',
             parameters: <String, dynamic>{

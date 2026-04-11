@@ -94,6 +94,17 @@ class ConversationsNotifier extends AsyncNotifier<List<ChatConversation>> {
     final repo = ref.read(repositoryProvider);
     await repo.chat.saveConversation(conv);
   }
+
+  Future<void> renameConversation(String id, String title) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.chat.updateConversationTitle(id, title);
+  }
+
+  Future<void> clearConversationMessages(String conversationId) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.chat.clearMessages(conversationId);
+    ref.invalidate(chatMessagesProvider(conversationId));
+  }
 }
 
 final chatMessagesProvider = FutureProvider.family<List<ChatMessage>, String>((

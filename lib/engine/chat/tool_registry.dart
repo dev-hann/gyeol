@@ -46,6 +46,11 @@ class ToolRegistry {
         'list_tasks' => _listTasks(args, repo),
         'get_queue_status' => _getQueueStatus(repo),
         'switch_provider' => _switchProvider(args, repo),
+        'rename_conversation' => _renameConversation(args, repo),
+        'search_messages' => _searchMessages(args, repo),
+        'clear_conversation' => _clearConversation(args, repo),
+        'export_conversation' => _exportConversation(args, repo),
+        'get_worker_details' => _getWorkerDetails(args, repo),
         _ => jsonEncode({'error': 'Unknown tool: $name'}),
       };
     } on Exception catch (e) {
@@ -918,7 +923,227 @@ class ToolRegistry {
         'required': ['provider'],
       },
     ),
+    const ToolDefinition(
+      name: 'rename_conversation',
+      description: 'Rename a chat conversation',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'conversationId': {
+            'type': 'string',
+            'description': 'ID of the conversation to rename',
+          },
+          'title': {
+            'type': 'string',
+            'description': 'New title for the conversation',
+          },
+        },
+        'required': ['conversationId', 'title'],
+      },
+    ),
+    const ToolDefinition(
+      name: 'search_messages',
+      description: 'Search chat messages by keyword',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'query': {
+            'type': 'string',
+            'description': 'Search keyword to find in message content',
+          },
+          'conversationId': {
+            'type': 'string',
+            'description': 'Limit search to a specific conversation (optional)',
+          },
+          'limit': {
+            'type': 'integer',
+            'description': 'Maximum number of results to return (default 20)',
+          },
+        },
+        'required': ['query'],
+      },
+    ),
+    const ToolDefinition(
+      name: 'clear_conversation',
+      description: 'Delete all messages in a conversation',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'conversationId': {
+            'type': 'string',
+            'description': 'ID of the conversation to clear',
+          },
+        },
+        'required': ['conversationId'],
+      },
+    ),
+    const ToolDefinition(
+      name: 'export_conversation',
+      description: 'Export a conversation as markdown text',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'conversationId': {
+            'type': 'string',
+            'description': 'ID of the conversation to export',
+          },
+        },
+        'required': ['conversationId'],
+      },
+    ),
+    const ToolDefinition(
+      name: 'get_worker_details',
+      description:
+          'Get detailed info about a specific worker including '
+          'system prompt, model config, layer assignment, '
+          'and recent execution logs',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'name': {
+            'type': 'string',
+            'description': 'Name of the worker to get details for',
+          },
+        },
+        'required': ['name'],
+      },
+    ),
   ];
+
+  static Future<String> _renameConversation(
+    Map<String, dynamic> args,
+    AppRepository repo,
+  ) async {
+    final conversationId = args['conversationId'] as String;
+    final title = args['title'] as String;
+
+    final convs = await repo.chat.listConversations();
+    final existing = convs.where((c) => c.id == conversationId).firstOrNull;
+    if (existing == null) {
+      return jsonEncode({'error': 'Conversation "$conversationId" not found'});
+    }
+
+    await repo.chat.updateConversationTitle(conversationId, title);
+    return jsonEncode({
+      'success': true,
+      'message': 'Conversation renamed to "$title"',
+    });
+  }
+
+  static Future<String> _searchMessages(
+    Map<String, dynamic> args,
+    AppRepository repo,
+  ) async {
+    final query = (args['query'] as String).toLowerCase();
+    final conversationId = args['conversationId'] as String?;
+    final limit = (args['limit'] as num?)?.toInt() ?? 20;
+
+    final convs = await repo.chat.listConversations();
+    final results = <Map<String, dynamic>>[];
+
+    for (final conv in convs) {
+      if (conversationId != null && conv.id != conversationId) continue;
+
+      final messages = await repo.chat.listMessages(conv.id);
+      for (final msg in messages) {
+        if (results.length >= limit) break;
+        if (msg.content.toLowerCase().contains(query)) {
+          final preview = msg.content.length > 200
+              ? '${msg.content.substring(0, 200)}...'
+              : msg.content;
+          results.add({
+            'conversationId': msg.conversationId,
+            'role': msg.role,
+            'content': preview,
+            'toolName': msg.toolName,
+          });
+        }
+      }
+    }
+
+    return jsonEncode({'messages': results});
+  }
+
+  static Future<String> _clearConversation(
+    Map<String, dynamic> args,
+    AppRepository repo,
+  ) async {
+    final conversationId = args['conversationId'] as String;
+    await repo.chat.clearMessages(conversationId);
+    return jsonEncode({
+      'success': true,
+      'message': 'All messages cleared in conversation',
+    });
+  }
+
+  static Future<String> _exportConversation(
+    Map<String, dynamic> args,
+    AppRepository repo,
+  ) async {
+    final conversationId = args['conversationId'] as String;
+
+    final convs = await repo.chat.listConversations();
+    final conv = convs.where((c) => c.id == conversationId).firstOrNull;
+    if (conv == null) {
+      return jsonEncode({'error': 'Conversation "$conversationId" not found'});
+    }
+
+    final messages = await repo.chat.listMessages(conversationId);
+    final buffer = StringBuffer()
+      ..writeln('# ${conv.title}')
+      ..writeln();
+
+    for (final msg in messages) {
+      final label = switch (msg.role) {
+        'user' => '**User**',
+        'assistant' => '**Assistant**',
+        'tool' => '**Tool (${msg.toolName ?? 'unknown'})**',
+        _ => '**${msg.role}**',
+      };
+      buffer
+        ..writeln('$label: ${msg.content}')
+        ..writeln();
+    }
+
+    return jsonEncode({'markdown': buffer.toString()});
+  }
+
+  static Future<String> _getWorkerDetails(
+    Map<String, dynamic> args,
+    AppRepository repo,
+  ) async {
+    final name = args['name'] as String;
+    final worker = await repo.workers.getWorker(name);
+    if (worker == null) {
+      return jsonEncode({'error': 'Worker "$name" not found'});
+    }
+
+    final allLogs = await repo.logs.listExecutionLogs();
+    final workerLogs = allLogs
+        .where((l) => l.workerName == name)
+        .take(5)
+        .map(
+          (l) => {
+            'id': l.id,
+            'taskId': l.taskId,
+            'status': l.status,
+            'message': l.message,
+            'createdAt': l.createdAt,
+          },
+        )
+        .toList();
+
+    return jsonEncode({
+      'name': worker.name,
+      'layerName': worker.layerName,
+      'systemPrompt': worker.systemPrompt,
+      'model': worker.model,
+      'temperature': worker.temperature,
+      'maxTokens': worker.maxTokens,
+      'enabled': worker.enabled,
+      'recentLogs': workerLogs,
+    });
+  }
 
   static Future<String> _listProviders(AppRepository repo) async {
     final settings = await repo.settings.getSettings();

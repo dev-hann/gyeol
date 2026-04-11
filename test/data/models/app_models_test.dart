@@ -266,17 +266,17 @@ void main() {
     test('defaults match expected values', () {
       const settings = ProviderSettings();
       expect(settings.activeProvider, ProviderType.openAI);
-      final openai = settings.configs[ProviderType.openAI] as OpenAIConfig;
+      final openai = settings.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(openai.apiKey, '');
       expect(openai.model, 'gpt-4o');
       final anthropic =
-          settings.configs[ProviderType.anthropic] as AnthropicConfig;
+          settings.configs[ProviderType.anthropic]! as AnthropicConfig;
       expect(anthropic.apiKey, '');
       expect(anthropic.model, 'claude-sonnet-4-20250514');
-      final ollama = settings.configs[ProviderType.ollama] as OllamaConfig;
+      final ollama = settings.configs[ProviderType.ollama]! as OllamaConfig;
       expect(ollama.baseUrl, '');
       expect(ollama.model, 'llama3');
-      final custom = settings.configs[ProviderType.custom] as CustomConfig;
+      final custom = settings.configs[ProviderType.custom]! as CustomConfig;
       expect(custom.baseUrl, '');
       expect(custom.apiKey, '');
       expect(custom.model, '');
@@ -293,7 +293,7 @@ void main() {
     test('fromJson defaults on empty map', () {
       final settings = ProviderSettings.fromJson({});
       expect(settings.activeProvider, ProviderType.openAI);
-      final openai = settings.configs[ProviderType.openAI] as OpenAIConfig;
+      final openai = settings.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(openai.model, 'gpt-4o');
     });
 
@@ -329,12 +329,12 @@ void main() {
         'default_timeout': 30000,
       });
       expect(settings.activeProvider, ProviderType.anthropic);
-      final openai = settings.configs[ProviderType.openAI] as OpenAIConfig;
+      final openai = settings.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(openai.apiKey, 'k1');
       final anthropic =
-          settings.configs[ProviderType.anthropic] as AnthropicConfig;
+          settings.configs[ProviderType.anthropic]! as AnthropicConfig;
       expect(anthropic.model, 'claude-3-opus');
-      final ollama = settings.configs[ProviderType.ollama] as OllamaConfig;
+      final ollama = settings.configs[ProviderType.ollama]! as OllamaConfig;
       expect(ollama.baseUrl, 'http://host:1234');
       expect(settings.defaultTemperature, 0.5);
       expect(settings.defaultMaxTokens, 2048);
@@ -388,25 +388,25 @@ void main() {
       expect(restored.defaultStopSequences, original.defaultStopSequences);
       expect(restored.defaultTimeout, original.defaultTimeout);
 
-      final origOpenai = original.configs[ProviderType.openAI] as OpenAIConfig;
-      final restOpenai = restored.configs[ProviderType.openAI] as OpenAIConfig;
+      final origOpenai = original.configs[ProviderType.openAI]! as OpenAIConfig;
+      final restOpenai = restored.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(restOpenai.apiKey, origOpenai.apiKey);
       expect(restOpenai.model, origOpenai.model);
 
       final origAnthropic =
-          original.configs[ProviderType.anthropic] as AnthropicConfig;
+          original.configs[ProviderType.anthropic]! as AnthropicConfig;
       final restAnthropic =
-          restored.configs[ProviderType.anthropic] as AnthropicConfig;
+          restored.configs[ProviderType.anthropic]! as AnthropicConfig;
       expect(restAnthropic.apiKey, origAnthropic.apiKey);
       expect(restAnthropic.model, origAnthropic.model);
 
-      final origOllama = original.configs[ProviderType.ollama] as OllamaConfig;
-      final restOllama = restored.configs[ProviderType.ollama] as OllamaConfig;
+      final origOllama = original.configs[ProviderType.ollama]! as OllamaConfig;
+      final restOllama = restored.configs[ProviderType.ollama]! as OllamaConfig;
       expect(restOllama.baseUrl, origOllama.baseUrl);
       expect(restOllama.model, origOllama.model);
 
-      final origCustom = original.configs[ProviderType.custom] as CustomConfig;
-      final restCustom = restored.configs[ProviderType.custom] as CustomConfig;
+      final origCustom = original.configs[ProviderType.custom]! as CustomConfig;
+      final restCustom = restored.configs[ProviderType.custom]! as CustomConfig;
       expect(restCustom.baseUrl, origCustom.baseUrl);
       expect(restCustom.apiKey, origCustom.apiKey);
       expect(restCustom.model, origCustom.model);
@@ -423,9 +423,9 @@ void main() {
         },
       );
       expect(copied.activeProvider, ProviderType.ollama);
-      final ollama = copied.configs[ProviderType.ollama] as OllamaConfig;
+      final ollama = copied.configs[ProviderType.ollama]! as OllamaConfig;
       expect(ollama.model, 'mistral');
-      final openai = copied.configs[ProviderType.openAI] as OpenAIConfig;
+      final openai = copied.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(openai.model, 'gpt-4o');
     });
 
@@ -434,11 +434,11 @@ void main() {
       final updated = original.withConfig(
         const OpenAIConfig(apiKey: 'sk-test'),
       );
-      final openai = updated.configs[ProviderType.openAI] as OpenAIConfig;
+      final openai = updated.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(openai.apiKey, 'sk-test');
       expect(openai.model, 'gpt-4o');
       final anthropic =
-          updated.configs[ProviderType.anthropic] as AnthropicConfig;
+          updated.configs[ProviderType.anthropic]! as AnthropicConfig;
       expect(anthropic.apiKey, '');
     });
 

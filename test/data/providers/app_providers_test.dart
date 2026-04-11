@@ -126,7 +126,7 @@ void main() {
     test('build returns default settings when none saved', () async {
       final settings = await container.read(settingsProvider.future);
       expect(settings.activeProvider, ProviderType.openAI);
-      final openai = settings.configs[ProviderType.openAI] as OpenAIConfig;
+      final openai = settings.configs[ProviderType.openAI]! as OpenAIConfig;
       expect(openai.apiKey, isEmpty);
     });
 
@@ -148,7 +148,7 @@ void main() {
       final result = await container.read(settingsProvider.future);
       expect(result.activeProvider, ProviderType.anthropic);
       final anthropic =
-          result.configs[ProviderType.anthropic] as AnthropicConfig;
+          result.configs[ProviderType.anthropic]! as AnthropicConfig;
       expect(anthropic.apiKey, 'sk-test');
       expect(result.defaultTemperature, 0.5);
     });

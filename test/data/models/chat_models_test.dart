@@ -215,8 +215,6 @@ void main() {
         conversationId: 'conv-id',
         role: 'system',
         content: 'You are helpful.',
-        toolName: null,
-        toolCallId: null,
         createdAt: 3000,
       );
 

@@ -40,6 +40,15 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
   bool _isStreaming = false;
   final _consumedToolIds = <String>{};
   List<ChatMessage> _localMessages = [];
+  bool _isRenaming = false;
+  final _renameController = TextEditingController();
+  final _renameFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _renameFocusNode.addListener(_onRenameFocusChanged);
+  }
 
   @override
   void dispose() {
@@ -47,7 +56,39 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
     _controller.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
+    _renameController.dispose();
+    _renameFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onRenameFocusChanged() {
+    if (!_renameFocusNode.hasFocus && _isRenaming) {
+      _finishRename();
+    }
+  }
+
+  void _startRename(ChatConversation conv) {
+    _renameController.text = conv.title;
+    setState(() => _isRenaming = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _renameFocusNode.requestFocus();
+    });
+  }
+
+  void _finishRename() {
+    if (!_isRenaming) return;
+    final newTitle = _renameController.text.trim();
+    final convId = ref.read(selectedConversationIdProvider);
+    if (newTitle.isNotEmpty && convId != null) {
+      ref
+          .read(conversationsProvider.notifier)
+          .renameConversation(convId, newTitle);
+    }
+    setState(() => _isRenaming = false);
+  }
+
+  void _cancelRename() {
+    setState(() => _isRenaming = false);
   }
 
   void _scrollToBottom() {
@@ -200,6 +241,86 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
     ref.read(chatSendingProvider.notifier).state = false;
   }
 
+  void _exportConversation() {
+    final messages = _localMessages;
+    if (messages.isEmpty) return;
+    final buffer = StringBuffer();
+    buffer.writeln('# 대화 내보내기');
+    buffer.writeln();
+    for (final msg in messages) {
+      final role = switch (msg.role) {
+        'user' => '## 사용자',
+        'assistant' => '## 어시스턴트',
+        'tool' => '## 도구 (${msg.toolName ?? "unknown"})',
+        _ => '## ${msg.role}',
+      };
+      buffer.writeln(role);
+      buffer.writeln();
+      buffer.writeln(msg.content);
+      buffer.writeln();
+    }
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('대화가 클립보드에 복사되었습니다'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _clearConversation() {
+    final convId = ref.read(selectedConversationIdProvider);
+    if (convId == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text(
+          '대화 초기화',
+          style: TextStyle(fontSize: 15, color: AppColors.foreground),
+        ),
+        content: const Text(
+          '이 대화의 모든 메시지를 삭제하시겠습니까?',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await ref
+                  .read(conversationsProvider.notifier)
+                  .clearConversationMessages(convId);
+              _localMessages = [];
+              ref.invalidate(chatMessagesProvider(convId));
+            },
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showConversationSearchDialog(List<ChatConversation> conversations) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _ConversationSearchDialog(
+        conversations: conversations,
+        onSelect: (conv) {
+          Navigator.of(ctx).pop();
+          ref.read(selectedConversationIdProvider.notifier).state = conv.id;
+        },
+        onNewConversation: () {
+          Navigator.of(ctx).pop();
+          ref.read(selectedConversationIdProvider.notifier).state = null;
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final convId = ref.watch(selectedConversationIdProvider);
@@ -224,7 +345,9 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
       children: [
         _buildToolbar(conversationsAsync),
         const Divider(height: 1),
-        Expanded(child: _buildMessages(messagesAsync, isSending)),
+        Expanded(
+          child: _buildMessages(messagesAsync, isSending, conversationsAsync),
+        ),
         if (convId == null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -255,6 +378,8 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
   Widget _buildToolbar(AsyncValue<List<ChatConversation>> conversationsAsync) {
     final settingsAsync = ref.watch(settingsProvider);
     final selectedId = ref.watch(selectedConversationIdProvider);
+    final hasConversation = selectedId != null;
+    final conversations = conversationsAsync.valueOrNull ?? [];
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -264,8 +389,43 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
       child: Row(
         children: [
           Expanded(
-            child: _buildConversationDropdown(conversationsAsync, selectedId),
+            child: _buildConversationSelector(conversationsAsync, selectedId),
           ),
+          if (hasConversation) ...[
+            const SizedBox(width: 4),
+            _buildToolbarIconButton(
+              icon: Icons.edit_outlined,
+              tooltip: '이름 변경',
+              onTap: () {
+                final conv = conversations
+                    .where((c) => c.id == selectedId)
+                    .firstOrNull;
+                if (conv != null) _startRename(conv);
+              },
+            ),
+          ],
+          if (conversations.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            _buildToolbarIconButton(
+              icon: Icons.search,
+              tooltip: '대화 검색',
+              onTap: () => _showConversationSearchDialog(conversations),
+            ),
+          ],
+          if (hasConversation) ...[
+            const SizedBox(width: 4),
+            _buildToolbarIconButton(
+              icon: Icons.save_alt,
+              tooltip: '대화 내보내기',
+              onTap: _exportConversation,
+            ),
+            const SizedBox(width: 4),
+            _buildToolbarIconButton(
+              icon: Icons.delete_sweep,
+              tooltip: '대화 초기화',
+              onTap: _clearConversation,
+            ),
+          ],
           const SizedBox(width: 8),
           settingsAsync.when(
             data: _buildModelChip,
@@ -277,7 +437,29 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
     );
   }
 
-  Widget _buildConversationDropdown(
+  Widget _buildToolbarIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Icon(icon, size: 14, color: AppColors.textMuted),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConversationSelector(
     AsyncValue<List<ChatConversation>> conversationsAsync,
     String? selectedId,
   ) {
@@ -292,6 +474,35 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
         final selected = conversations
             .where((c) => c.id == selectedId)
             .firstOrNull;
+
+        if (_isRenaming && selected != null) {
+          return Focus(
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.escape) {
+                _cancelRename();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: TextField(
+              controller: _renameController,
+              focusNode: _renameFocusNode,
+              onSubmitted: (_) => _finishRename(),
+              autofocus: true,
+              style: const TextStyle(fontSize: 13, color: AppColors.foreground),
+              decoration: const InputDecoration(
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                hintText: '대화 제목 입력',
+              ),
+            ),
+          );
+        }
+
         return PopupMenuButton<String>(
           initialValue: selectedId,
           offset: const Offset(0, 32),
@@ -447,8 +658,13 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
   Widget _buildMessages(
     AsyncValue<List<ChatMessage>>? messagesAsync,
     bool isSending,
+    AsyncValue<List<ChatConversation>> conversationsAsync,
   ) {
     if (messagesAsync == null) {
+      final convs = conversationsAsync.valueOrNull;
+      if (convs == null || convs.isEmpty) {
+        return _buildWelcomeState();
+      }
       return const Center(
         child: Text(
           'Start a new conversation',
@@ -483,12 +699,80 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
     );
   }
 
+  Widget _buildWelcomeState() {
+    final suggestions = ['도움이 되는 레이어 만들기', '사용 가능한 모델 보기', '시스템 상태 확인'];
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              size: 48,
+              color: AppColors.primary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Gyeol AI 어시스턴트에 오신 것을 환영합니다',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.foreground,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '무엇이든 물어보세요. 레이어 관리, 작업 실행, 시스템 상태 확인 등 '
+              '다양한 작업을 도와드립니다.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions.map((s) {
+                return ActionChip(
+                  label: Text(s, style: const TextStyle(fontSize: 12)),
+                  onPressed: () {
+                    _controller.text = s;
+                    _sendMessage();
+                  },
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageList(List<ChatMessage> messages, bool isSending) {
     if (messages.isEmpty && !_isStreaming && _errorMessage.isEmpty) {
-      return const Center(
-        child: Text(
-          'No messages yet',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.chat_outlined,
+              size: 36,
+              color: AppColors.textMuted.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '메시지를 입력하여 대화를 시작하세요',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+            ),
+          ],
         ),
       );
     }
@@ -717,6 +1001,92 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ConversationSearchDialog extends StatefulWidget {
+  const _ConversationSearchDialog({
+    required this.conversations,
+    required this.onSelect,
+    required this.onNewConversation,
+  });
+
+  final List<ChatConversation> conversations;
+  final void Function(ChatConversation) onSelect;
+  final VoidCallback onNewConversation;
+
+  @override
+  State<_ConversationSearchDialog> createState() =>
+      _ConversationSearchDialogState();
+}
+
+class _ConversationSearchDialogState extends State<_ConversationSearchDialog> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.conversations
+        .where(
+          (c) => c.title.toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
+        .toList();
+
+    return AlertDialog(
+      backgroundColor: AppColors.card,
+      title: TextField(
+        controller: _searchController,
+        autofocus: true,
+        style: const TextStyle(fontSize: 13, color: AppColors.foreground),
+        decoration: const InputDecoration(
+          hintText: '대화 검색...',
+          isDense: true,
+          prefixIcon: Icon(Icons.search, size: 16),
+        ),
+        onChanged: (v) => setState(() => _searchQuery = v),
+      ),
+      content: SizedBox(
+        width: 400,
+        height: 300,
+        child: ListView(
+          children: [
+            ...filtered.map(
+              (c) => ListTile(
+                dense: true,
+                title: Text(
+                  c.title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                onTap: () => widget.onSelect(c),
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              dense: true,
+              leading: const Icon(
+                Icons.add,
+                size: 16,
+                color: AppColors.primary,
+              ),
+              title: const Text(
+                '새 대화',
+                style: TextStyle(fontSize: 13, color: AppColors.primary),
+              ),
+              onTap: widget.onNewConversation,
+            ),
+          ],
+        ),
       ),
     );
   }
