@@ -1,0 +1,130 @@
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gyeol/data/database/database.dart';
+import 'package:gyeol/data/models/thread_models.dart';
+import 'package:gyeol/data/repositories/app_repository.dart';
+
+void main() {
+  late AppDatabase db;
+  late AppRepository repo;
+
+  setUp(() {
+    db = AppDatabase.forTesting(NativeDatabase.memory());
+    repo = AppRepository(db);
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  group('ThreadRepository saveThread + getThread', () {
+    test('round-trips a thread with required fields only', () async {
+      const thread = ThreadDefinition(
+        name: 'pipeline-1',
+        path: '/root/child',
+        layerNames: ['parse', 'analyze'],
+      );
+      await repo.threads.saveThread(thread);
+
+      final found = await repo.threads.getThread('pipeline-1');
+      expect(found, isNotNull);
+      expect(found!.name, 'pipeline-1');
+      expect(found.path, '/root/child');
+      expect(found.layerNames, ['parse', 'analyze']);
+      expect(found.contextPrompt, isNull);
+      expect(found.enabled, true);
+      expect(found.status, ThreadStatus.idle);
+    });
+
+    test('round-trips a thread with all optional fields', () async {
+      const thread = ThreadDefinition(
+        name: 'pipeline-2',
+        path: '/a/b/c',
+        layerNames: ['extract', 'transform', 'load'],
+        contextPrompt: 'Summarize the result',
+        enabled: false,
+        status: ThreadStatus.completed,
+      );
+      await repo.threads.saveThread(thread);
+
+      final found = await repo.threads.getThread('pipeline-2');
+      expect(found, isNotNull);
+      expect(found!.name, 'pipeline-2');
+      expect(found.path, '/a/b/c');
+      expect(found.layerNames, ['extract', 'transform', 'load']);
+      expect(found.contextPrompt, 'Summarize the result');
+      expect(found.enabled, false);
+      expect(found.status, ThreadStatus.completed);
+    });
+
+    test('returns null for non-existent thread', () async {
+      final found = await repo.threads.getThread('ghost');
+      expect(found, isNull);
+    });
+  });
+
+  group('ThreadRepository listThreads', () {
+    test('returns empty list when no threads', () async {
+      final threads = await repo.threads.listThreads();
+      expect(threads, isEmpty);
+    });
+
+    test('returns all saved threads', () async {
+      const t1 = ThreadDefinition(
+        name: 'alpha',
+        path: '/a',
+        layerNames: ['L1'],
+      );
+      const t2 = ThreadDefinition(name: 'beta', path: '/b', layerNames: ['L2']);
+      await repo.threads.saveThread(t1);
+      await repo.threads.saveThread(t2);
+
+      final threads = await repo.threads.listThreads();
+      expect(threads, hasLength(2));
+      final names = threads.map((t) => t.name).toSet();
+      expect(names, {'alpha', 'beta'});
+    });
+  });
+
+  group('ThreadRepository deleteThread', () {
+    test('removes a saved thread', () async {
+      const thread = ThreadDefinition(
+        name: 'to_delete',
+        path: '/x',
+        layerNames: ['L1'],
+      );
+      await repo.threads.saveThread(thread);
+      expect(await repo.threads.getThread('to_delete'), isNotNull);
+
+      await repo.threads.deleteThread('to_delete');
+      expect(await repo.threads.getThread('to_delete'), isNull);
+    });
+
+    test('is no-op for non-existent thread', () async {
+      await repo.threads.deleteThread('nonexistent');
+
+      final threads = await repo.threads.listThreads();
+      expect(threads, isEmpty);
+    });
+  });
+
+  group('ThreadRepository watchThreads', () {
+    test('emits update when thread is saved', () async {
+      final stream = repo.threads.watchThreads();
+
+      final firstEmission = await stream.first;
+      expect(firstEmission, isEmpty);
+
+      const thread = ThreadDefinition(
+        name: 'watched',
+        path: '/w',
+        layerNames: ['L1'],
+      );
+      await repo.threads.saveThread(thread);
+
+      final secondEmission = await stream.first;
+      expect(secondEmission, hasLength(1));
+      expect(secondEmission.first.name, 'watched');
+    });
+  });
+}
