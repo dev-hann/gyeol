@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/settings/pages/settings_page.dart';
 import 'package:gyeol/providers/model_fetcher.dart';
-import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 class NodeDetailPanel extends ConsumerStatefulWidget {
@@ -696,11 +696,11 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
           ),
           const SizedBox(height: 8),
           if (configured.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 'No providers configured. Add one in Settings first.',
-                style: const TextStyle(fontSize: 11, color: AppColors.error),
+                style: TextStyle(fontSize: 11, color: AppColors.error),
               ),
             )
           else
@@ -708,7 +708,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<ProviderType>(
-                    value: validType,
+                    initialValue: validType,
                     isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Provider',
@@ -917,7 +917,9 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
 
     if (_wModels.isNotEmpty) {
       return DropdownButtonFormField<String>(
-        value: _wModels.contains(_wModelCtl.text) ? _wModelCtl.text : null,
+        initialValue: _wModels.contains(_wModelCtl.text)
+            ? _wModelCtl.text
+            : null,
         decoration: const InputDecoration(
           labelText: 'Model',
           isDense: true,

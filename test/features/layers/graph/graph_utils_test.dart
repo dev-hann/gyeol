@@ -10,13 +10,13 @@ void main() {
         layerName: 'L1',
         inputTypes: ['text'],
         outputTypes: ['json'],
-        workerNames: ['w1'],
+        workerCount: 1,
         enabled: true,
       );
       expect(data.layerName, 'L1');
       expect(data.inputTypes, ['text']);
       expect(data.outputTypes, ['json']);
-      expect(data.workerNames, ['w1']);
+      expect(data.workerCount, 1);
       expect(data.enabled, isTrue);
     });
 
@@ -25,7 +25,7 @@ void main() {
         layerName: 'L1',
         inputTypes: [],
         outputTypes: [],
-        workerNames: [],
+        workerCount: 0,
         enabled: true,
       );
       expect(data.runningTasks, 0);
@@ -36,7 +36,7 @@ void main() {
         layerName: 'L1',
         inputTypes: [],
         outputTypes: [],
-        workerNames: [],
+        workerCount: 0,
         enabled: false,
         runningTasks: 5,
       );
@@ -47,7 +47,7 @@ void main() {
 
   group('buildNodes', () {
     test('returns empty list for empty layers', () {
-      final nodes = buildNodes([], []);
+      final nodes = buildNodes([], [], []);
       expect(nodes, isEmpty);
     });
 
@@ -57,17 +57,15 @@ void main() {
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
         const LayerDefinition(
           name: 'L2',
           inputTypes: ['json'],
           outputTypes: ['result'],
-          workerNames: ['w2'],
           order: 1,
         ),
       ];
-      final nodes = buildNodes(layers, []);
+      final nodes = buildNodes(layers, [], []);
       expect(nodes, hasLength(2));
     });
 
@@ -77,10 +75,9 @@ void main() {
           name: 'Alpha',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
       ];
-      final nodes = buildNodes(layers, []);
+      final nodes = buildNodes(layers, [], []);
       expect(nodes.first.id, 'Alpha');
     });
 
@@ -90,10 +87,9 @@ void main() {
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
       ];
-      final nodes = buildNodes(layers, []);
+      final nodes = buildNodes(layers, [], []);
       final node = nodes.first;
       expect(node.ports, hasLength(2));
       expect(node.ports.any((p) => p.type == PortType.input), isTrue);
@@ -106,17 +102,15 @@ void main() {
           name: 'L0',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
         const LayerDefinition(
           name: 'L1',
           inputTypes: ['json'],
           outputTypes: ['result'],
-          workerNames: ['w2'],
           order: 1,
         ),
       ];
-      final nodes = buildNodes(layers, []);
+      final nodes = buildNodes(layers, [], []);
       final xPositions = nodes.map((n) => n.position.value.dx).toList();
       expect(xPositions, hasLength(2));
       final diff = (xPositions[1] - xPositions[0]).abs();
@@ -129,7 +123,6 @@ void main() {
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
       ];
       final tasks = [
@@ -154,7 +147,7 @@ void main() {
           updatedAt: 0,
         ),
       ];
-      final nodes = buildNodes(layers, tasks);
+      final nodes = buildNodes(layers, tasks, []);
       expect(nodes.first.data.runningTasks, 1);
     });
 
@@ -164,16 +157,19 @@ void main() {
           name: 'L1',
           inputTypes: ['a', 'b'],
           outputTypes: ['c'],
-          workerNames: ['w1', 'w2'],
           enabled: false,
         ),
       ];
-      final nodes = buildNodes(layers, []);
+      final workers = [
+        const WorkerDefinition(name: 'w1', layerName: 'L1', systemPrompt: 'p1'),
+        const WorkerDefinition(name: 'w2', layerName: 'L1', systemPrompt: 'p2'),
+      ];
+      final nodes = buildNodes(layers, [], workers);
       final data = nodes.first.data;
       expect(data.layerName, 'L1');
       expect(data.inputTypes, ['a', 'b']);
       expect(data.outputTypes, ['c']);
-      expect(data.workerNames, ['w1', 'w2']);
+      expect(data.workerCount, 2);
       expect(data.enabled, isFalse);
     });
   });
@@ -185,13 +181,11 @@ void main() {
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
         const LayerDefinition(
           name: 'B',
           inputTypes: ['json'],
           outputTypes: ['result'],
-          workerNames: ['w2'],
           order: 1,
         ),
       ];
@@ -209,13 +203,11 @@ void main() {
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
         const LayerDefinition(
           name: 'B',
           inputTypes: ['image'],
           outputTypes: ['result'],
-          workerNames: ['w2'],
           order: 1,
         ),
       ];
@@ -229,13 +221,11 @@ void main() {
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
         const LayerDefinition(
           name: 'B',
           inputTypes: ['json'],
           outputTypes: ['result'],
-          workerNames: ['w2'],
           order: 1,
         ),
       ];
@@ -249,13 +239,11 @@ void main() {
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
-          workerNames: ['w1'],
         ),
         const LayerDefinition(
           name: 'B',
           inputTypes: ['json'],
           outputTypes: ['result'],
-          workerNames: ['w2'],
           order: 1,
         ),
       ];
@@ -276,20 +264,17 @@ void main() {
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json', 'data'],
-          workerNames: ['w1'],
         ),
         const LayerDefinition(
           name: 'B',
           inputTypes: ['json'],
           outputTypes: ['result'],
-          workerNames: ['w2'],
           order: 1,
         ),
         const LayerDefinition(
           name: 'C',
           inputTypes: ['data'],
           outputTypes: ['report'],
-          workerNames: ['w3'],
           order: 2,
         ),
       ];

@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/models/app_models.dart';
+import 'package:gyeol/providers/anthropic_provider.dart';
 import 'package:gyeol/providers/custom_provider.dart';
 import 'package:gyeol/providers/lllm_provider.dart';
 import 'package:gyeol/providers/ollama_provider.dart';
 import 'package:gyeol/providers/openai_provider.dart';
-import 'package:gyeol/providers/anthropic_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -23,9 +23,8 @@ void main() {
     test('stores toolCalls for assistant messages', () {
       final msg = ChatMessageForApi(
         role: 'assistant',
-        content: null,
         toolCalls: [
-          ToolCall(
+          const ToolCall(
             id: 'call_1',
             name: 'create_layer',
             arguments: '{"name": "L1"}',
@@ -59,7 +58,7 @@ void main() {
     test('stores toolCalls for tool response', () {
       final response = ChatResponse(
         toolCalls: [
-          ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
+          const ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
         ],
       );
       expect(response.content, isNull);
@@ -70,7 +69,7 @@ void main() {
       final response = ChatResponse(
         content: 'I will create a layer.',
         toolCalls: [
-          ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
+          const ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
         ],
       );
       expect(response.content, 'I will create a layer.');
@@ -142,8 +141,8 @@ void main() {
 
       final response = await provider.generateChat(
         messages: [
-          ChatMessageForApi(role: 'system', content: 'You are helpful.'),
-          ChatMessageForApi(role: 'user', content: 'Hi'),
+          const ChatMessageForApi(role: 'system', content: 'You are helpful.'),
+          const ChatMessageForApi(role: 'user', content: 'Hi'),
         ],
       );
 
@@ -186,7 +185,9 @@ void main() {
       );
 
       final response = await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'Create a layer')],
+        messages: [
+          const ChatMessageForApi(role: 'user', content: 'Create a layer'),
+        ],
         tools: [
           ToolDefinition(
             name: 'create_layer',
@@ -253,8 +254,8 @@ void main() {
 
       await provider.generateChat(
         messages: [
-          ChatMessageForApi(role: 'system', content: 'Be helpful'),
-          ChatMessageForApi(role: 'user', content: 'Do stuff'),
+          const ChatMessageForApi(role: 'system', content: 'Be helpful'),
+          const ChatMessageForApi(role: 'user', content: 'Do stuff'),
         ],
         tools: [
           ToolDefinition(
@@ -296,7 +297,7 @@ void main() {
       );
 
       await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+        messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
       );
     });
 
@@ -332,10 +333,9 @@ void main() {
 
       await provider.generateChat(
         messages: [
-          ChatMessageForApi(role: 'user', content: 'Create a layer'),
-          ChatMessageForApi(
+          const ChatMessageForApi(role: 'user', content: 'Create a layer'),
+          const ChatMessageForApi(
             role: 'assistant',
-            content: null,
             toolCalls: [
               ToolCall(
                 id: 'call_abc123',
@@ -344,7 +344,7 @@ void main() {
               ),
             ],
           ),
-          ChatMessageForApi(
+          const ChatMessageForApi(
             role: 'tool',
             content: '{"status": "ok"}',
             toolCallId: 'call_abc123',
@@ -390,8 +390,8 @@ void main() {
 
       await provider.generateChat(
         messages: [
-          ChatMessageForApi(role: 'user', content: 'go'),
-          ChatMessageForApi(
+          const ChatMessageForApi(role: 'user', content: 'go'),
+          const ChatMessageForApi(
             role: 'assistant',
             toolCalls: [
               ToolCall(
@@ -415,7 +415,7 @@ void main() {
 
       expect(
         provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
       );
@@ -436,7 +436,7 @@ void main() {
 
       expect(
         provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
       );
@@ -457,7 +457,7 @@ void main() {
 
       expect(
         provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
       );
@@ -490,7 +490,7 @@ void main() {
       );
 
       final response = await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'Hi')],
+        messages: [const ChatMessageForApi(role: 'user', content: 'Hi')],
       );
 
       expect(response.content, 'Hello from Claude chat!');
@@ -528,11 +528,11 @@ void main() {
 
         await provider.generateChat(
           messages: [
-            ChatMessageForApi(
+            const ChatMessageForApi(
               role: 'system',
               content: 'You are a scheduler AI',
             ),
-            ChatMessageForApi(role: 'user', content: 'Hello'),
+            const ChatMessageForApi(role: 'user', content: 'Hello'),
           ],
         );
       },
@@ -565,7 +565,9 @@ void main() {
       );
 
       final response = await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'Create a layer')],
+        messages: [
+          const ChatMessageForApi(role: 'user', content: 'Create a layer'),
+        ],
         tools: [
           ToolDefinition(
             name: 'create_layer',
@@ -621,7 +623,7 @@ void main() {
       );
 
       await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'Run it')],
+        messages: [const ChatMessageForApi(role: 'user', content: 'Run it')],
         tools: [
           ToolDefinition(
             name: 'run_thread',
@@ -660,7 +662,7 @@ void main() {
       );
 
       await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+        messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
       );
     });
 
@@ -698,10 +700,9 @@ void main() {
 
       await provider.generateChat(
         messages: [
-          ChatMessageForApi(role: 'user', content: 'Create a layer'),
-          ChatMessageForApi(
+          const ChatMessageForApi(role: 'user', content: 'Create a layer'),
+          const ChatMessageForApi(
             role: 'assistant',
-            content: null,
             toolCalls: [
               ToolCall(
                 id: 'toolu_abc123',
@@ -710,7 +711,7 @@ void main() {
               ),
             ],
           ),
-          ChatMessageForApi(
+          const ChatMessageForApi(
             role: 'tool',
             content: '{"status": "ok"}',
             toolCallId: 'toolu_abc123',
@@ -729,7 +730,7 @@ void main() {
 
       expect(
         provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
       );
@@ -750,7 +751,7 @@ void main() {
 
       expect(
         provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
       );
@@ -793,8 +794,8 @@ void main() {
 
       final response = await provider.generateChat(
         messages: [
-          ChatMessageForApi(role: 'system', content: 'Be helpful'),
-          ChatMessageForApi(role: 'user', content: 'Hi'),
+          const ChatMessageForApi(role: 'system', content: 'Be helpful'),
+          const ChatMessageForApi(role: 'user', content: 'Hi'),
         ],
       );
 
@@ -837,7 +838,9 @@ void main() {
       );
 
       final response = await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'Create layer')],
+        messages: [
+          const ChatMessageForApi(role: 'user', content: 'Create layer'),
+        ],
         tools: [
           ToolDefinition(
             name: 'create_layer',
@@ -890,7 +893,7 @@ void main() {
       );
 
       await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'go')],
+        messages: [const ChatMessageForApi(role: 'user', content: 'go')],
         tools: [
           ToolDefinition(
             name: 'run_thread',
@@ -932,7 +935,7 @@ void main() {
       );
 
       final response = await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+        messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
       );
       expect(response.content, 'ok');
     });
@@ -952,7 +955,7 @@ void main() {
 
       expect(
         provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
       );
@@ -973,7 +976,7 @@ void main() {
 
       expect(
         provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
       );
@@ -1014,7 +1017,7 @@ void main() {
         );
 
         final response = await provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         );
         expect(response.content, 'Custom OpenAI chat!');
       },
@@ -1048,7 +1051,7 @@ void main() {
         );
 
         final response = await provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         );
         expect(response.content, 'Custom Anthropic chat!');
       },
@@ -1085,7 +1088,7 @@ void main() {
         );
 
         final response = await provider.generateChat(
-          messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         );
         expect(response.content, 'Custom Ollama chat!');
       },
@@ -1101,7 +1104,7 @@ void main() {
     test('generateChat can be overridden', () async {
       final provider = _FakeLlmProviderForChat();
       final response = await provider.generateChat(
-        messages: [ChatMessageForApi(role: 'user', content: 'hi')],
+        messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
       );
       expect(response.content, 'fake-chat');
       expect(response.toolCalls, isNull);

@@ -194,13 +194,14 @@ class OllamaProvider implements LlmProvider {
       throw LlmError('${response.statusCode}: $respBody');
     }
 
-    var buffer = '';
+    final buffer = StringBuffer();
     await for (final chunk in response.stream.transform(utf8.decoder)) {
-      buffer += chunk;
-      while (buffer.contains('\n')) {
-        final idx = buffer.indexOf('\n');
-        final line = buffer.substring(0, idx).trim();
-        buffer = buffer.substring(idx + 1);
+      buffer.write(chunk);
+      var remaining = buffer.toString();
+      while (remaining.contains('\n')) {
+        final idx = remaining.indexOf('\n');
+        final line = remaining.substring(0, idx).trim();
+        remaining = remaining.substring(idx + 1);
         if (!line.startsWith('data: ')) continue;
         final data = line.substring(6).trim();
         if (data == '[DONE]') {
@@ -237,6 +238,9 @@ class OllamaProvider implements LlmProvider {
           continue;
         }
       }
+      buffer
+        ..clear()
+        ..write(remaining);
     }
     yield const ChatStreamDelta(done: true);
   }

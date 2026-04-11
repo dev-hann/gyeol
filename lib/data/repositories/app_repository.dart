@@ -1,13 +1,12 @@
 import 'package:gyeol/data/database/database.dart';
-
-import 'chat_repository.dart';
-import 'graph_repository.dart';
-import 'layer_repository.dart';
-import 'log_repository.dart';
-import 'settings_repository.dart';
-import 'task_repository.dart';
-import 'thread_repository.dart';
-import 'worker_repository.dart';
+import 'package:gyeol/data/repositories/chat_repository.dart';
+import 'package:gyeol/data/repositories/graph_repository.dart';
+import 'package:gyeol/data/repositories/layer_repository.dart';
+import 'package:gyeol/data/repositories/log_repository.dart';
+import 'package:gyeol/data/repositories/settings_repository.dart';
+import 'package:gyeol/data/repositories/task_repository.dart';
+import 'package:gyeol/data/repositories/thread_repository.dart';
+import 'package:gyeol/data/repositories/worker_repository.dart';
 
 export 'chat_repository.dart';
 export 'graph_repository.dart';

@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
-import 'package:gyeol/features/settings/pages/settings_page.dart';
 import 'package:gyeol/engine/chat/chat_service.dart';
+import 'package:gyeol/features/settings/pages/settings_page.dart';
 import 'package:gyeol/providers/lllm_provider.dart';
 import 'package:gyeol/providers/model_fetcher.dart';
 
@@ -268,7 +268,7 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
           ),
           const SizedBox(width: 8),
           settingsAsync.when(
-            data: (settings) => _buildModelChip(settings),
+            data: _buildModelChip,
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
@@ -648,7 +648,7 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
             _controller.text = choice;
             _sendMessage();
           },
-          onConfirm: (approved, action) {
+          onConfirm: ({required approved, required action}) {
             setState(() => _consumedToolIds.add(msg.id));
             _controller.text = approved ? '승인: $action' : '거부: $action';
             _sendMessage();
@@ -826,7 +826,7 @@ class _ProviderModelSheetState extends ConsumerState<_ProviderModelSheet> {
                   ? _selectedType
                   : configured.first.providerType;
               return DropdownButtonFormField<ProviderType>(
-                value: validType,
+                initialValue: validType,
                 decoration: const InputDecoration(
                   labelText: 'Provider',
                   isDense: true,
@@ -871,7 +871,9 @@ class _ProviderModelSheetState extends ConsumerState<_ProviderModelSheet> {
           else ...[
             if (_models.isNotEmpty)
               DropdownButtonFormField<String>(
-                value: _models.contains(_selectedModel) ? _selectedModel : null,
+                initialValue: _models.contains(_selectedModel)
+                    ? _selectedModel
+                    : null,
                 decoration: const InputDecoration(
                   labelText: 'Model',
                   isDense: true,
@@ -964,7 +966,8 @@ class _MessageBubble extends StatelessWidget {
   final VoidCallback? onCopy;
   final VoidCallback? onRegenerate;
   final void Function(String choice)? onSelectChoice;
-  final void Function(bool approved, String action)? onConfirm;
+  final void Function({required bool approved, required String action})?
+  onConfirm;
   final bool isConsumed;
 
   @override
@@ -1025,7 +1028,7 @@ class _MessageBubble extends StatelessWidget {
         fontWeight: FontWeight.w600,
         color: AppColors.foreground,
       ),
-      code: TextStyle(
+      code: const TextStyle(
         fontSize: 12,
         fontFamily: 'monospace',
         backgroundColor: AppColors.background,
@@ -1066,8 +1069,8 @@ class _MessageBubble extends StatelessWidget {
         border: Border.all(color: AppColors.border),
       ),
       codeblockPadding: const EdgeInsets.all(12),
-      horizontalRuleDecoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+      horizontalRuleDecoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
       ),
     );
   }
@@ -1236,7 +1239,7 @@ class _MessageBubble extends StatelessWidget {
                   return ActionChip(
                     label: Text(option, style: const TextStyle(fontSize: 12)),
                     onPressed: () => onSelectChoice?.call(option),
-                    side: BorderSide(color: AppColors.border),
+                    side: const BorderSide(color: AppColors.border),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -1324,7 +1327,8 @@ class _MessageBubble extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => onConfirm?.call(true, action),
+                      onPressed: () =>
+                          onConfirm?.call(approved: true, action: action),
                       icon: const Icon(Icons.check, size: 14),
                       label: const Text('승인', style: TextStyle(fontSize: 12)),
                       style: OutlinedButton.styleFrom(
@@ -1340,7 +1344,8 @@ class _MessageBubble extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => onConfirm?.call(false, action),
+                      onPressed: () =>
+                          onConfirm?.call(approved: false, action: action),
                       icon: const Icon(Icons.close, size: 14),
                       label: const Text('거부', style: TextStyle(fontSize: 12)),
                       style: OutlinedButton.styleFrom(

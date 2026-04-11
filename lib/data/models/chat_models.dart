@@ -47,9 +47,9 @@ class ChatMessage {
     required this.conversationId,
     required this.role,
     required this.content,
+    required this.createdAt,
     this.toolName,
     this.toolCallId,
-    required this.createdAt,
   });
 
   factory ChatMessage.create({

@@ -147,7 +147,7 @@ void main() {
       );
 
       final provider = FakeLlmProvider([
-        ChatResponse(
+        const ChatResponse(
           toolCalls: [
             ToolCall(id: 'call_1', name: 'list_layers', arguments: '{}'),
           ],
@@ -169,12 +169,12 @@ void main() {
 
     test('handles multiple tool calls in sequence', () async {
       final provider = FakeLlmProvider([
-        ChatResponse(
+        const ChatResponse(
           toolCalls: [
             ToolCall(id: 'call_1', name: 'list_layers', arguments: '{}'),
           ],
         ),
-        ChatResponse(
+        const ChatResponse(
           toolCalls: [
             ToolCall(id: 'call_2', name: 'list_workers', arguments: '{}'),
           ],
@@ -211,14 +211,14 @@ void main() {
       final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
 
       final history = [
-        ChatMessage(
+        const ChatMessage(
           id: 'm1',
           conversationId: 'conv1',
           role: 'user',
           content: 'previous question',
           createdAt: 1000,
         ),
-        ChatMessage(
+        const ChatMessage(
           id: 'm2',
           conversationId: 'conv1',
           role: 'assistant',
@@ -352,7 +352,8 @@ void main() {
 
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       expect(decoded['layers'], isA<List<dynamic>>());
-      final layers = decoded['layers'] as List<dynamic>;
+      final layers = (decoded['layers'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
       expect(layers, hasLength(1));
       expect(layers.first['name'], 'L1');
     });
@@ -670,7 +671,6 @@ void main() {
     test('switch_provider switches active provider', () async {
       await repo.settings.saveSettings(
         const ProviderSettings(
-          activeProvider: ProviderType.openAI,
           configs: {
             ProviderType.openAI: OpenAIConfig(apiKey: 'test-key'),
             ProviderType.anthropic: AnthropicConfig(apiKey: 'test-key'),
@@ -693,7 +693,6 @@ void main() {
     test('switch_provider rejects unconfigured provider', () async {
       await repo.settings.saveSettings(
         const ProviderSettings(
-          activeProvider: ProviderType.openAI,
           configs: {
             ProviderType.openAI: OpenAIConfig(apiKey: 'test-key'),
             ProviderType.anthropic: AnthropicConfig(),

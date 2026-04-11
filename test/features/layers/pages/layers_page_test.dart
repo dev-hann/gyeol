@@ -12,13 +12,11 @@ List<LayerDefinition> fakeLayers() => [
     name: 'Draft',
     inputTypes: ['issue'],
     outputTypes: ['plan'],
-    workerNames: ['writer-1'],
   ),
   const LayerDefinition(
     name: 'Review',
     inputTypes: ['plan'],
     outputTypes: ['analysis'],
-    workerNames: ['reviewer-1'],
     order: 1,
   ),
 ];
@@ -158,7 +156,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('New Layer'), findsOneWidget);
-      expect(find.byType(TextField), findsNWidgets(4));
+      expect(find.byType(TextField), findsNWidgets(3));
       await disposeLayersPage(tester);
     });
 

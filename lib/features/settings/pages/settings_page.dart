@@ -312,7 +312,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: ExpansionTile(
-          initiallyExpanded: false,
           dense: true,
           tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -478,7 +477,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             TextField(
               decoration: const InputDecoration(
                 labelText: 'Stop Sequences',
-                hintText: 'Comma-separated, e.g. "\\n", "END"',
+                hintText: r'Comma-separated, e.g. "\n", "END"',
                 isDense: true,
               ),
               controller: TextEditingController(
@@ -592,7 +591,7 @@ class _ProviderConfigDialogState extends State<_ProviderConfigDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<ProviderType>(
-              value: _selectedType,
+              initialValue: _selectedType,
               decoration: const InputDecoration(
                 labelText: 'Platform',
                 prefixIcon: Icon(Icons.dns_outlined, size: 18),
@@ -663,7 +662,7 @@ class _ProviderConfigDialogState extends State<_ProviderConfigDialog> {
   }
 
   void _submit() {
-    final ProviderConfig newConfig = switch (_selectedType) {
+    final newConfig = switch (_selectedType) {
       ProviderType.openAI => OpenAIConfig(
         apiKey: _apiKeyCtrl.text,
         model:

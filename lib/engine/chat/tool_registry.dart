@@ -736,7 +736,8 @@ class ToolRegistry {
           'Use this when the user needs to select from multiple options, '
           'such as choosing a model, picking a configuration, or selecting '
           'from a list of items. The UI will render clickable choice chips. '
-          'When the user clicks a choice, it will be sent back as their response.',
+          'When the user clicks a choice, it will be sent back as their '
+          'response.',
       parameters: {
         'type': 'object',
         'properties': {
@@ -803,7 +804,8 @@ class ToolRegistry {
           'contextPrompt': {
             'type': 'string',
             'description':
-                'Context prompt for thread execution (optional, set to empty string to clear)',
+                'Context prompt for thread execution '
+                '(optional, set to empty string to clear)',
           },
           'enabled': {
             'type': 'boolean',

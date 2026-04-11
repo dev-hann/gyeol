@@ -61,7 +61,7 @@ class Scheduler {
           .where((w) => w.layerName == layer.name)
           .map((w) => w.name);
 
-      for (final workerName in layerWorkers) {
+      for (final _ in layerWorkers) {
         taken++;
       }
     }

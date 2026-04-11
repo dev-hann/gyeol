@@ -26,13 +26,11 @@ void main() {
       name: 'L1',
       inputTypes: ['txt'],
       outputTypes: ['json'],
-      workerNames: [],
     ),
     const LayerDefinition(
       name: 'L2',
       inputTypes: ['json'],
       outputTypes: ['md'],
-      workerNames: [],
     ),
   ];
 

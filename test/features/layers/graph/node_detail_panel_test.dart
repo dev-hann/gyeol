@@ -14,13 +14,11 @@ List<LayerDefinition> fakeLayers() => [
     name: 'Draft',
     inputTypes: ['text', 'prompt'],
     outputTypes: ['draft'],
-    workerNames: ['writer-1'],
   ),
   const LayerDefinition(
     name: 'Review',
     inputTypes: ['draft'],
     outputTypes: ['review'],
-    workerNames: [],
     order: 1,
     enabled: false,
   ),
@@ -44,7 +42,7 @@ List<WorkerDefinition> fakeWorkers() => [
 ];
 
 NodeFlowController<LayerGraphData, void> createTestController() {
-  final nodes = buildNodes(fakeLayers(), []);
+  final nodes = buildNodes(fakeLayers(), [], fakeWorkers());
   final connections = buildConnections(fakeLayers(), <(String, String)>{});
   return NodeFlowController<LayerGraphData, void>(
     nodes: nodes,
@@ -265,50 +263,6 @@ void main() {
     });
   });
 
-  group('NodeDetailPanel — save layer preserves workerNames', () {
-    testWidgets('saving edited layer preserves existing workerNames', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 900);
-      tester.view.devicePixelRatio = 1.0;
-      final notifier = _CapturingLayersNotifier(fakeLayers());
-      final ctrl = NodeFlowController<LayerGraphData, void>();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            layersProvider.overrideWith(() => notifier),
-            workersProvider.overrideWith(
-              () => _FakeWorkersNotifier(fakeWorkers()),
-            ),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: NodeDetailPanel(
-                layerName: 'Draft',
-                onClose: () {},
-                controller: ctrl,
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Edit'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(notifier.saved, isNotEmpty);
-      expect(
-        notifier.saved.last.workerNames,
-        equals(['writer-1']),
-        reason: 'saveLayer should preserve existing workerNames',
-      );
-    });
-  });
-
   group('NodeDetailPanel — didUpdateWidget syncs controllers', () {
     testWidgets('updates input types text when layerName changes', (
       tester,
@@ -318,17 +272,15 @@ void main() {
           name: 'A',
           inputTypes: ['alpha'],
           outputTypes: ['a-out'],
-          workerNames: [],
         ),
         const LayerDefinition(
           name: 'B',
           inputTypes: ['beta'],
           outputTypes: ['b-out'],
-          workerNames: [],
         ),
       ];
       final ctrl = NodeFlowController<LayerGraphData, void>(
-        nodes: buildNodes(layers, []),
+        nodes: buildNodes(layers, [], []),
       );
 
       await tester.pumpWidget(
@@ -378,22 +330,16 @@ void main() {
 
     testWidgets('updates enabled status when switching layers', (tester) async {
       final layers = [
-        const LayerDefinition(
-          name: 'On',
-          inputTypes: ['x'],
-          outputTypes: [],
-          workerNames: [],
-        ),
+        const LayerDefinition(name: 'On', inputTypes: ['x'], outputTypes: []),
         const LayerDefinition(
           name: 'Off',
           inputTypes: ['x'],
           outputTypes: [],
-          workerNames: [],
           enabled: false,
         ),
       ];
       final ctrl = NodeFlowController<LayerGraphData, void>(
-        nodes: buildNodes(layers, []),
+        nodes: buildNodes(layers, [], []),
       );
 
       await tester.pumpWidget(
@@ -448,7 +394,6 @@ void main() {
             name: 'Empty',
             inputTypes: [],
             outputTypes: ['out'],
-            workerNames: [],
           ),
         ],
         workers: [],
@@ -472,20 +417,6 @@ class _FakeWorkersNotifier extends WorkersNotifier {
 
   @override
   Future<List<WorkerDefinition>> build() async => _workers;
-}
-
-class _CapturingLayersNotifier extends LayersNotifier {
-  _CapturingLayersNotifier(this._layers);
-  final List<LayerDefinition> _layers;
-  final List<LayerDefinition> saved = [];
-
-  @override
-  Future<List<LayerDefinition>> build() async => _layers;
-
-  @override
-  Future<void> saveLayer(LayerDefinition layer) async {
-    saved.add(layer);
-  }
 }
 
 class _NeverLayersNotifier extends LayersNotifier {

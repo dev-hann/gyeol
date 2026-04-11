@@ -32,7 +32,6 @@ List<LayerDefinition> fakeLayers() => [
     name: 'Draft',
     inputTypes: ['text'],
     outputTypes: ['draft'],
-    workerNames: ['writer-1', 'critic-1'],
   ),
 ];
 
@@ -171,13 +170,11 @@ void main() {
             name: 'Draft',
             inputTypes: ['text'],
             outputTypes: ['draft'],
-            workerNames: ['writer-1'],
           ),
           const LayerDefinition(
             name: 'Review',
             inputTypes: ['draft'],
             outputTypes: ['review'],
-            workerNames: [],
             order: 1,
           ),
         ],

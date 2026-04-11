@@ -208,7 +208,6 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               setState(() => _selectedLayerName = name);
             },
             onNodeDragEnd: _savePositions,
-            onConnectionCreated: null,
             onViewportChanged: _savePositions,
           ),
         ),

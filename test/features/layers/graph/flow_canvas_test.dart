@@ -7,14 +7,23 @@ import 'package:gyeol/features/layers/graph/layer_node_widget.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 NodeFlowController<LayerGraphData, void> createTestController() {
-  final nodes = buildNodes([
-    const LayerDefinition(
-      name: 'TestLayer',
-      inputTypes: ['text'],
-      outputTypes: ['json'],
-      workerNames: ['w1'],
-    ),
-  ], []);
+  final nodes = buildNodes(
+    [
+      const LayerDefinition(
+        name: 'TestLayer',
+        inputTypes: ['text'],
+        outputTypes: ['json'],
+      ),
+    ],
+    [],
+    [
+      const WorkerDefinition(
+        name: 'w1',
+        layerName: 'TestLayer',
+        systemPrompt: 'test',
+      ),
+    ],
+  );
   return NodeFlowController<LayerGraphData, void>(nodes: nodes);
 }
 
@@ -65,15 +74,18 @@ void main() {
     });
 
     testWidgets('renders disabled layer with reduced opacity', (tester) async {
-      final nodes = buildNodes([
-        const LayerDefinition(
-          name: 'DisabledLayer',
-          inputTypes: [],
-          outputTypes: [],
-          workerNames: [],
-          enabled: false,
-        ),
-      ], []);
+      final nodes = buildNodes(
+        [
+          const LayerDefinition(
+            name: 'DisabledLayer',
+            inputTypes: [],
+            outputTypes: [],
+            enabled: false,
+          ),
+        ],
+        [],
+        [],
+      );
       final controller = NodeFlowController<LayerGraphData, void>(nodes: nodes);
       await tester.pumpWidget(buildWidget(controller));
       await tester.pumpAndSettle();
