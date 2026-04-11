@@ -52,13 +52,13 @@ class Scheduler {
       final layer = layers.first;
       final updatedTask = task.copyWith(
         status: TaskStatus.running,
-        layerName: layer.name,
+        layerId: layer.id,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
       await _repo.tasks.saveTask(updatedTask);
 
       final layerWorkers = (await _repo.workers.listWorkers())
-          .where((w) => w.layerName == layer.name)
+          .where((w) => w.layerId == layer.id)
           .map((w) => w.name);
 
       for (final _ in layerWorkers) {
@@ -108,17 +108,25 @@ class Scheduler {
   }
 
   Future<List<WorkerResult>> runThread(ThreadDefinition thread) async {
-    if (thread.layerNames.isEmpty) return [];
+    if (thread.layerIds.isEmpty) return [];
 
     final allResults = <WorkerResult>[];
     final files = await collectFilesFromPath(thread.path);
 
     var currentType = 'raw';
 
-    for (final layerName in thread.layerNames) {
-      final layers = _layerRegistry.findByInputType(currentType);
-      final layer = layers.where((l) => l.name == layerName).firstOrNull;
-      if (layer == null || !layer.enabled) continue;
+    final allLayers = await _repo.layers.listLayers();
+    final layerById = <int, LayerDefinition>{
+      for (final l in allLayers) l.id: l,
+    };
+
+    for (final layerId in thread.layerIds) {
+      final layer = layerById[layerId];
+      if (layer == null) continue;
+
+      final matchingLayers = _layerRegistry.findByInputType(currentType);
+      if (!matchingLayers.any((l) => l.id == layerId)) continue;
+      if (!layer.enabled) continue;
 
       final payload = <String, dynamic>{
         'thread': thread.name,
@@ -131,7 +139,7 @@ class Scheduler {
         currentType,
         payload,
         TaskPriority.high,
-      ).copyWith(layerName: layer.name);
+      ).copyWith(layerId: layer.id);
 
       final updatedTask = task.copyWith(
         status: TaskStatus.running,
@@ -141,7 +149,7 @@ class Scheduler {
 
       final layerFutures = <Future<WorkerResult>>[];
       final layerWorkers = (await _repo.workers.listWorkers())
-          .where((w) => w.layerName == layer.name)
+          .where((w) => w.layerId == layer.id)
           .map((w) => w.name);
       for (final workerName in layerWorkers) {
         layerFutures.add(

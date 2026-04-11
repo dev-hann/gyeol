@@ -185,6 +185,7 @@ void main() {
   group('LayerDefinition', () {
     test('defaults order=0 enabled=true', () {
       const layer = LayerDefinition(
+        id: 1,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -196,6 +197,7 @@ void main() {
 
     test('holds layerPrompt', () {
       const layer = LayerDefinition(
+        id: 2,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -206,6 +208,7 @@ void main() {
 
     test('copyWith overrides specified fields only', () {
       const layer = LayerDefinition(
+        id: 3,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -223,6 +226,7 @@ void main() {
 
     test('copyWith can update layerPrompt', () {
       const layer = LayerDefinition(
+        id: 4,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -237,7 +241,7 @@ void main() {
     test('defaults enabled=true and optional fields null', () {
       const worker = WorkerDefinition(
         name: 'w',
-        layerName: 'l',
+        layerId: 1,
         systemPrompt: 'prompt',
       );
       expect(worker.model, isNull);
@@ -249,14 +253,14 @@ void main() {
     test('copyWith overrides specified fields only', () {
       const worker = WorkerDefinition(
         name: 'w',
-        layerName: 'l',
+        layerId: 1,
         systemPrompt: 'prompt',
         model: 'gpt-4',
       );
       final copied = worker.copyWith(model: 'claude', enabled: false);
 
       expect(copied.name, 'w');
-      expect(copied.layerName, 'l');
+      expect(copied.layerId, 1);
       expect(copied.model, 'claude');
       expect(copied.enabled, false);
     });

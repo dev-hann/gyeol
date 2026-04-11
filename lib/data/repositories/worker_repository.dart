@@ -10,7 +10,7 @@ class WorkerRepository {
     return _db.saveWorker(
       WorkersCompanion.insert(
         name: worker.name,
-        layerName: worker.layerName,
+        layerId: worker.layerId,
         systemPrompt: worker.systemPrompt,
         model: Value(worker.model),
         temperature: Value(worker.temperature),
@@ -39,7 +39,7 @@ class WorkerRepository {
   WorkerDefinition _workerFromRow(Worker r) {
     return WorkerDefinition(
       name: r.name,
-      layerName: r.layerName,
+      layerId: r.layerId,
       systemPrompt: r.systemPrompt,
       model: r.model,
       temperature: r.temperature,

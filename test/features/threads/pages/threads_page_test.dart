@@ -10,12 +10,12 @@ void main() {
     const ThreadDefinition(
       name: 'review',
       path: '/home/user/project',
-      layerNames: ['L1', 'L2'],
+      layerIds: [1, 2],
     ),
     const ThreadDefinition(
       name: 'analysis',
       path: '/data/src',
-      layerNames: [],
+      layerIds: [],
       enabled: false,
       status: ThreadStatus.completed,
     ),
@@ -23,11 +23,13 @@ void main() {
 
   final fakeLayers = [
     const LayerDefinition(
+      id: 1,
       name: 'L1',
       inputTypes: ['txt'],
       outputTypes: ['json'],
     ),
     const LayerDefinition(
+      id: 2,
       name: 'L2',
       inputTypes: ['json'],
       outputTypes: ['md'],

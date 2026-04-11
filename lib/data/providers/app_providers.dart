@@ -1,4 +1,5 @@
 export 'chat_provider.dart';
+export 'connections_provider.dart';
 export 'core_providers.dart';
 export 'graph_state_provider.dart';
 export 'layers_provider.dart';

@@ -19,6 +19,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksProvider);
+    final layersAsync = ref.watch(layersProvider);
     final queueSizeAsync = ref.watch(queueSizeProvider);
     final workersAsync = ref.watch(workersProvider);
     final settingsAsync = ref.watch(settingsProvider);
@@ -155,7 +156,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                       separatorBuilder: (_, __) =>
                                           const Divider(height: 1),
                                       itemBuilder: (context, index) =>
-                                          _TaskTile(task: tasks[index]),
+                                          _TaskTile(
+                                            task: tasks[index],
+                                            layers:
+                                                layersAsync.valueOrNull ?? [],
+                                          ),
                                     ),
                             ),
                           ],
@@ -231,9 +236,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     ),
                   );
                 }
+                final allLayers = ref.read(layersProvider).valueOrNull ?? [];
                 final byLayer = <String, List<WorkerDefinition>>{};
                 for (final w in workers) {
-                  byLayer.putIfAbsent(w.layerName, () => []).add(w);
+                  final lName =
+                      allLayers
+                          .where((l) => l.id == w.layerId)
+                          .firstOrNull
+                          ?.name ??
+                      '';
+                  byLayer.putIfAbsent(lName, () => []).add(w);
                 }
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,11 +458,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 }
 
 class _TaskTile extends StatelessWidget {
-  const _TaskTile({required this.task});
+  const _TaskTile({required this.task, required this.layers});
   final AppTask task;
+  final List<LayerDefinition> layers;
 
   @override
   Widget build(BuildContext context) {
+    final layerName = task.layerId != null
+        ? layers.where((l) => l.id == task.layerId).firstOrNull?.name
+        : null;
     return InkWell(
       onTap: () {},
       child: Padding(
@@ -480,9 +496,9 @@ class _TaskTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      if (task.layerName != null)
+                      if (layerName != null)
                         Text(
-                          'Layer: ${task.layerName}',
+                          'Layer: $layerName',
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.textSecondary,

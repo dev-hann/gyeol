@@ -1,4 +1,3 @@
-// ignore_for_file: avoid_equals_and_hash_code_on_mutable_classes
 import 'package:uuid/uuid.dart';
 
 enum TaskPriority { low, medium, high }
@@ -18,7 +17,7 @@ class AppTask {
     this.maxRetries = 3,
     this.depth = 0,
     this.parentTaskId,
-    this.layerName,
+    this.layerId,
     this.workerName,
   });
 
@@ -47,7 +46,7 @@ class AppTask {
   final int maxRetries;
   final int depth;
   final String? parentTaskId;
-  final String? layerName;
+  final int? layerId;
   final String? workerName;
   final int createdAt;
   final int updatedAt;
@@ -61,7 +60,7 @@ class AppTask {
 
   AppTask copyWith({
     TaskStatus? status,
-    String? layerName,
+    int? layerId,
     String? workerName,
     int? retryCount,
     int? depth,
@@ -78,7 +77,7 @@ class AppTask {
       maxRetries: maxRetries,
       depth: depth ?? this.depth,
       parentTaskId: parentTaskId ?? this.parentTaskId,
-      layerName: layerName ?? this.layerName,
+      layerId: layerId ?? this.layerId,
       workerName: workerName ?? this.workerName,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -11,13 +11,13 @@ import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 class NodeDetailPanel extends ConsumerStatefulWidget {
   const NodeDetailPanel({
-    required this.layerName,
+    required this.layerId,
     required this.onClose,
     required this.controller,
     this.onConnectionRemoved,
     super.key,
   });
-  final String? layerName;
+  final int? layerId;
   final VoidCallback onClose;
   final NodeFlowController<LayerGraphData, void> controller;
   final void Function(String src, String dest)? onConnectionRemoved;
@@ -63,7 +63,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   @override
   void didUpdateWidget(covariant NodeDetailPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.layerName != widget.layerName) {
+    if (oldWidget.layerId != widget.layerId) {
       _editing = false;
       _showWorkerForm = false;
       _editingWorkerName = null;
@@ -95,22 +95,20 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.layerName == null) return const SizedBox.shrink();
+    if (widget.layerId == null) return const SizedBox.shrink();
 
     final layersAsync = ref.watch(layersProvider);
     final workersAsync = ref.watch(workersProvider);
 
     return layersAsync.when(
       data: (layers) {
-        final layer = layers
-            .where((l) => l.name == widget.layerName)
-            .firstOrNull;
+        final layer = layers.where((l) => l.id == widget.layerId).firstOrNull;
         if (layer == null) return const SizedBox.shrink();
 
         return workersAsync.when(
           data: (workers) {
             final layerWorkers = workers
-                .where((w) => w.layerName == layer.name)
+                .where((w) => w.layerId == layer.id)
                 .toList();
             return _buildPanel(layer, layerWorkers);
           },
@@ -282,7 +280,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
                 color: AppColors.error,
               ),
               onPressed: () {
-                ref.read(layersProvider.notifier).deleteLayer(layer.name);
+                ref.read(layersProvider.notifier).deleteLayer(layer.id);
                 widget.onClose();
               },
               tooltip: 'Delete layer',
@@ -366,12 +364,13 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   }
 
   Widget _buildConnectionsSection(LayerDefinition layer) {
-    final nodeConns = widget.controller.getConnectionsForNode(layer.name);
+    final nodeId = layer.id.toString();
+    final nodeConns = widget.controller.getConnectionsForNode(nodeId);
     final outgoing = <Connection<void>>[];
     final incoming = <Connection<void>>[];
 
     for (final conn in nodeConns) {
-      if (conn.sourceNodeId == layer.name) {
+      if (conn.sourceNodeId == nodeId) {
         outgoing.add(conn);
       } else {
         incoming.add(conn);
@@ -429,7 +428,11 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   }
 
   Widget _buildConnectionTile(Connection<void> conn, bool isOutgoing) {
-    final otherName = isOutgoing ? conn.targetNodeId : conn.sourceNodeId;
+    final layers = ref.read(layersProvider).valueOrNull ?? [];
+    final otherNodeId = isOutgoing ? conn.targetNodeId : conn.sourceNodeId;
+    final otherId = int.tryParse(otherNodeId);
+    final otherLayer = layers.where((l) => l.id == otherId).firstOrNull;
+    final displayName = otherLayer?.name ?? otherNodeId;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -442,7 +445,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              otherName,
+              displayName,
               style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -824,11 +827,9 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   }
 
   void _saveLayer() {
-    if (widget.layerName == null) return;
+    if (widget.layerId == null) return;
     final layers = ref.read(layersProvider).valueOrNull ?? [];
-    final existing = layers
-        .where((l) => l.name == widget.layerName)
-        .firstOrNull;
+    final existing = layers.where((l) => l.id == widget.layerId).firstOrNull;
     if (existing == null) return;
     final layer = existing.copyWith(
       inputTypes: _splitCSV(_inputCtl.text),
@@ -842,10 +843,10 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   }
 
   void _saveWorker() {
-    if (_wNameCtl.text.isEmpty || widget.layerName == null) return;
+    if (_wNameCtl.text.isEmpty || widget.layerId == null) return;
     final worker = WorkerDefinition(
       name: _wNameCtl.text,
-      layerName: widget.layerName!,
+      layerId: widget.layerId!,
       systemPrompt: _wPromptCtl.text,
       model: _wModelCtl.text.isEmpty ? null : _wModelCtl.text,
       temperature: double.tryParse(_wTempCtl.text) ?? 0.7,

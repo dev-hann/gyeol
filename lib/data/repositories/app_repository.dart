@@ -1,5 +1,6 @@
 import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/repositories/chat_repository.dart';
+import 'package:gyeol/data/repositories/connection_repository.dart';
 import 'package:gyeol/data/repositories/graph_repository.dart';
 import 'package:gyeol/data/repositories/layer_repository.dart';
 import 'package:gyeol/data/repositories/log_repository.dart';
@@ -9,6 +10,7 @@ import 'package:gyeol/data/repositories/thread_repository.dart';
 import 'package:gyeol/data/repositories/worker_repository.dart';
 
 export 'chat_repository.dart';
+export 'connection_repository.dart';
 export 'graph_repository.dart';
 export 'layer_repository.dart';
 export 'log_repository.dart';
@@ -29,4 +31,5 @@ class AppRepository {
   late final GraphRepository graph = GraphRepository(_db);
   late final LogRepository logs = LogRepository(_db);
   late final ChatRepository chat = ChatRepository(_db);
+  late final ConnectionRepository connections = ConnectionRepository(_db);
 }

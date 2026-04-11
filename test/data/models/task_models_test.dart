@@ -47,7 +47,7 @@ void main() {
         maxRetries: 5,
         depth: 2,
         parentTaskId: 'parent',
-        layerName: 'parse',
+        layerId: 1,
         workerName: 'worker1',
       );
 
@@ -62,7 +62,7 @@ void main() {
       expect(task.maxRetries, 5);
       expect(task.depth, 2);
       expect(task.parentTaskId, 'parent');
-      expect(task.layerName, 'parse');
+      expect(task.layerId, 1);
       expect(task.workerName, 'worker1');
     });
 
@@ -81,7 +81,7 @@ void main() {
       expect(task.maxRetries, 3);
       expect(task.depth, 0);
       expect(task.parentTaskId, isNull);
-      expect(task.layerName, isNull);
+      expect(task.layerId, isNull);
       expect(task.workerName, isNull);
     });
 
@@ -185,7 +185,7 @@ void main() {
 
       final copied = original.copyWith(
         status: TaskStatus.running,
-        layerName: 'layerA',
+        layerId: 1,
         workerName: 'workerA',
         retryCount: 2,
         depth: 3,
@@ -200,7 +200,7 @@ void main() {
       expect(copied.createdAt, 100);
       expect(copied.maxRetries, 3);
       expect(copied.status, TaskStatus.running);
-      expect(copied.layerName, 'layerA');
+      expect(copied.layerId, 1);
       expect(copied.workerName, 'workerA');
       expect(copied.retryCount, 2);
       expect(copied.depth, 3);
@@ -221,7 +221,7 @@ void main() {
         maxRetries: 5,
         depth: 1,
         parentTaskId: 'p',
-        layerName: 'L',
+        layerId: 1,
         workerName: 'W',
       );
 
@@ -238,7 +238,7 @@ void main() {
       expect(copied.maxRetries, original.maxRetries);
       expect(copied.depth, original.depth);
       expect(copied.parentTaskId, original.parentTaskId);
-      expect(copied.layerName, original.layerName);
+      expect(copied.layerId, original.layerId);
       expect(copied.workerName, original.workerName);
     });
 

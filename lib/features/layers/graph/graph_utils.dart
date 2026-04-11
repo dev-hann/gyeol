@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gyeol/data/models/app_models.dart';
+import 'package:gyeol/data/repositories/connection_repository.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 const double kNodeWidth = 240;
@@ -9,6 +10,7 @@ const double kNodeSep = 60;
 
 class LayerGraphData {
   const LayerGraphData({
+    required this.layerId,
     required this.layerName,
     required this.inputTypes,
     required this.outputTypes,
@@ -16,6 +18,7 @@ class LayerGraphData {
     required this.enabled,
     this.runningTasks = 0,
   });
+  final int layerId;
   final String layerName;
   final List<String> inputTypes;
   final List<String> outputTypes;
@@ -28,39 +31,39 @@ List<Node<LayerGraphData>> buildNodes(
   List<LayerDefinition> layers,
   List<AppTask> tasks,
   List<WorkerDefinition> workers,
+  List<LayerConnectionData> connections,
 ) {
   if (layers.isEmpty) return [];
 
-  final runningByLayer = <String, int>{};
+  final runningByLayer = <int, int>{};
   for (final task in tasks) {
-    if (task.status == TaskStatus.running && task.layerName != null) {
-      runningByLayer[task.layerName!] =
-          (runningByLayer[task.layerName!] ?? 0) + 1;
+    if (task.status == TaskStatus.running && task.layerId != null) {
+      runningByLayer[task.layerId!] = (runningByLayer[task.layerId!] ?? 0) + 1;
     }
   }
 
-  final positions = layoutGraph(layers);
+  final positions = layoutGraph(layers, connections);
 
   return layers.map((layer) {
-    final layerWorkerCount = workers
-        .where((w) => w.layerName == layer.name)
-        .length;
+    final nodeId = layer.id.toString();
+    final layerWorkerCount = workers.where((w) => w.layerId == layer.id).length;
     return Node<LayerGraphData>(
-      id: layer.name,
+      id: nodeId,
       type: 'layer',
-      position: positions[layer.name]!,
+      position: positions[nodeId]!,
       size: const Size(kNodeWidth, kNodeHeight),
       data: LayerGraphData(
+        layerId: layer.id,
         layerName: layer.name,
         inputTypes: layer.inputTypes,
         outputTypes: layer.outputTypes,
         workerCount: layerWorkerCount,
         enabled: layer.enabled,
-        runningTasks: runningByLayer[layer.name] ?? 0,
+        runningTasks: runningByLayer[layer.id] ?? 0,
       ),
       ports: [
         Port(
-          id: '${layer.name}-in',
+          id: '$nodeId-in',
           name: 'In',
           type: PortType.input,
           offset: const Offset(0, 40),
@@ -68,7 +71,7 @@ List<Node<LayerGraphData>> buildNodes(
           multiConnections: true,
         ),
         Port(
-          id: '${layer.name}-out',
+          id: '$nodeId-out',
           name: 'Out',
           position: PortPosition.right,
           type: PortType.output,
@@ -81,71 +84,47 @@ List<Node<LayerGraphData>> buildNodes(
   }).toList();
 }
 
-List<Connection<void>> buildConnections(
-  List<LayerDefinition> layers,
-  Set<(String, String)> removedConnections,
-) {
-  final sorted = List<LayerDefinition>.from(layers)
-    ..sort((a, b) => a.order.compareTo(b.order));
-
-  final connections = <Connection<void>>[];
+List<Connection<void>> buildConnections(List<LayerConnectionData> connections) {
   var connIndex = 0;
-
-  for (var i = 0; i < sorted.length; i++) {
-    for (var j = 0; j < sorted.length; j++) {
-      if (i == j) continue;
-      final srcName = sorted[i].name;
-      final destName = sorted[j].name;
-      if (removedConnections.contains((srcName, destName))) continue;
-
-      final overlap = sorted[i].outputTypes.toSet().intersection(
-        sorted[j].inputTypes.toSet(),
-      );
-      if (overlap.isNotEmpty) {
-        connections.add(
-          Connection<void>(
-            id: 'conn-${connIndex++}',
-            sourceNodeId: srcName,
-            sourcePortId: '$srcName-out',
-            targetNodeId: destName,
-            targetPortId: '$destName-in',
-          ),
-        );
-      }
-    }
-  }
-
-  return connections;
+  return connections.map((c) {
+    final srcId = c.sourceLayerId.toString();
+    final dstId = c.targetLayerId.toString();
+    return Connection<void>(
+      id: 'conn-${connIndex++}',
+      sourceNodeId: srcId,
+      sourcePortId: '$srcId-out',
+      targetNodeId: dstId,
+      targetPortId: '$dstId-in',
+    );
+  }).toList();
 }
 
-Map<String, Offset> layoutGraph(List<LayerDefinition> layers) {
+Map<String, Offset> layoutGraph(
+  List<LayerDefinition> layers,
+  List<LayerConnectionData> connections,
+) {
   if (layers.isEmpty) return {};
 
-  final names = layers.map((l) => l.name).toSet();
+  final nodeIds = layers.map((l) => l.id.toString()).toSet();
+
   final edges = <(String, String)>[];
-  for (final src in layers) {
-    for (final dst in layers) {
-      if (src.name == dst.name) continue;
-      if (src.outputTypes
-          .toSet()
-          .intersection(dst.inputTypes.toSet())
-          .isNotEmpty) {
-        edges.add((src.name, dst.name));
-      }
+  for (final c in connections) {
+    final srcId = c.sourceLayerId.toString();
+    final dstId = c.targetLayerId.toString();
+    if (nodeIds.contains(srcId) && nodeIds.contains(dstId)) {
+      edges.add((srcId, dstId));
     }
   }
 
   final incoming = <String, Set<String>>{};
   final outgoing = <String, Set<String>>{};
-  for (final name in names) {
-    incoming[name] = {};
-    outgoing[name] = {};
+  for (final id in nodeIds) {
+    incoming[id] = {};
+    outgoing[id] = {};
   }
   for (final (src, dst) in edges) {
-    if (names.contains(src) && names.contains(dst)) {
-      outgoing[src]!.add(dst);
-      incoming[dst]!.add(src);
-    }
+    outgoing[src]!.add(dst);
+    incoming[dst]!.add(src);
   }
 
   final rank = <String, int>{};
@@ -160,13 +139,13 @@ Map<String, Offset> layoutGraph(List<LayerDefinition> layers) {
     }
   }
 
-  final sources = names.where((n) => incoming[n]!.isEmpty).toList()..sort();
+  final sources = nodeIds.where((n) => incoming[n]!.isEmpty).toList()..sort();
   for (final s in sources) {
     assignRank(s, 0);
   }
-  for (final name in names) {
-    if (!visited.contains(name)) {
-      rank[name] = 0;
+  for (final id in nodeIds) {
+    if (!visited.contains(id)) {
+      rank[id] = 0;
     }
   }
 

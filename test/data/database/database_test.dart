@@ -180,10 +180,12 @@ void main() {
           outputTypes: '[]',
         ),
       );
+      final layers = await db.listLayers();
+      final layerId = layers.first.id;
       await db.saveWorker(
         WorkersCompanion.insert(
           name: 'parser',
-          layerName: 'parse',
+          layerId: layerId,
           systemPrompt: 'Parse text',
           enabled: const Value(true),
         ),
@@ -192,7 +194,7 @@ void main() {
       final worker = await db.getWorker('parser');
       expect(worker, isNotNull);
       expect(worker!.name, 'parser');
-      expect(worker.layerName, 'parse');
+      expect(worker.layerId, layerId);
       expect(worker.systemPrompt, 'Parse text');
     });
 
@@ -207,11 +209,14 @@ void main() {
       await db.saveLayer(
         LayersCompanion.insert(name: 'l2', inputTypes: '[]', outputTypes: '[]'),
       );
+      final layers = await db.listLayers();
+      final l1Id = layers.firstWhere((l) => l.name == 'l1').id;
+      final l2Id = layers.firstWhere((l) => l.name == 'l2').id;
       await db.saveWorker(
-        WorkersCompanion.insert(name: 'a', layerName: 'l1', systemPrompt: 'p1'),
+        WorkersCompanion.insert(name: 'a', layerId: l1Id, systemPrompt: 'p1'),
       );
       await db.saveWorker(
-        WorkersCompanion.insert(name: 'b', layerName: 'l2', systemPrompt: 'p2'),
+        WorkersCompanion.insert(name: 'b', layerId: l2Id, systemPrompt: 'p2'),
       );
 
       final workers = await db.listWorkers();
@@ -222,10 +227,12 @@ void main() {
       await db.saveLayer(
         LayersCompanion.insert(name: 'l', inputTypes: '[]', outputTypes: '[]'),
       );
+      final layers = await db.listLayers();
+      final layerId = layers.first.id;
       await db.saveWorker(
         WorkersCompanion.insert(
           name: 'doomed',
-          layerName: 'l',
+          layerId: layerId,
           systemPrompt: 'p',
         ),
       );
@@ -366,7 +373,8 @@ void main() {
         ),
       );
 
-      await db.deleteLayer('gone');
+      final layers = await db.listLayers();
+      await db.deleteLayer(layers.first.id);
       expect(await db.listLayers(), isEmpty);
     });
   });
@@ -387,10 +395,13 @@ void main() {
           outputTypes: '[]',
         ),
       );
+      final layers = await db.listLayers();
+      final parseId = layers.firstWhere((l) => l.name == 'parse').id;
+      final analyzeId = layers.firstWhere((l) => l.name == 'analyze').id;
       await db.saveThread(
         ThreadsCompanion.insert(name: 'thread1', path: '/path/to/file.dart'),
       );
-      await db.saveThreadLayers('thread1', ['parse', 'analyze']);
+      await db.saveThreadLayerIds('thread1', [parseId, analyzeId]);
 
       final thread = await db.getThread('thread1');
       expect(thread, isNotNull);
@@ -399,10 +410,10 @@ void main() {
       expect(thread.enabled, isTrue);
       expect(thread.status, 'idle');
 
-      final layers = await db.listThreadLayers('thread1');
-      expect(layers, hasLength(2));
-      expect(layers[0].layerName, 'parse');
-      expect(layers[1].layerName, 'analyze');
+      final threadLayers = await db.listThreadLayers('thread1');
+      expect(threadLayers, hasLength(2));
+      expect(threadLayers[0].layerId, parseId);
+      expect(threadLayers[1].layerId, analyzeId);
     });
 
     test('getThread returns null for missing name', () async {
@@ -416,21 +427,24 @@ void main() {
       await db.saveLayer(
         LayersCompanion.insert(name: 'b', inputTypes: '[]', outputTypes: '[]'),
       );
+      final layers = await db.listLayers();
+      final aId = layers.firstWhere((l) => l.name == 'a').id;
+      final bId = layers.firstWhere((l) => l.name == 'b').id;
       await db.saveThread(
         ThreadsCompanion.insert(name: 'thread1', path: '/old/path'),
       );
-      await db.saveThreadLayers('thread1', ['a']);
+      await db.saveThreadLayerIds('thread1', [aId]);
       await db.saveThread(
         ThreadsCompanion.insert(name: 'thread1', path: '/new/path'),
       );
-      await db.saveThreadLayers('thread1', ['b']);
+      await db.saveThreadLayerIds('thread1', [bId]);
 
       final thread = await db.getThread('thread1');
       expect(thread!.path, '/new/path');
 
-      final layers = await db.listThreadLayers('thread1');
-      expect(layers, hasLength(1));
-      expect(layers[0].layerName, 'b');
+      final threadLayers = await db.listThreadLayers('thread1');
+      expect(threadLayers, hasLength(1));
+      expect(threadLayers[0].layerId, bId);
     });
 
     test('listThreads returns all threads', () async {
@@ -445,8 +459,10 @@ void main() {
       await db.saveLayer(
         LayersCompanion.insert(name: 'L1', inputTypes: '[]', outputTypes: '[]'),
       );
+      final layers = await db.listLayers();
+      final layerId = layers.first.id;
       await db.saveThread(ThreadsCompanion.insert(name: 'doomed', path: '/x'));
-      await db.saveThreadLayers('doomed', ['L1']);
+      await db.saveThreadLayerIds('doomed', [layerId]);
       expect(await db.getThread('doomed'), isNotNull);
 
       await db.deleteThread('doomed');

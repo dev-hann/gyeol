@@ -4,14 +4,14 @@ class ThreadDefinition {
   const ThreadDefinition({
     required this.name,
     required this.path,
-    required this.layerNames,
+    required this.layerIds,
     this.contextPrompt,
     this.enabled = true,
     this.status = ThreadStatus.idle,
   });
   final String name;
   final String path;
-  final List<String> layerNames;
+  final List<int> layerIds;
   final String? contextPrompt;
   final bool enabled;
   final ThreadStatus status;
@@ -19,7 +19,7 @@ class ThreadDefinition {
   ThreadDefinition copyWith({
     String? name,
     String? path,
-    List<String>? layerNames,
+    List<int>? layerIds,
     String? contextPrompt,
     bool? enabled,
     ThreadStatus? status,
@@ -27,7 +27,7 @@ class ThreadDefinition {
     return ThreadDefinition(
       name: name ?? this.name,
       path: path ?? this.path,
-      layerNames: layerNames ?? this.layerNames,
+      layerIds: layerIds ?? this.layerIds,
       contextPrompt: contextPrompt ?? this.contextPrompt,
       enabled: enabled ?? this.enabled,
       status: status ?? this.status,

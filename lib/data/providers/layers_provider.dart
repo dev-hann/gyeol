@@ -26,8 +26,8 @@ class LayersNotifier extends AsyncNotifier<List<LayerDefinition>> {
     await repo.layers.saveLayer(layer);
   }
 
-  Future<void> deleteLayer(String name) async {
+  Future<void> deleteLayer(int id) async {
     final repo = ref.read(repositoryProvider);
-    await repo.layers.deleteLayer(name);
+    await repo.layers.deleteLayer(id);
   }
 }

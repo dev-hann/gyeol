@@ -21,14 +21,17 @@ void main() {
     test('round-trips a worker with required fields only', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const worker = WorkerDefinition(
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
+      final worker = WorkerDefinition(
         name: 'parser',
-        layerName: 'parse',
+        layerId: layerId,
         systemPrompt: 'Parse the input',
       );
       await repo.workers.saveWorker(worker);
@@ -36,7 +39,7 @@ void main() {
       final found = await repo.workers.getWorker('parser');
       expect(found, isNotNull);
       expect(found!.name, 'parser');
-      expect(found.layerName, 'parse');
+      expect(found.layerId, layerId);
       expect(found.systemPrompt, 'Parse the input');
       expect(found.model, isNull);
       expect(found.temperature, isNull);
@@ -47,14 +50,17 @@ void main() {
     test('round-trips a worker with all optional fields', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'analyze',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const worker = WorkerDefinition(
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
+      final worker = WorkerDefinition(
         name: 'analyzer',
-        layerName: 'analyze',
+        layerId: layerId,
         systemPrompt: 'Analyze deeply',
         model: 'gpt-4o',
         temperature: 0.7,
@@ -66,7 +72,7 @@ void main() {
       final found = await repo.workers.getWorker('analyzer');
       expect(found, isNotNull);
       expect(found!.name, 'analyzer');
-      expect(found.layerName, 'analyze');
+      expect(found.layerId, layerId);
       expect(found.systemPrompt, 'Analyze deeply');
       expect(found.model, 'gpt-4o');
       expect(found.temperature, 0.7);
@@ -89,6 +95,7 @@ void main() {
     test('returns all saved workers', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
@@ -96,19 +103,23 @@ void main() {
       );
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const w1 = WorkerDefinition(
+      final layers = await repo.layers.listLayers();
+      final l1Id = layers.firstWhere((l) => l.name == 'L1').id;
+      final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
+      final w1 = WorkerDefinition(
         name: 'a',
-        layerName: 'L1',
+        layerId: l1Id,
         systemPrompt: 'prompt a',
       );
-      const w2 = WorkerDefinition(
+      final w2 = WorkerDefinition(
         name: 'b',
-        layerName: 'L2',
+        layerId: l2Id,
         systemPrompt: 'prompt b',
       );
       await repo.workers.saveWorker(w1);
@@ -125,14 +136,17 @@ void main() {
     test('removes a saved worker', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const worker = WorkerDefinition(
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
+      final worker = WorkerDefinition(
         name: 'to_delete',
-        layerName: 'L1',
+        layerId: layerId,
         systemPrompt: 'delete me',
       );
       await repo.workers.saveWorker(worker);
@@ -154,6 +168,7 @@ void main() {
     test('replaces existing worker with same name', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
@@ -161,23 +176,27 @@ void main() {
       );
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const original = WorkerDefinition(
+      final layers = await repo.layers.listLayers();
+      final l1Id = layers.firstWhere((l) => l.name == 'L1').id;
+      final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
+      final original = WorkerDefinition(
         name: 'upsert_w',
-        layerName: 'L1',
+        layerId: l1Id,
         systemPrompt: 'original prompt',
         model: 'gpt-3.5',
         temperature: 0.5,
       );
       await repo.workers.saveWorker(original);
 
-      const updated = WorkerDefinition(
+      final updated = WorkerDefinition(
         name: 'upsert_w',
-        layerName: 'L2',
+        layerId: l2Id,
         systemPrompt: 'updated prompt',
         model: 'gpt-4o',
         temperature: 0.9,
@@ -188,7 +207,7 @@ void main() {
 
       final found = await repo.workers.getWorker('upsert_w');
       expect(found, isNotNull);
-      expect(found!.layerName, 'L2');
+      expect(found!.layerId, l2Id);
       expect(found.systemPrompt, 'updated prompt');
       expect(found.model, 'gpt-4o');
       expect(found.temperature, 0.9);
@@ -209,14 +228,17 @@ void main() {
 
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const worker = WorkerDefinition(
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
+      final worker = WorkerDefinition(
         name: 'watched',
-        layerName: 'L1',
+        layerId: layerId,
         systemPrompt: 'watch me',
       );
       await repo.workers.saveWorker(worker);

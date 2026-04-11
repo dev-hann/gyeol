@@ -58,6 +58,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
   @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksProvider);
+    final layersAsync = ref.watch(layersProvider);
     final logsAsync = ref.watch(logsProvider);
 
     return Scaffold(
@@ -76,7 +77,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _buildActiveTasks(tasksAsync)),
+                  Expanded(child: _buildActiveTasks(tasksAsync, layersAsync)),
                   const SizedBox(width: 16),
                   Expanded(child: _buildExecutionLogs(logsAsync)),
                 ],
@@ -88,7 +89,14 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
     );
   }
 
-  Widget _buildActiveTasks(AsyncValue<List<AppTask>> async) {
+  Widget _buildActiveTasks(
+    AsyncValue<List<AppTask>> async,
+    AsyncValue<List<LayerDefinition>> layersAsync,
+  ) {
+    final layers = layersAsync.valueOrNull ?? [];
+    String layerName(int? id) => id != null
+        ? (layers.where((l) => l.id == id).firstOrNull?.name ?? 'N/A')
+        : 'N/A';
     return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,7 +213,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${task.layerName ?? "N/A"} / ${task.workerName ?? "unassigned"} | Depth: ${task.depth} | Retry: ${task.retryCount}/${task.maxRetries}',
+                              '${layerName(task.layerId)} / ${task.workerName ?? "unassigned"} | Depth: ${task.depth} | Retry: ${task.retryCount}/${task.maxRetries}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: AppColors.textSecondary,
@@ -234,7 +242,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Layer: ${task.layerName ?? "N/A"}',
+                                      'Layer: ${layerName(task.layerId)}',
                                       style: const TextStyle(
                                         fontSize: 10,
                                         color: AppColors.textSecondary,

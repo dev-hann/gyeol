@@ -20,6 +20,7 @@ void main() {
   group('LayerRepository saveLayer + listLayers', () {
     test('round-trips a layer with required fields only', () async {
       const layer = LayerDefinition(
+        id: 0,
         name: 'parse',
         inputTypes: ['text'],
         outputTypes: ['structured'],
@@ -38,6 +39,7 @@ void main() {
 
     test('round-trips a layer with all optional fields', () async {
       const layer = LayerDefinition(
+        id: 0,
         name: 'analyze',
         inputTypes: ['structured'],
         outputTypes: ['analysis'],
@@ -60,18 +62,21 @@ void main() {
 
     test('returns layers ordered by sortOrder ascending', () async {
       const third = LayerDefinition(
+        id: 0,
         name: 'c',
         inputTypes: [],
         outputTypes: [],
         order: 30,
       );
       const first = LayerDefinition(
+        id: 0,
         name: 'a',
         inputTypes: [],
         outputTypes: [],
         order: 10,
       );
       const second = LayerDefinition(
+        id: 0,
         name: 'b',
         inputTypes: [],
         outputTypes: [],
@@ -94,6 +99,7 @@ void main() {
   group('LayerRepository upsert', () {
     test('replaces existing layer with same name', () async {
       const original = LayerDefinition(
+        id: 0,
         name: 'layer-x',
         inputTypes: ['raw'],
         outputTypes: ['parsed'],
@@ -101,7 +107,11 @@ void main() {
       );
       await repo.layers.saveLayer(original);
 
-      const updated = LayerDefinition(
+      final saved = await repo.layers.listLayers();
+      final savedId = saved.first.id;
+
+      final updated = LayerDefinition(
+        id: savedId,
         name: 'layer-x',
         inputTypes: ['raw', 'semi'],
         outputTypes: ['parsed', 'enriched'],
@@ -124,6 +134,7 @@ void main() {
   group('LayerRepository deleteLayer', () {
     test('removes a saved layer', () async {
       const layer = LayerDefinition(
+        id: 0,
         name: 'to_delete',
         inputTypes: [],
         outputTypes: [],
@@ -131,12 +142,13 @@ void main() {
       await repo.layers.saveLayer(layer);
       expect(await repo.layers.listLayers(), hasLength(1));
 
-      await repo.layers.deleteLayer('to_delete');
+      final saved = await repo.layers.listLayers();
+      await repo.layers.deleteLayer(saved.first.id);
       expect(await repo.layers.listLayers(), isEmpty);
     });
 
     test('is no-op for non-existent layer', () async {
-      await repo.layers.deleteLayer('nonexistent');
+      await repo.layers.deleteLayer(999);
 
       final layers = await repo.layers.listLayers();
       expect(layers, isEmpty);
@@ -151,6 +163,7 @@ void main() {
       expect(firstEmission, isEmpty);
 
       const layer = LayerDefinition(
+        id: 0,
         name: 'watched',
         inputTypes: ['text'],
         outputTypes: ['tokens'],
@@ -166,18 +179,21 @@ void main() {
   group('LayerRepository multiple layers', () {
     test('saves and lists multiple layers', () async {
       const l1 = LayerDefinition(
+        id: 0,
         name: 'parse',
         inputTypes: ['text'],
         outputTypes: ['structured'],
         order: 1,
       );
       const l2 = LayerDefinition(
+        id: 0,
         name: 'analyze',
         inputTypes: ['structured'],
         outputTypes: ['analysis'],
         order: 2,
       );
       const l3 = LayerDefinition(
+        id: 0,
         name: 'generate',
         inputTypes: ['analysis'],
         outputTypes: ['text'],
@@ -194,11 +210,13 @@ void main() {
 
     test('delete one layer preserves others', () async {
       const keep = LayerDefinition(
+        id: 0,
         name: 'keep',
         inputTypes: [],
         outputTypes: [],
       );
       const remove = LayerDefinition(
+        id: 0,
         name: 'remove',
         inputTypes: [],
         outputTypes: [],
@@ -206,7 +224,9 @@ void main() {
       await repo.layers.saveLayer(keep);
       await repo.layers.saveLayer(remove);
 
-      await repo.layers.deleteLayer('remove');
+      final saved = await repo.layers.listLayers();
+      final removeLayer = saved.firstWhere((l) => l.name == 'remove');
+      await repo.layers.deleteLayer(removeLayer.id);
       final layers = await repo.layers.listLayers();
       expect(layers, hasLength(1));
       expect(layers.first.name, 'keep');

@@ -5,6 +5,7 @@ void main() {
   group('LayerDefinition', () {
     test('constructor sets all fields', () {
       const layer = LayerDefinition(
+        id: 1,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -12,6 +13,7 @@ void main() {
         order: 1,
       );
 
+      expect(layer.id, 1);
       expect(layer.name, 'parse');
       expect(layer.inputTypes, ['raw']);
       expect(layer.outputTypes, ['structured']);
@@ -22,6 +24,7 @@ void main() {
 
     test('constructor defaults optional fields', () {
       const layer = LayerDefinition(
+        id: 2,
         name: 'eval',
         inputTypes: [],
         outputTypes: [],
@@ -34,6 +37,7 @@ void main() {
 
     test('is a const-constructible class', () {
       const layer = LayerDefinition(
+        id: 3,
         name: 'x',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -44,6 +48,7 @@ void main() {
 
     test('copyWith overrides specified fields', () {
       const original = LayerDefinition(
+        id: 4,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -59,6 +64,7 @@ void main() {
         enabled: false,
       );
 
+      expect(copied.id, 4);
       expect(copied.name, 'parse');
       expect(copied.inputTypes, ['text']);
       expect(copied.outputTypes, ['json']);
@@ -69,6 +75,7 @@ void main() {
 
     test('copyWith preserves fields when not specified', () {
       const original = LayerDefinition(
+        id: 5,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -79,6 +86,7 @@ void main() {
 
       final copied = original.copyWith();
 
+      expect(copied.id, original.id);
       expect(copied.name, original.name);
       expect(copied.inputTypes, original.inputTypes);
       expect(copied.outputTypes, original.outputTypes);
@@ -89,6 +97,7 @@ void main() {
 
     test('copyWith layerPrompt keeps original when not specified', () {
       const original = LayerDefinition(
+        id: 6,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -104,6 +113,7 @@ void main() {
 
     test('inputTypes and outputTypes are independent lists', () {
       const layer = LayerDefinition(
+        id: 7,
         name: 'test',
         inputTypes: ['a', 'b'],
         outputTypes: ['c', 'd', 'e'],
@@ -119,11 +129,13 @@ void main() {
       'two instances with same values are not identical (no value equality)',
       () {
         const a = LayerDefinition(
+          id: 8,
           name: 'parse',
           inputTypes: ['raw'],
           outputTypes: ['structured'],
         );
         const b = LayerDefinition(
+          id: 8,
           name: 'parse',
           inputTypes: ['raw'],
           outputTypes: ['structured'],
@@ -135,6 +147,7 @@ void main() {
 
     test('order can be negative', () {
       const layer = LayerDefinition(
+        id: 9,
         name: 'pre',
         inputTypes: [],
         outputTypes: [],
@@ -146,6 +159,7 @@ void main() {
 
     test('enabled can be false', () {
       const layer = LayerDefinition(
+        id: 10,
         name: 'disabled',
         inputTypes: [],
         outputTypes: [],

@@ -157,10 +157,16 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
       selectedLayers: selectedLayers,
       onConfirm: () async {
         if (nameCtl.text.isEmpty || pathCtl.text.isEmpty) return;
+        final allLayers = ref.read(layersProvider).valueOrNull ?? [];
+        final nameToId = <String, int>{for (final l in allLayers) l.name: l.id};
+        final layerIds = selectedLayers
+            .map((n) => nameToId[n])
+            .whereType<int>()
+            .toList();
         final thread = ThreadDefinition(
           name: nameCtl.text,
           path: pathCtl.text,
-          layerNames: List.from(selectedLayers),
+          layerIds: layerIds,
           contextPrompt: promptCtl.text.isEmpty ? null : promptCtl.text,
         );
         await ref.read(threadsProvider.notifier).saveThread(thread);
@@ -177,7 +183,12 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     final nameCtl = TextEditingController(text: thread.name);
     final pathCtl = TextEditingController(text: thread.path);
     final promptCtl = TextEditingController(text: thread.contextPrompt ?? '');
-    final selectedLayers = List<String>.from(thread.layerNames);
+    final selectedLayers = <String>[];
+    final idToName = <int, String>{for (final l in layers) l.id: l.name};
+    for (final id in thread.layerIds) {
+      final name = idToName[id];
+      if (name != null) selectedLayers.add(name);
+    }
 
     _showThreadDialog(
       context: context,
@@ -188,9 +199,14 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
       selectedLayers: selectedLayers,
       onConfirm: () async {
         if (nameCtl.text.isEmpty || pathCtl.text.isEmpty) return;
+        final nameToId = <String, int>{for (final l in layers) l.name: l.id};
+        final newLayerIds = selectedLayers
+            .map((n) => nameToId[n])
+            .whereType<int>()
+            .toList();
         final updated = thread.copyWith(
           path: pathCtl.text,
-          layerNames: List.from(selectedLayers),
+          layerIds: newLayerIds,
           contextPrompt: promptCtl.text.isEmpty ? null : promptCtl.text,
         );
         await ref.read(threadsProvider.notifier).saveThread(updated);
@@ -393,8 +409,8 @@ class _ThreadCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final threadLayers = thread.layerNames
-        .map((name) => layers.where((l) => l.name == name).firstOrNull)
+    final threadLayers = thread.layerIds
+        .map((id) => layers.where((l) => l.id == id).firstOrNull)
         .whereType<LayerDefinition>()
         .toList();
 

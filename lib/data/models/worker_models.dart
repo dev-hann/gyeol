@@ -1,7 +1,7 @@
 class WorkerDefinition {
   const WorkerDefinition({
     required this.name,
-    required this.layerName,
+    required this.layerId,
     required this.systemPrompt,
     this.model,
     this.temperature,
@@ -9,7 +9,7 @@ class WorkerDefinition {
     this.enabled = true,
   });
   final String name;
-  final String layerName;
+  final int layerId;
   final String systemPrompt;
   final String? model;
   final double? temperature;
@@ -17,7 +17,7 @@ class WorkerDefinition {
   final bool enabled;
 
   WorkerDefinition copyWith({
-    String? layerName,
+    int? layerId,
     String? systemPrompt,
     String? model,
     double? temperature,
@@ -26,7 +26,7 @@ class WorkerDefinition {
   }) {
     return WorkerDefinition(
       name: name,
-      layerName: layerName ?? this.layerName,
+      layerId: layerId ?? this.layerId,
       systemPrompt: systemPrompt ?? this.systemPrompt,
       model: model ?? this.model,
       temperature: temperature ?? this.temperature,

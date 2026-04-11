@@ -13,6 +13,7 @@ void main() {
     test('adds a layer', () {
       final registry = LayerRegistry();
       const layer = LayerDefinition(
+        id: 0,
         name: 'L1',
         inputTypes: ['text'],
         outputTypes: ['analysis'],
@@ -29,6 +30,7 @@ void main() {
       final registry = LayerRegistry()
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: ['analysis'],
@@ -37,6 +39,7 @@ void main() {
         )
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'L1',
             inputTypes: ['text', 'json'],
             outputTypes: ['analysis'],
@@ -53,6 +56,7 @@ void main() {
       final registry = LayerRegistry()
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'B',
             inputTypes: ['text'],
             outputTypes: [],
@@ -61,6 +65,7 @@ void main() {
         )
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'A',
             inputTypes: ['text'],
             outputTypes: [],
@@ -79,6 +84,7 @@ void main() {
       final registry = LayerRegistry()
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: [],
@@ -93,6 +99,7 @@ void main() {
       final registry = LayerRegistry()
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: [],
@@ -109,6 +116,7 @@ void main() {
       final registry = LayerRegistry()
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'old',
             inputTypes: ['text'],
             outputTypes: [],
@@ -116,12 +124,14 @@ void main() {
         )
         ..setAll([
           const LayerDefinition(
+            id: 0,
             name: 'new1',
             inputTypes: ['text'],
             outputTypes: [],
             order: 2,
           ),
           const LayerDefinition(
+            id: 0,
             name: 'new2',
             inputTypes: ['text'],
             outputTypes: [],
@@ -141,6 +151,7 @@ void main() {
       final registry = LayerRegistry()
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'enabled',
             inputTypes: ['text'],
             outputTypes: [],
@@ -148,6 +159,7 @@ void main() {
         )
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'disabled',
             inputTypes: ['text'],
             outputTypes: [],
@@ -164,6 +176,7 @@ void main() {
       final registry = LayerRegistry()
         ..register(
           const LayerDefinition(
+            id: 0,
             name: 'L1',
             inputTypes: ['image'],
             outputTypes: [],
@@ -336,6 +349,7 @@ void main() {
     test('skips task when depth exceeds maxExecutionDepth', () async {
       registry.register(
         const LayerDefinition(
+          id: 0,
           name: 'deep',
           inputTypes: ['deep'],
           outputTypes: [],
@@ -355,6 +369,7 @@ void main() {
     test('skips task when all matching layers are disabled', () async {
       registry.register(
         const LayerDefinition(
+          id: 0,
           name: 'off',
           inputTypes: ['text'],
           outputTypes: [],
@@ -367,13 +382,18 @@ void main() {
     });
 
     test('drains queue when layer has no workers in db', () async {
-      registry.register(
-        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
-      );
-
       await repo.layers.saveLayer(
-        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
+        const LayerDefinition(
+          id: 0,
+          name: 'L',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
       );
+      final savedLayers = await repo.layers.listLayers();
+      final savedLayer = savedLayers.first;
+
+      registry.register(savedLayer);
 
       scheduler.submit(AppTask.create('text', null, TaskPriority.high));
 
@@ -383,18 +403,23 @@ void main() {
     });
 
     test('drains queue and processes task with db workers', () async {
-      registry.register(
-        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
-      );
-
       await repo.layers.saveLayer(
-        const LayerDefinition(name: 'L', inputTypes: ['text'], outputTypes: []),
+        const LayerDefinition(
+          id: 0,
+          name: 'L',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
       );
+      final savedLayers = await repo.layers.listLayers();
+      final savedLayer = savedLayers.first;
+
+      registry.register(savedLayer);
 
       await repo.workers.saveWorker(
-        const WorkerDefinition(
+        WorkerDefinition(
           name: 'w1',
-          layerName: 'L',
+          layerId: savedLayer.id,
           systemPrompt: 'test',
         ),
       );

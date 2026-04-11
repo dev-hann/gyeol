@@ -41,33 +41,16 @@ void main() {
       const thread = ThreadDefinition(
         name: 'empty',
         path: '/tmp',
-        layerNames: [],
+        layerIds: [],
       );
       final results = await scheduler.runThread(thread);
       expect(results, isEmpty);
     });
 
     test('executes layers in sequence and returns results', () async {
-      registry
-        ..register(
-          const LayerDefinition(
-            name: 'L1',
-            inputTypes: ['raw'],
-            outputTypes: ['parsed'],
-            order: 1,
-          ),
-        )
-        ..register(
-          const LayerDefinition(
-            name: 'L2',
-            inputTypes: ['parsed'],
-            outputTypes: ['done'],
-            order: 2,
-          ),
-        );
-
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -76,6 +59,7 @@ void main() {
       );
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L2',
           inputTypes: ['parsed'],
           outputTypes: ['done'],
@@ -83,17 +67,25 @@ void main() {
         ),
       );
 
+      final savedLayers = await repo.layers.listLayers();
+      final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
+      final l2 = savedLayers.firstWhere((l) => l.name == 'L2');
+
+      registry
+        ..register(l1)
+        ..register(l2);
+
       await repo.workers.saveWorker(
-        const WorkerDefinition(
+        WorkerDefinition(
           name: 'w1',
-          layerName: 'L1',
+          layerId: l1.id,
           systemPrompt: 'parse the input',
         ),
       );
       await repo.workers.saveWorker(
-        const WorkerDefinition(
+        WorkerDefinition(
           name: 'w2',
-          layerName: 'L2',
+          layerId: l2.id,
           systemPrompt: 'analyze the parsed data',
         ),
       );
@@ -111,10 +103,10 @@ void main() {
         ),
       );
 
-      const thread = ThreadDefinition(
+      final thread = ThreadDefinition(
         name: 'test_thread',
         path: '/tmp/nonexistent_test_path',
-        layerNames: ['L1', 'L2'],
+        layerIds: [l1.id, l2.id],
       );
 
       final results = await scheduler.runThread(thread);
@@ -123,27 +115,9 @@ void main() {
     });
 
     test('skips disabled layers', () async {
-      registry
-        ..register(
-          const LayerDefinition(
-            name: 'L1',
-            inputTypes: ['raw'],
-            outputTypes: ['parsed'],
-            order: 1,
-            enabled: false,
-          ),
-        )
-        ..register(
-          const LayerDefinition(
-            name: 'L2',
-            inputTypes: ['raw'],
-            outputTypes: ['done'],
-            order: 2,
-          ),
-        );
-
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -153,6 +127,7 @@ void main() {
       );
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L2',
           inputTypes: ['raw'],
           outputTypes: ['done'],
@@ -160,12 +135,16 @@ void main() {
         ),
       );
 
+      final savedLayers = await repo.layers.listLayers();
+      final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
+      final l2 = savedLayers.firstWhere((l) => l.name == 'L2');
+
+      registry
+        ..register(l1)
+        ..register(l2);
+
       await repo.workers.saveWorker(
-        const WorkerDefinition(
-          name: 'w2',
-          layerName: 'L2',
-          systemPrompt: 'run me',
-        ),
+        WorkerDefinition(name: 'w2', layerId: l2.id, systemPrompt: 'run me'),
       );
       await repo.settings.saveSettings(
         const ProviderSettings(
@@ -181,10 +160,10 @@ void main() {
         ),
       );
 
-      const thread = ThreadDefinition(
+      final thread = ThreadDefinition(
         name: 'skip_test',
         path: '/tmp',
-        layerNames: ['L1', 'L2'],
+        layerIds: [l1.id, l2.id],
       );
 
       final results = await scheduler.runThread(thread);
@@ -192,17 +171,9 @@ void main() {
     });
 
     test('includes path context in task payload', () async {
-      registry.register(
-        const LayerDefinition(
-          name: 'L1',
-          inputTypes: ['raw'],
-          outputTypes: ['parsed'],
-          order: 1,
-        ),
-      );
-
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -210,10 +181,15 @@ void main() {
         ),
       );
 
+      final savedLayers = await repo.layers.listLayers();
+      final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
+
+      registry.register(l1);
+
       await repo.workers.saveWorker(
-        const WorkerDefinition(
+        WorkerDefinition(
           name: 'w1',
-          layerName: 'L1',
+          layerId: l1.id,
           systemPrompt: 'process files',
         ),
       );
@@ -231,10 +207,10 @@ void main() {
         ),
       );
 
-      const thread = ThreadDefinition(
+      final thread = ThreadDefinition(
         name: 'path_test',
         path: '/custom/workspace',
-        layerNames: ['L1'],
+        layerIds: [l1.id],
       );
 
       await scheduler.runThread(thread);
@@ -251,17 +227,9 @@ void main() {
     });
 
     test('executes multiple threads sequentially', () async {
-      registry.register(
-        const LayerDefinition(
-          name: 'L1',
-          inputTypes: ['raw'],
-          outputTypes: ['done'],
-          order: 1,
-        ),
-      );
-
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['done'],
@@ -269,12 +237,13 @@ void main() {
         ),
       );
 
+      final savedLayers = await repo.layers.listLayers();
+      final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
+
+      registry.register(l1);
+
       await repo.workers.saveWorker(
-        const WorkerDefinition(
-          name: 'w1',
-          layerName: 'L1',
-          systemPrompt: 'do work',
-        ),
+        WorkerDefinition(name: 'w1', layerId: l1.id, systemPrompt: 'do work'),
       );
       await repo.settings.saveSettings(
         const ProviderSettings(
@@ -290,9 +259,9 @@ void main() {
         ),
       );
 
-      const threads = [
-        ThreadDefinition(name: 'thread1', path: '/path/a', layerNames: ['L1']),
-        ThreadDefinition(name: 'thread2', path: '/path/b', layerNames: ['L1']),
+      final threads = [
+        ThreadDefinition(name: 'thread1', path: '/path/a', layerIds: [l1.id]),
+        ThreadDefinition(name: 'thread2', path: '/path/b', layerIds: [l1.id]),
       ];
 
       final results = await scheduler.runAllThreads(threads);

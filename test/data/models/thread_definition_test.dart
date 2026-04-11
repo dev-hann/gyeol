@@ -7,7 +7,7 @@ void main() {
       const thread = ThreadDefinition(
         name: 'review',
         path: '/home/user/project',
-        layerNames: ['L1', 'L2'],
+        layerIds: [1, 2],
       );
       expect(thread.enabled, true);
       expect(thread.status, ThreadStatus.idle);
@@ -18,14 +18,14 @@ void main() {
       const thread = ThreadDefinition(
         name: 'analysis',
         path: '/data/src',
-        layerNames: ['parse', 'analyze'],
+        layerIds: [1, 2],
         contextPrompt: 'Legal document analysis pipeline',
         enabled: false,
         status: ThreadStatus.completed,
       );
       expect(thread.name, 'analysis');
       expect(thread.path, '/data/src');
-      expect(thread.layerNames, ['parse', 'analyze']);
+      expect(thread.layerIds, [1, 2]);
       expect(thread.contextPrompt, 'Legal document analysis pipeline');
       expect(thread.enabled, false);
       expect(thread.status, ThreadStatus.completed);
@@ -35,18 +35,18 @@ void main() {
       const thread = ThreadDefinition(
         name: 't1',
         path: '/old',
-        layerNames: ['A'],
+        layerIds: [1],
         contextPrompt: 'old context',
       );
       final copied = thread.copyWith(
         path: '/new',
-        layerNames: ['A', 'B'],
+        layerIds: [1, 2],
         status: ThreadStatus.running,
       );
 
       expect(copied.name, 't1');
       expect(copied.path, '/new');
-      expect(copied.layerNames, ['A', 'B']);
+      expect(copied.layerIds, [1, 2]);
       expect(copied.enabled, true);
       expect(copied.status, ThreadStatus.running);
       expect(copied.contextPrompt, 'old context');
@@ -56,7 +56,7 @@ void main() {
       const thread = ThreadDefinition(
         name: 't1',
         path: '/old',
-        layerNames: ['A'],
+        layerIds: [1],
         contextPrompt: 'old context',
       );
       final copied = thread.copyWith(contextPrompt: 'new context');
@@ -74,7 +74,7 @@ void main() {
           ThreadDefinition(
             name: 't',
             path: '/x',
-            layerNames: [],
+            layerIds: [],
             status: entry.key,
           ).statusLabel,
           entry.value,

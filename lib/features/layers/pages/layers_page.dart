@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/data/repositories/app_repository.dart';
 import 'package:gyeol/features/layers/graph/flow_canvas.dart';
 import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/node_detail_panel.dart';
@@ -19,7 +20,7 @@ class LayersPage extends ConsumerStatefulWidget {
 
 class _LayersPageState extends ConsumerState<LayersPage> {
   late NodeFlowController<LayerGraphData, void> _controller;
-  String? _selectedLayerName;
+  int? _selectedLayerId;
   bool _initialized = false;
 
   @override
@@ -66,10 +67,10 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     final tasks = ref.read(tasksProvider).valueOrNull ?? [];
     final workers = ref.read(workersProvider).valueOrNull ?? [];
     final graphState = ref.read(graphStateProvider).valueOrNull;
-    final removedConnections = graphState?.removedConnections ?? {};
+    final connections = ref.read(connectionsProvider).valueOrNull ?? [];
     final savedPositions = graphState?.nodePositions ?? {};
-    final newNodes = buildNodes(layers, tasks, workers);
-    final autoConnections = buildConnections(layers, removedConnections);
+    final newNodes = buildNodes(layers, tasks, workers, connections);
+    final autoConnections = buildConnections(connections);
 
     final positionMap = <String, Offset>{};
     for (final id in _controller.nodeIds) {
@@ -128,6 +129,9 @@ class _LayersPageState extends ConsumerState<LayersPage> {
         if (_initialized) _syncController();
       })
       ..listen(tasksProvider, (prev, next) {
+        if (_initialized) _syncController();
+      })
+      ..listen(connectionsProvider, (prev, next) {
         if (_initialized) _syncController();
       });
 
@@ -203,25 +207,50 @@ class _LayersPageState extends ConsumerState<LayersPage> {
         Expanded(
           child: FlowCanvas(
             controller: _controller,
-            onNodeTap: (name) {
+            onNodeTap: (nodeId) {
               _savePositions();
-              setState(() => _selectedLayerName = name);
+              setState(() => _selectedLayerId = int.tryParse(nodeId));
             },
             onNodeDragEnd: _savePositions,
+            onConnectionCreated: (src, dst) {
+              final srcId = int.tryParse(src);
+              final dstId = int.tryParse(dst);
+              if (srcId != null && dstId != null) {
+                ref
+                    .read(connectionsProvider.notifier)
+                    .saveConnection(
+                      LayerConnectionData(
+                        sourceLayerId: srcId,
+                        targetLayerId: dstId,
+                      ),
+                    );
+              }
+            },
+            onConnectionRemoved: (src, dst) {
+              final srcId = int.tryParse(src);
+              final dstId = int.tryParse(dst);
+              if (srcId != null && dstId != null) {
+                ref
+                    .read(connectionsProvider.notifier)
+                    .deleteConnection(srcId, dstId);
+              }
+            },
             onViewportChanged: _savePositions,
           ),
         ),
-        if (_selectedLayerName != null)
+        if (_selectedLayerId != null)
           NodeDetailPanel(
-            layerName: _selectedLayerName,
-            onClose: () => setState(() => _selectedLayerName = null),
+            layerId: _selectedLayerId,
+            onClose: () => setState(() => _selectedLayerId = null),
             controller: _controller,
-            onConnectionRemoved: (src, dest) {
-              final current = ref.read(graphStateProvider).valueOrNull;
-              final updated = {...?current?.removedConnections, (src, dest)};
-              ref
-                  .read(graphStateProvider.notifier)
-                  .saveRemovedConnections(updated);
+            onConnectionRemoved: (src, dst) {
+              final srcId = int.tryParse(src);
+              final dstId = int.tryParse(dst);
+              if (srcId != null && dstId != null) {
+                ref
+                    .read(connectionsProvider.notifier)
+                    .deleteConnection(srcId, dstId);
+              }
             },
           ),
       ],
@@ -282,6 +311,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
             onPressed: () async {
               if (nameCtl.text.isEmpty) return;
               final layer = LayerDefinition(
+                id: 0,
                 name: nameCtl.text,
                 inputTypes: _splitCSV(inputCtl.text),
                 outputTypes: _splitCSV(outputCtl.text),

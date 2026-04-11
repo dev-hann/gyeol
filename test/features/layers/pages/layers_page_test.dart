@@ -5,15 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/data/repositories/connection_repository.dart';
 import 'package:gyeol/features/layers/pages/layers_page.dart';
 
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
+    id: 1,
     name: 'Draft',
     inputTypes: ['issue'],
     outputTypes: ['plan'],
   ),
   const LayerDefinition(
+    id: 2,
     name: 'Review',
     inputTypes: ['plan'],
     outputTypes: ['analysis'],
@@ -28,7 +31,7 @@ List<AppTask> fakeTasks() => [
     payload: null,
     priority: TaskPriority.high,
     status: TaskStatus.running,
-    layerName: 'Draft',
+    layerId: 1,
     workerName: 'writer-1',
     createdAt: 1000,
     updatedAt: 1000,
@@ -56,7 +59,9 @@ void main() {
           tasksProvider.overrideWith(
             () => _FakeTasksNotifier(tasks ?? fakeTasks()),
           ),
+          workersProvider.overrideWith(() => _FakeWorkersNotifier([])),
           graphStateProvider.overrideWith(_FakeGraphStateNotifier.new),
+          connectionsProvider.overrideWith(() => _FakeConnectionsNotifier([])),
         ],
         child: const MaterialApp(home: LayersPage()),
       ),
@@ -116,7 +121,11 @@ void main() {
           overrides: [
             layersProvider.overrideWith(_ErrorLayersNotifier.new),
             tasksProvider.overrideWith(() => _FakeTasksNotifier(fakeTasks())),
+            workersProvider.overrideWith(() => _FakeWorkersNotifier([])),
             graphStateProvider.overrideWith(_FakeGraphStateNotifier.new),
+            connectionsProvider.overrideWith(
+              () => _FakeConnectionsNotifier([]),
+            ),
           ],
           child: const MaterialApp(home: LayersPage()),
         ),
@@ -134,7 +143,11 @@ void main() {
           overrides: [
             layersProvider.overrideWith(_LoadingLayersNotifier.new),
             tasksProvider.overrideWith(() => _FakeTasksNotifier(fakeTasks())),
+            workersProvider.overrideWith(() => _FakeWorkersNotifier([])),
             graphStateProvider.overrideWith(_FakeGraphStateNotifier.new),
+            connectionsProvider.overrideWith(
+              () => _FakeConnectionsNotifier([]),
+            ),
           ],
           child: const MaterialApp(home: LayersPage()),
         ),
@@ -204,4 +217,20 @@ class _LoadingLayersNotifier extends LayersNotifier {
 class _FakeGraphStateNotifier extends GraphStateNotifier {
   @override
   Future<GraphState> build() async => const GraphState();
+}
+
+class _FakeWorkersNotifier extends WorkersNotifier {
+  _FakeWorkersNotifier(this._workers);
+  final List<WorkerDefinition> _workers;
+
+  @override
+  Future<List<WorkerDefinition>> build() async => _workers;
+}
+
+class _FakeConnectionsNotifier extends ConnectionsNotifier {
+  _FakeConnectionsNotifier(this._connections);
+  final List<LayerConnectionData> _connections;
+
+  @override
+  Future<List<LayerConnectionData>> build() async => _connections;
 }

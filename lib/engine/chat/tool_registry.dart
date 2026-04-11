@@ -72,6 +72,7 @@ class ToolRegistry {
         .toList();
 
     final layer = LayerDefinition(
+      id: 0,
       name: name,
       inputTypes: inputTypes,
       outputTypes: outputTypes,
@@ -112,7 +113,12 @@ class ToolRegistry {
     AppRepository repo,
   ) async {
     final name = args['name'] as String;
-    await repo.layers.deleteLayer(name);
+    final layers = await repo.layers.listLayers();
+    final layer = layers.where((l) => l.name == name).firstOrNull;
+    if (layer == null) {
+      return jsonEncode({'error': 'Layer "$name" not found'});
+    }
+    await repo.layers.deleteLayer(layer.id);
     return jsonEncode({'success': true, 'message': 'Layer "$name" deleted'});
   }
 
@@ -127,9 +133,15 @@ class ToolRegistry {
     final temperature = (args['temperature'] as num?)?.toDouble();
     final maxTokens = (args['maxTokens'] as num?)?.toInt();
 
+    final layers = await repo.layers.listLayers();
+    final layer = layers.where((l) => l.name == layerName).firstOrNull;
+    if (layer == null) {
+      return jsonEncode({'error': 'Layer "$layerName" not found'});
+    }
+
     final worker = WorkerDefinition(
       name: name,
-      layerName: layerName,
+      layerId: layer.id,
       systemPrompt: systemPrompt,
       model: model,
       temperature: temperature,
@@ -150,8 +162,20 @@ class ToolRegistry {
       return jsonEncode({'error': 'Worker "$name" not found'});
     }
 
+    int? newLayerId;
+    if (args['layerName'] != null) {
+      final layers = await repo.layers.listLayers();
+      final layer = layers
+          .where((l) => l.name == args['layerName'])
+          .firstOrNull;
+      if (layer == null) {
+        return jsonEncode({'error': 'Layer "${args['layerName']}" not found'});
+      }
+      newLayerId = layer.id;
+    }
+
     final updated = existing.copyWith(
-      layerName: args['layerName'] as String?,
+      layerId: newLayerId,
       systemPrompt: args['systemPrompt'] as String?,
       model: args['model'] as String?,
       temperature: (args['temperature'] as num?)?.toDouble(),
@@ -182,7 +206,7 @@ class ToolRegistry {
             'inputTypes': l.inputTypes,
             'outputTypes': l.outputTypes,
             'workerNames': workers
-                .where((w) => w.layerName == l.name)
+                .where((w) => w.layerId == l.id)
                 .map((w) => w.name)
                 .toList(),
             'order': l.order,
@@ -198,14 +222,23 @@ class ToolRegistry {
     AppRepository repo,
   ) async {
     final workers = await repo.workers.listWorkers();
+    final layers = await repo.layers.listLayers();
+    final idToName = <int, String>{for (final l in layers) l.id: l.name};
+
     final filtered = args['layerName'] != null
-        ? workers.where((w) => w.layerName == args['layerName']).toList()
+        ? () {
+            final targetLayer = layers
+                .where((l) => l.name == args['layerName'])
+                .firstOrNull;
+            if (targetLayer == null) return <WorkerDefinition>[];
+            return workers.where((w) => w.layerId == targetLayer.id).toList();
+          }()
         : workers;
     final result = filtered
         .map(
           (w) => {
             'name': w.name,
-            'layerName': w.layerName,
+            'layerName': idToName[w.layerId] ?? '',
             'model': w.model,
             'temperature': w.temperature,
             'maxTokens': w.maxTokens,
@@ -218,12 +251,14 @@ class ToolRegistry {
 
   static Future<String> _listThreads(AppRepository repo) async {
     final threads = await repo.threads.listThreads();
+    final layers = await repo.layers.listLayers();
+    final idToName = <int, String>{for (final l in layers) l.id: l.name};
     final result = threads
         .map(
           (t) => {
             'name': t.name,
             'path': t.path,
-            'layerNames': t.layerNames,
+            'layerNames': t.layerIds.map((id) => idToName[id] ?? '').toList(),
             'contextPrompt': t.contextPrompt,
             'status': t.status.name,
             'enabled': t.enabled,
@@ -243,11 +278,14 @@ class ToolRegistry {
         .map((e) => e as String)
         .toList();
 
-    final thread = ThreadDefinition(
-      name: name,
-      path: path,
-      layerNames: layerNames,
-    );
+    final layers = await repo.layers.listLayers();
+    final nameToId = <String, int>{for (final l in layers) l.name: l.id};
+    final layerIds = layerNames
+        .map((n) => nameToId[n])
+        .whereType<int>()
+        .toList();
+
+    final thread = ThreadDefinition(name: name, path: path, layerIds: layerIds);
 
     await repo.threads.saveThread(thread);
     return jsonEncode({'success': true, 'message': 'Thread "$name" created'});
@@ -263,10 +301,13 @@ class ToolRegistry {
       return jsonEncode({'error': 'Thread "$name" not found'});
     }
 
+    final layers = await repo.layers.listLayers();
+    final idToName = <int, String>{for (final l in layers) l.id: l.name};
+
     return jsonEncode({
       'status': 'queued',
       'thread': thread.name,
-      'layerNames': thread.layerNames,
+      'layerNames': thread.layerIds.map((id) => idToName[id] ?? '').toList(),
     });
   }
 
@@ -280,11 +321,22 @@ class ToolRegistry {
       return jsonEncode({'error': 'Thread "$name" not found'});
     }
 
+    List<int>? newLayerIds;
+    if (args['layerNames'] != null) {
+      final layerNames = (args['layerNames'] as List)
+          .map((e) => e as String)
+          .toList();
+      final layers = await repo.layers.listLayers();
+      final nameToId = <String, int>{for (final l in layers) l.name: l.id};
+      newLayerIds = layerNames
+          .map((n) => nameToId[n])
+          .whereType<int>()
+          .toList();
+    }
+
     final updated = existing.copyWith(
       path: args['path'] as String?,
-      layerNames: args['layerNames'] != null
-          ? (args['layerNames'] as List).map((e) => e as String).toList()
-          : null,
+      layerIds: newLayerIds,
       contextPrompt: args['contextPrompt'] as String?,
       enabled: args['enabled'] as bool?,
     );
@@ -309,8 +361,9 @@ class ToolRegistry {
     final workerName = args['workerName'] as String;
     final layerName = args['layerName'] as String;
 
-    final layer = await repo.layers.listLayers();
-    if (layer.where((l) => l.name == layerName).isEmpty) {
+    final layers = await repo.layers.listLayers();
+    final layer = layers.where((l) => l.name == layerName).firstOrNull;
+    if (layer == null) {
       return jsonEncode({'error': 'Layer "$layerName" not found'});
     }
 
@@ -319,13 +372,13 @@ class ToolRegistry {
       return jsonEncode({'error': 'Worker "$workerName" not found'});
     }
 
-    if (worker.layerName == layerName) {
+    if (worker.layerId == layer.id) {
       return jsonEncode({
         'error': 'Worker "$workerName" already assigned to layer "$layerName"',
       });
     }
 
-    await repo.workers.saveWorker(worker.copyWith(layerName: layerName));
+    await repo.workers.saveWorker(worker.copyWith(layerId: layer.id));
     return jsonEncode({
       'success': true,
       'message': 'Worker "$workerName" assigned to layer "$layerName"',
@@ -344,16 +397,18 @@ class ToolRegistry {
       return jsonEncode({'error': 'Worker "$workerName" not found'});
     }
 
-    if (worker.layerName != layerName) {
+    final layers = await repo.layers.listLayers();
+    final layer = layers.where((l) => l.name == layerName).firstOrNull;
+    if (layer == null || worker.layerId != layer.id) {
       return jsonEncode({
         'error': 'Worker "$workerName" not assigned to layer "$layerName"',
       });
     }
 
-    await repo.workers.saveWorker(worker.copyWith(layerName: ''));
     return jsonEncode({
-      'success': true,
-      'message': 'Worker "$workerName" removed from layer "$layerName"',
+      'error':
+          'Cannot unassign worker from layer — layerId is required. '
+          'Use assign_worker to reassign.',
     });
   }
 
@@ -386,6 +441,8 @@ class ToolRegistry {
   ) async {
     final limit = (args['limit'] as num?)?.toInt() ?? 50;
     final tasks = await repo.tasks.listTasks(limit: limit);
+    final layers = await repo.layers.listLayers();
+    final idToName = <int, String>{for (final l in layers) l.id: l.name};
     final result = tasks
         .map(
           (t) => {
@@ -393,7 +450,7 @@ class ToolRegistry {
             'taskType': t.taskType,
             'priority': t.priority.name,
             'status': t.status.name,
-            'layerName': t.layerName,
+            'layerName': t.layerId != null ? idToName[t.layerId] : null,
             'workerName': t.workerName,
             'retryCount': t.retryCount,
             'depth': t.depth,
@@ -472,10 +529,12 @@ class ToolRegistry {
       if (thread == null) {
         return jsonEncode({'error': 'Thread "$name" not found'});
       }
+      final layers = await repo.layers.listLayers();
+      final idToName = <int, String>{for (final l in layers) l.id: l.name};
       return jsonEncode({
         'thread': thread.name,
         'status': thread.status.name,
-        'layerNames': thread.layerNames,
+        'layerNames': thread.layerIds.map((id) => idToName[id] ?? '').toList(),
       });
     }
 
@@ -1144,6 +1203,9 @@ class ToolRegistry {
       return jsonEncode({'error': 'Worker "$name" not found'});
     }
 
+    final layers = await repo.layers.listLayers();
+    final idToName = <int, String>{for (final l in layers) l.id: l.name};
+
     final allLogs = await repo.logs.listExecutionLogs();
     final workerLogs = allLogs
         .where((l) => l.workerName == name)
@@ -1161,7 +1223,7 @@ class ToolRegistry {
 
     return jsonEncode({
       'name': worker.name,
-      'layerName': worker.layerName,
+      'layerName': idToName[worker.layerId] ?? '',
       'systemPrompt': worker.systemPrompt,
       'model': worker.model,
       'temperature': worker.temperature,

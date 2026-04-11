@@ -18,6 +18,7 @@ void main() {
       bool enabled = true,
     }) {
       return LayerDefinition(
+        id: 0,
         name: name,
         inputTypes: inputTypes,
         outputTypes: outputTypes,

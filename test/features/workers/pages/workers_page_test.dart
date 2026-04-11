@@ -8,7 +8,7 @@ import 'package:gyeol/features/workers/pages/workers_page.dart';
 List<WorkerDefinition> fakeWorkers() => [
   const WorkerDefinition(
     name: 'writer-1',
-    layerName: 'Draft',
+    layerId: 1,
     systemPrompt: 'You are a creative writer.',
     model: 'gpt-4o',
     temperature: 0.7,
@@ -16,12 +16,12 @@ List<WorkerDefinition> fakeWorkers() => [
   ),
   const WorkerDefinition(
     name: 'critic-1',
-    layerName: 'Draft',
+    layerId: 1,
     systemPrompt: 'You are a critical reviewer.',
   ),
   const WorkerDefinition(
     name: 'orphan-1',
-    layerName: 'NonExistent',
+    layerId: 99,
     systemPrompt: 'I have no layer.',
     enabled: false,
   ),
@@ -29,6 +29,7 @@ List<WorkerDefinition> fakeWorkers() => [
 
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
+    id: 1,
     name: 'Draft',
     inputTypes: ['text'],
     outputTypes: ['draft'],
@@ -161,17 +162,19 @@ void main() {
         workers: [
           const WorkerDefinition(
             name: 'writer-1',
-            layerName: 'Draft',
+            layerId: 1,
             systemPrompt: 'You are a writer.',
           ),
         ],
         layers: [
           const LayerDefinition(
+            id: 1,
             name: 'Draft',
             inputTypes: ['text'],
             outputTypes: ['draft'],
           ),
           const LayerDefinition(
+            id: 2,
             name: 'Review',
             inputTypes: ['draft'],
             outputTypes: ['review'],

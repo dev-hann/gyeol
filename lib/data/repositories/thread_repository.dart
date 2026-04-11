@@ -16,15 +16,15 @@ class ThreadRepository {
         status: Value(thread.status.name),
       ),
     );
-    await _db.saveThreadLayers(thread.name, thread.layerNames);
+    await _db.saveThreadLayerIds(thread.name, thread.layerIds);
   }
 
   Future<List<ThreadDefinition>> listThreads() async {
     final rows = await _db.listThreads();
     final allLayers = await _db.listAllThreadLayers();
-    final layersByThread = <String, List<String>>{};
+    final layersByThread = <String, List<int>>{};
     for (final row in allLayers) {
-      layersByThread.putIfAbsent(row.threadName, () => []).add(row.layerName);
+      layersByThread.putIfAbsent(row.threadName, () => []).add(row.layerId);
     }
     return rows.map((r) => _fromRow(r, layersByThread)).toList();
   }
@@ -32,9 +32,9 @@ class ThreadRepository {
   Stream<List<ThreadDefinition>> watchThreads() {
     return _db.watchThreads().asyncMap((rows) async {
       final allLayers = await _db.listAllThreadLayers();
-      final layersByThread = <String, List<String>>{};
+      final layersByThread = <String, List<int>>{};
       for (final row in allLayers) {
-        layersByThread.putIfAbsent(row.threadName, () => []).add(row.layerName);
+        layersByThread.putIfAbsent(row.threadName, () => []).add(row.layerId);
       }
       return rows.map((r) => _fromRow(r, layersByThread)).toList();
     });
@@ -44,19 +44,16 @@ class ThreadRepository {
     final row = await _db.getThread(name);
     if (row == null) return null;
     final layers = await _db.listThreadLayers(name);
-    return _fromRow(row, {name: layers.map((l) => l.layerName).toList()});
+    return _fromRow(row, {name: layers.map((l) => l.layerId).toList()});
   }
 
   Future<void> deleteThread(String name) => _db.deleteThread(name);
 
-  ThreadDefinition _fromRow(
-    Thread r,
-    Map<String, List<String>> layersByThread,
-  ) {
+  ThreadDefinition _fromRow(Thread r, Map<String, List<int>> layersByThread) {
     return ThreadDefinition(
       name: r.name,
       path: r.path,
-      layerNames: layersByThread[r.name] ?? [],
+      layerIds: layersByThread[r.name] ?? [],
       contextPrompt: r.contextPrompt,
       enabled: r.enabled,
       status: ThreadStatus.values.firstWhere(

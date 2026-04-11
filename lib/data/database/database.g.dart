@@ -8,6 +8,19 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $LayersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -16,6 +29,7 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+    $customConstraints: 'UNIQUE NOT NULL',
   );
   static const VerificationMeta _inputTypesMeta = const VerificationMeta(
     'inputTypes',
@@ -103,6 +117,7 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
   );
   @override
   List<GeneratedColumn> get $columns => [
+    id,
     name,
     inputTypes,
     outputTypes,
@@ -124,6 +139,9 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
     if (data.containsKey('name')) {
       context.handle(
         _nameMeta,
@@ -188,11 +206,15 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {name};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Layer map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Layer(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -235,6 +257,7 @@ class $LayersTable extends Layers with TableInfo<$LayersTable, Layer> {
 }
 
 class Layer extends DataClass implements Insertable<Layer> {
+  final int id;
   final String name;
   final String inputTypes;
   final String outputTypes;
@@ -244,6 +267,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   final int createdAt;
   final int updatedAt;
   const Layer({
+    required this.id,
     required this.name,
     required this.inputTypes,
     required this.outputTypes,
@@ -256,6 +280,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
     map['input_types'] = Variable<String>(inputTypes);
     map['output_types'] = Variable<String>(outputTypes);
@@ -271,6 +296,7 @@ class Layer extends DataClass implements Insertable<Layer> {
 
   LayersCompanion toCompanion(bool nullToAbsent) {
     return LayersCompanion(
+      id: Value(id),
       name: Value(name),
       inputTypes: Value(inputTypes),
       outputTypes: Value(outputTypes),
@@ -290,6 +316,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Layer(
+      id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       inputTypes: serializer.fromJson<String>(json['inputTypes']),
       outputTypes: serializer.fromJson<String>(json['outputTypes']),
@@ -304,6 +331,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'inputTypes': serializer.toJson<String>(inputTypes),
       'outputTypes': serializer.toJson<String>(outputTypes),
@@ -316,6 +344,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   }
 
   Layer copyWith({
+    int? id,
     String? name,
     String? inputTypes,
     String? outputTypes,
@@ -325,6 +354,7 @@ class Layer extends DataClass implements Insertable<Layer> {
     int? createdAt,
     int? updatedAt,
   }) => Layer(
+    id: id ?? this.id,
     name: name ?? this.name,
     inputTypes: inputTypes ?? this.inputTypes,
     outputTypes: outputTypes ?? this.outputTypes,
@@ -336,6 +366,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   );
   Layer copyWithCompanion(LayersCompanion data) {
     return Layer(
+      id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       inputTypes: data.inputTypes.present
           ? data.inputTypes.value
@@ -356,6 +387,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   @override
   String toString() {
     return (StringBuffer('Layer(')
+          ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('inputTypes: $inputTypes, ')
           ..write('outputTypes: $outputTypes, ')
@@ -370,6 +402,7 @@ class Layer extends DataClass implements Insertable<Layer> {
 
   @override
   int get hashCode => Object.hash(
+    id,
     name,
     inputTypes,
     outputTypes,
@@ -383,6 +416,7 @@ class Layer extends DataClass implements Insertable<Layer> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Layer &&
+          other.id == this.id &&
           other.name == this.name &&
           other.inputTypes == this.inputTypes &&
           other.outputTypes == this.outputTypes &&
@@ -394,6 +428,7 @@ class Layer extends DataClass implements Insertable<Layer> {
 }
 
 class LayersCompanion extends UpdateCompanion<Layer> {
+  final Value<int> id;
   final Value<String> name;
   final Value<String> inputTypes;
   final Value<String> outputTypes;
@@ -402,8 +437,8 @@ class LayersCompanion extends UpdateCompanion<Layer> {
   final Value<bool> enabled;
   final Value<int> createdAt;
   final Value<int> updatedAt;
-  final Value<int> rowid;
   const LayersCompanion({
+    this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.inputTypes = const Value.absent(),
     this.outputTypes = const Value.absent(),
@@ -412,9 +447,9 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     this.enabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   LayersCompanion.insert({
+    this.id = const Value.absent(),
     required String name,
     required String inputTypes,
     required String outputTypes,
@@ -423,11 +458,11 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     this.enabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
   }) : name = Value(name),
        inputTypes = Value(inputTypes),
        outputTypes = Value(outputTypes);
   static Insertable<Layer> custom({
+    Expression<int>? id,
     Expression<String>? name,
     Expression<String>? inputTypes,
     Expression<String>? outputTypes,
@@ -436,9 +471,9 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     Expression<bool>? enabled,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (inputTypes != null) 'input_types': inputTypes,
       if (outputTypes != null) 'output_types': outputTypes,
@@ -447,11 +482,11 @@ class LayersCompanion extends UpdateCompanion<Layer> {
       if (enabled != null) 'enabled': enabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   LayersCompanion copyWith({
+    Value<int>? id,
     Value<String>? name,
     Value<String>? inputTypes,
     Value<String>? outputTypes,
@@ -460,9 +495,9 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     Value<bool>? enabled,
     Value<int>? createdAt,
     Value<int>? updatedAt,
-    Value<int>? rowid,
   }) {
     return LayersCompanion(
+      id: id ?? this.id,
       name: name ?? this.name,
       inputTypes: inputTypes ?? this.inputTypes,
       outputTypes: outputTypes ?? this.outputTypes,
@@ -471,13 +506,15 @@ class LayersCompanion extends UpdateCompanion<Layer> {
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
@@ -502,15 +539,13 @@ class LayersCompanion extends UpdateCompanion<Layer> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('LayersCompanion(')
+          ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('inputTypes: $inputTypes, ')
           ..write('outputTypes: $outputTypes, ')
@@ -518,8 +553,7 @@ class LayersCompanion extends UpdateCompanion<Layer> {
           ..write('sortOrder: $sortOrder, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('rowid: $rowid')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -539,17 +573,17 @@ class $WorkersTable extends Workers with TableInfo<$WorkersTable, Worker> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _layerNameMeta = const VerificationMeta(
-    'layerName',
+  static const VerificationMeta _layerIdMeta = const VerificationMeta(
+    'layerId',
   );
   @override
-  late final GeneratedColumn<String> layerName = GeneratedColumn<String>(
-    'layer_name',
+  late final GeneratedColumn<int> layerId = GeneratedColumn<int>(
+    'layer_id',
     aliasedName,
     false,
-    type: DriftSqlType.string,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES layers(name) ON DELETE CASCADE',
+    $customConstraints: 'NOT NULL REFERENCES layers(id) ON DELETE CASCADE',
   );
   static const VerificationMeta _systemPromptMeta = const VerificationMeta(
     'systemPrompt',
@@ -635,7 +669,7 @@ class $WorkersTable extends Workers with TableInfo<$WorkersTable, Worker> {
   @override
   List<GeneratedColumn> get $columns => [
     name,
-    layerName,
+    layerId,
     systemPrompt,
     model,
     temperature,
@@ -664,13 +698,13 @@ class $WorkersTable extends Workers with TableInfo<$WorkersTable, Worker> {
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    if (data.containsKey('layer_name')) {
+    if (data.containsKey('layer_id')) {
       context.handle(
-        _layerNameMeta,
-        layerName.isAcceptableOrUnknown(data['layer_name']!, _layerNameMeta),
+        _layerIdMeta,
+        layerId.isAcceptableOrUnknown(data['layer_id']!, _layerIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_layerNameMeta);
+      context.missing(_layerIdMeta);
     }
     if (data.containsKey('system_prompt')) {
       context.handle(
@@ -735,9 +769,9 @@ class $WorkersTable extends Workers with TableInfo<$WorkersTable, Worker> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
-      layerName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}layer_name'],
+      layerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}layer_id'],
       )!,
       systemPrompt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -778,7 +812,7 @@ class $WorkersTable extends Workers with TableInfo<$WorkersTable, Worker> {
 
 class Worker extends DataClass implements Insertable<Worker> {
   final String name;
-  final String layerName;
+  final int layerId;
   final String systemPrompt;
   final String? model;
   final double? temperature;
@@ -788,7 +822,7 @@ class Worker extends DataClass implements Insertable<Worker> {
   final int updatedAt;
   const Worker({
     required this.name,
-    required this.layerName,
+    required this.layerId,
     required this.systemPrompt,
     this.model,
     this.temperature,
@@ -801,7 +835,7 @@ class Worker extends DataClass implements Insertable<Worker> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['name'] = Variable<String>(name);
-    map['layer_name'] = Variable<String>(layerName);
+    map['layer_id'] = Variable<int>(layerId);
     map['system_prompt'] = Variable<String>(systemPrompt);
     if (!nullToAbsent || model != null) {
       map['model'] = Variable<String>(model);
@@ -821,7 +855,7 @@ class Worker extends DataClass implements Insertable<Worker> {
   WorkersCompanion toCompanion(bool nullToAbsent) {
     return WorkersCompanion(
       name: Value(name),
-      layerName: Value(layerName),
+      layerId: Value(layerId),
       systemPrompt: Value(systemPrompt),
       model: model == null && nullToAbsent
           ? const Value.absent()
@@ -845,7 +879,7 @@ class Worker extends DataClass implements Insertable<Worker> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Worker(
       name: serializer.fromJson<String>(json['name']),
-      layerName: serializer.fromJson<String>(json['layerName']),
+      layerId: serializer.fromJson<int>(json['layerId']),
       systemPrompt: serializer.fromJson<String>(json['systemPrompt']),
       model: serializer.fromJson<String?>(json['model']),
       temperature: serializer.fromJson<double?>(json['temperature']),
@@ -860,7 +894,7 @@ class Worker extends DataClass implements Insertable<Worker> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'name': serializer.toJson<String>(name),
-      'layerName': serializer.toJson<String>(layerName),
+      'layerId': serializer.toJson<int>(layerId),
       'systemPrompt': serializer.toJson<String>(systemPrompt),
       'model': serializer.toJson<String?>(model),
       'temperature': serializer.toJson<double?>(temperature),
@@ -873,7 +907,7 @@ class Worker extends DataClass implements Insertable<Worker> {
 
   Worker copyWith({
     String? name,
-    String? layerName,
+    int? layerId,
     String? systemPrompt,
     Value<String?> model = const Value.absent(),
     Value<double?> temperature = const Value.absent(),
@@ -883,7 +917,7 @@ class Worker extends DataClass implements Insertable<Worker> {
     int? updatedAt,
   }) => Worker(
     name: name ?? this.name,
-    layerName: layerName ?? this.layerName,
+    layerId: layerId ?? this.layerId,
     systemPrompt: systemPrompt ?? this.systemPrompt,
     model: model.present ? model.value : this.model,
     temperature: temperature.present ? temperature.value : this.temperature,
@@ -895,7 +929,7 @@ class Worker extends DataClass implements Insertable<Worker> {
   Worker copyWithCompanion(WorkersCompanion data) {
     return Worker(
       name: data.name.present ? data.name.value : this.name,
-      layerName: data.layerName.present ? data.layerName.value : this.layerName,
+      layerId: data.layerId.present ? data.layerId.value : this.layerId,
       systemPrompt: data.systemPrompt.present
           ? data.systemPrompt.value
           : this.systemPrompt,
@@ -914,7 +948,7 @@ class Worker extends DataClass implements Insertable<Worker> {
   String toString() {
     return (StringBuffer('Worker(')
           ..write('name: $name, ')
-          ..write('layerName: $layerName, ')
+          ..write('layerId: $layerId, ')
           ..write('systemPrompt: $systemPrompt, ')
           ..write('model: $model, ')
           ..write('temperature: $temperature, ')
@@ -929,7 +963,7 @@ class Worker extends DataClass implements Insertable<Worker> {
   @override
   int get hashCode => Object.hash(
     name,
-    layerName,
+    layerId,
     systemPrompt,
     model,
     temperature,
@@ -943,7 +977,7 @@ class Worker extends DataClass implements Insertable<Worker> {
       identical(this, other) ||
       (other is Worker &&
           other.name == this.name &&
-          other.layerName == this.layerName &&
+          other.layerId == this.layerId &&
           other.systemPrompt == this.systemPrompt &&
           other.model == this.model &&
           other.temperature == this.temperature &&
@@ -955,7 +989,7 @@ class Worker extends DataClass implements Insertable<Worker> {
 
 class WorkersCompanion extends UpdateCompanion<Worker> {
   final Value<String> name;
-  final Value<String> layerName;
+  final Value<int> layerId;
   final Value<String> systemPrompt;
   final Value<String?> model;
   final Value<double?> temperature;
@@ -966,7 +1000,7 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
   final Value<int> rowid;
   const WorkersCompanion({
     this.name = const Value.absent(),
-    this.layerName = const Value.absent(),
+    this.layerId = const Value.absent(),
     this.systemPrompt = const Value.absent(),
     this.model = const Value.absent(),
     this.temperature = const Value.absent(),
@@ -978,7 +1012,7 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
   });
   WorkersCompanion.insert({
     required String name,
-    required String layerName,
+    required int layerId,
     required String systemPrompt,
     this.model = const Value.absent(),
     this.temperature = const Value.absent(),
@@ -988,11 +1022,11 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name),
-       layerName = Value(layerName),
+       layerId = Value(layerId),
        systemPrompt = Value(systemPrompt);
   static Insertable<Worker> custom({
     Expression<String>? name,
-    Expression<String>? layerName,
+    Expression<int>? layerId,
     Expression<String>? systemPrompt,
     Expression<String>? model,
     Expression<double>? temperature,
@@ -1004,7 +1038,7 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
   }) {
     return RawValuesInsertable({
       if (name != null) 'name': name,
-      if (layerName != null) 'layer_name': layerName,
+      if (layerId != null) 'layer_id': layerId,
       if (systemPrompt != null) 'system_prompt': systemPrompt,
       if (model != null) 'model': model,
       if (temperature != null) 'temperature': temperature,
@@ -1018,7 +1052,7 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
 
   WorkersCompanion copyWith({
     Value<String>? name,
-    Value<String>? layerName,
+    Value<int>? layerId,
     Value<String>? systemPrompt,
     Value<String?>? model,
     Value<double?>? temperature,
@@ -1030,7 +1064,7 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
   }) {
     return WorkersCompanion(
       name: name ?? this.name,
-      layerName: layerName ?? this.layerName,
+      layerId: layerId ?? this.layerId,
       systemPrompt: systemPrompt ?? this.systemPrompt,
       model: model ?? this.model,
       temperature: temperature ?? this.temperature,
@@ -1048,8 +1082,8 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
-    if (layerName.present) {
-      map['layer_name'] = Variable<String>(layerName.value);
+    if (layerId.present) {
+      map['layer_id'] = Variable<int>(layerId.value);
     }
     if (systemPrompt.present) {
       map['system_prompt'] = Variable<String>(systemPrompt.value);
@@ -1082,7 +1116,7 @@ class WorkersCompanion extends UpdateCompanion<Worker> {
   String toString() {
     return (StringBuffer('WorkersCompanion(')
           ..write('name: $name, ')
-          ..write('layerName: $layerName, ')
+          ..write('layerId: $layerId, ')
           ..write('systemPrompt: $systemPrompt, ')
           ..write('model: $model, ')
           ..write('temperature: $temperature, ')
@@ -1198,17 +1232,17 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     requiredDuringInsert: false,
     $customConstraints: 'REFERENCES tasks(id) ON DELETE CASCADE',
   );
-  static const VerificationMeta _layerNameMeta = const VerificationMeta(
-    'layerName',
+  static const VerificationMeta _layerIdMeta = const VerificationMeta(
+    'layerId',
   );
   @override
-  late final GeneratedColumn<String> layerName = GeneratedColumn<String>(
-    'layer_name',
+  late final GeneratedColumn<int> layerId = GeneratedColumn<int>(
+    'layer_id',
     aliasedName,
     true,
-    type: DriftSqlType.string,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
-    $customConstraints: 'REFERENCES layers(name) ON DELETE SET NULL',
+    $customConstraints: 'REFERENCES layers(id) ON DELETE SET NULL',
   );
   static const VerificationMeta _workerNameMeta = const VerificationMeta(
     'workerName',
@@ -1255,7 +1289,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     maxRetries,
     depth,
     parentTaskId,
-    layerName,
+    layerId,
     workerName,
     createdAt,
     updatedAt,
@@ -1336,10 +1370,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         ),
       );
     }
-    if (data.containsKey('layer_name')) {
+    if (data.containsKey('layer_id')) {
       context.handle(
-        _layerNameMeta,
-        layerName.isAcceptableOrUnknown(data['layer_name']!, _layerNameMeta),
+        _layerIdMeta,
+        layerId.isAcceptableOrUnknown(data['layer_id']!, _layerIdMeta),
       );
     }
     if (data.containsKey('worker_name')) {
@@ -1409,9 +1443,9 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}parent_task_id'],
       ),
-      layerName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}layer_name'],
+      layerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}layer_id'],
       ),
       workerName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -1444,7 +1478,7 @@ class Task extends DataClass implements Insertable<Task> {
   final int maxRetries;
   final int depth;
   final String? parentTaskId;
-  final String? layerName;
+  final int? layerId;
   final String? workerName;
   final int createdAt;
   final int updatedAt;
@@ -1458,7 +1492,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.maxRetries,
     required this.depth,
     this.parentTaskId,
-    this.layerName,
+    this.layerId,
     this.workerName,
     required this.createdAt,
     required this.updatedAt,
@@ -1477,8 +1511,8 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || parentTaskId != null) {
       map['parent_task_id'] = Variable<String>(parentTaskId);
     }
-    if (!nullToAbsent || layerName != null) {
-      map['layer_name'] = Variable<String>(layerName);
+    if (!nullToAbsent || layerId != null) {
+      map['layer_id'] = Variable<int>(layerId);
     }
     if (!nullToAbsent || workerName != null) {
       map['worker_name'] = Variable<String>(workerName);
@@ -1501,9 +1535,9 @@ class Task extends DataClass implements Insertable<Task> {
       parentTaskId: parentTaskId == null && nullToAbsent
           ? const Value.absent()
           : Value(parentTaskId),
-      layerName: layerName == null && nullToAbsent
+      layerId: layerId == null && nullToAbsent
           ? const Value.absent()
-          : Value(layerName),
+          : Value(layerId),
       workerName: workerName == null && nullToAbsent
           ? const Value.absent()
           : Value(workerName),
@@ -1527,7 +1561,7 @@ class Task extends DataClass implements Insertable<Task> {
       maxRetries: serializer.fromJson<int>(json['maxRetries']),
       depth: serializer.fromJson<int>(json['depth']),
       parentTaskId: serializer.fromJson<String?>(json['parentTaskId']),
-      layerName: serializer.fromJson<String?>(json['layerName']),
+      layerId: serializer.fromJson<int?>(json['layerId']),
       workerName: serializer.fromJson<String?>(json['workerName']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
@@ -1546,7 +1580,7 @@ class Task extends DataClass implements Insertable<Task> {
       'maxRetries': serializer.toJson<int>(maxRetries),
       'depth': serializer.toJson<int>(depth),
       'parentTaskId': serializer.toJson<String?>(parentTaskId),
-      'layerName': serializer.toJson<String?>(layerName),
+      'layerId': serializer.toJson<int?>(layerId),
       'workerName': serializer.toJson<String?>(workerName),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
@@ -1563,7 +1597,7 @@ class Task extends DataClass implements Insertable<Task> {
     int? maxRetries,
     int? depth,
     Value<String?> parentTaskId = const Value.absent(),
-    Value<String?> layerName = const Value.absent(),
+    Value<int?> layerId = const Value.absent(),
     Value<String?> workerName = const Value.absent(),
     int? createdAt,
     int? updatedAt,
@@ -1577,7 +1611,7 @@ class Task extends DataClass implements Insertable<Task> {
     maxRetries: maxRetries ?? this.maxRetries,
     depth: depth ?? this.depth,
     parentTaskId: parentTaskId.present ? parentTaskId.value : this.parentTaskId,
-    layerName: layerName.present ? layerName.value : this.layerName,
+    layerId: layerId.present ? layerId.value : this.layerId,
     workerName: workerName.present ? workerName.value : this.workerName,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -1599,7 +1633,7 @@ class Task extends DataClass implements Insertable<Task> {
       parentTaskId: data.parentTaskId.present
           ? data.parentTaskId.value
           : this.parentTaskId,
-      layerName: data.layerName.present ? data.layerName.value : this.layerName,
+      layerId: data.layerId.present ? data.layerId.value : this.layerId,
       workerName: data.workerName.present
           ? data.workerName.value
           : this.workerName,
@@ -1620,7 +1654,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('maxRetries: $maxRetries, ')
           ..write('depth: $depth, ')
           ..write('parentTaskId: $parentTaskId, ')
-          ..write('layerName: $layerName, ')
+          ..write('layerId: $layerId, ')
           ..write('workerName: $workerName, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -1639,7 +1673,7 @@ class Task extends DataClass implements Insertable<Task> {
     maxRetries,
     depth,
     parentTaskId,
-    layerName,
+    layerId,
     workerName,
     createdAt,
     updatedAt,
@@ -1657,7 +1691,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.maxRetries == this.maxRetries &&
           other.depth == this.depth &&
           other.parentTaskId == this.parentTaskId &&
-          other.layerName == this.layerName &&
+          other.layerId == this.layerId &&
           other.workerName == this.workerName &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -1673,7 +1707,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<int> maxRetries;
   final Value<int> depth;
   final Value<String?> parentTaskId;
-  final Value<String?> layerName;
+  final Value<int?> layerId;
   final Value<String?> workerName;
   final Value<int> createdAt;
   final Value<int> updatedAt;
@@ -1688,7 +1722,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.maxRetries = const Value.absent(),
     this.depth = const Value.absent(),
     this.parentTaskId = const Value.absent(),
-    this.layerName = const Value.absent(),
+    this.layerId = const Value.absent(),
     this.workerName = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1704,7 +1738,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.maxRetries = const Value.absent(),
     this.depth = const Value.absent(),
     this.parentTaskId = const Value.absent(),
-    this.layerName = const Value.absent(),
+    this.layerId = const Value.absent(),
     this.workerName = const Value.absent(),
     required int createdAt,
     required int updatedAt,
@@ -1726,7 +1760,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<int>? maxRetries,
     Expression<int>? depth,
     Expression<String>? parentTaskId,
-    Expression<String>? layerName,
+    Expression<int>? layerId,
     Expression<String>? workerName,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
@@ -1742,7 +1776,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (maxRetries != null) 'max_retries': maxRetries,
       if (depth != null) 'depth': depth,
       if (parentTaskId != null) 'parent_task_id': parentTaskId,
-      if (layerName != null) 'layer_name': layerName,
+      if (layerId != null) 'layer_id': layerId,
       if (workerName != null) 'worker_name': workerName,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -1760,7 +1794,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<int>? maxRetries,
     Value<int>? depth,
     Value<String?>? parentTaskId,
-    Value<String?>? layerName,
+    Value<int?>? layerId,
     Value<String?>? workerName,
     Value<int>? createdAt,
     Value<int>? updatedAt,
@@ -1776,7 +1810,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       maxRetries: maxRetries ?? this.maxRetries,
       depth: depth ?? this.depth,
       parentTaskId: parentTaskId ?? this.parentTaskId,
-      layerName: layerName ?? this.layerName,
+      layerId: layerId ?? this.layerId,
       workerName: workerName ?? this.workerName,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -1814,8 +1848,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (parentTaskId.present) {
       map['parent_task_id'] = Variable<String>(parentTaskId.value);
     }
-    if (layerName.present) {
-      map['layer_name'] = Variable<String>(layerName.value);
+    if (layerId.present) {
+      map['layer_id'] = Variable<int>(layerId.value);
     }
     if (workerName.present) {
       map['worker_name'] = Variable<String>(workerName.value);
@@ -1844,7 +1878,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('maxRetries: $maxRetries, ')
           ..write('depth: $depth, ')
           ..write('parentTaskId: $parentTaskId, ')
-          ..write('layerName: $layerName, ')
+          ..write('layerId: $layerId, ')
           ..write('workerName: $workerName, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2943,17 +2977,17 @@ class $ThreadLayersTable extends ThreadLayers
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL REFERENCES threads(name) ON DELETE CASCADE',
   );
-  static const VerificationMeta _layerNameMeta = const VerificationMeta(
-    'layerName',
+  static const VerificationMeta _layerIdMeta = const VerificationMeta(
+    'layerId',
   );
   @override
-  late final GeneratedColumn<String> layerName = GeneratedColumn<String>(
-    'layer_name',
+  late final GeneratedColumn<int> layerId = GeneratedColumn<int>(
+    'layer_id',
     aliasedName,
     false,
-    type: DriftSqlType.string,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
-    $customConstraints: 'NOT NULL REFERENCES layers(name) ON DELETE CASCADE',
+    $customConstraints: 'NOT NULL REFERENCES layers(id) ON DELETE CASCADE',
   );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
@@ -2968,7 +3002,7 @@ class $ThreadLayersTable extends ThreadLayers
     defaultValue: const Constant(0),
   );
   @override
-  List<GeneratedColumn> get $columns => [threadName, layerName, sortOrder];
+  List<GeneratedColumn> get $columns => [threadName, layerId, sortOrder];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2989,13 +3023,13 @@ class $ThreadLayersTable extends ThreadLayers
     } else if (isInserting) {
       context.missing(_threadNameMeta);
     }
-    if (data.containsKey('layer_name')) {
+    if (data.containsKey('layer_id')) {
       context.handle(
-        _layerNameMeta,
-        layerName.isAcceptableOrUnknown(data['layer_name']!, _layerNameMeta),
+        _layerIdMeta,
+        layerId.isAcceptableOrUnknown(data['layer_id']!, _layerIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_layerNameMeta);
+      context.missing(_layerIdMeta);
     }
     if (data.containsKey('sort_order')) {
       context.handle(
@@ -3007,7 +3041,7 @@ class $ThreadLayersTable extends ThreadLayers
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {threadName, layerName};
+  Set<GeneratedColumn> get $primaryKey => {threadName, layerId};
   @override
   ThreadLayer map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -3016,9 +3050,9 @@ class $ThreadLayersTable extends ThreadLayers
         DriftSqlType.string,
         data['${effectivePrefix}thread_name'],
       )!,
-      layerName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}layer_name'],
+      layerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}layer_id'],
       )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -3035,18 +3069,18 @@ class $ThreadLayersTable extends ThreadLayers
 
 class ThreadLayer extends DataClass implements Insertable<ThreadLayer> {
   final String threadName;
-  final String layerName;
+  final int layerId;
   final int sortOrder;
   const ThreadLayer({
     required this.threadName,
-    required this.layerName,
+    required this.layerId,
     required this.sortOrder,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['thread_name'] = Variable<String>(threadName);
-    map['layer_name'] = Variable<String>(layerName);
+    map['layer_id'] = Variable<int>(layerId);
     map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
@@ -3054,7 +3088,7 @@ class ThreadLayer extends DataClass implements Insertable<ThreadLayer> {
   ThreadLayersCompanion toCompanion(bool nullToAbsent) {
     return ThreadLayersCompanion(
       threadName: Value(threadName),
-      layerName: Value(layerName),
+      layerId: Value(layerId),
       sortOrder: Value(sortOrder),
     );
   }
@@ -3066,7 +3100,7 @@ class ThreadLayer extends DataClass implements Insertable<ThreadLayer> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ThreadLayer(
       threadName: serializer.fromJson<String>(json['threadName']),
-      layerName: serializer.fromJson<String>(json['layerName']),
+      layerId: serializer.fromJson<int>(json['layerId']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
@@ -3075,26 +3109,23 @@ class ThreadLayer extends DataClass implements Insertable<ThreadLayer> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'threadName': serializer.toJson<String>(threadName),
-      'layerName': serializer.toJson<String>(layerName),
+      'layerId': serializer.toJson<int>(layerId),
       'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
 
-  ThreadLayer copyWith({
-    String? threadName,
-    String? layerName,
-    int? sortOrder,
-  }) => ThreadLayer(
-    threadName: threadName ?? this.threadName,
-    layerName: layerName ?? this.layerName,
-    sortOrder: sortOrder ?? this.sortOrder,
-  );
+  ThreadLayer copyWith({String? threadName, int? layerId, int? sortOrder}) =>
+      ThreadLayer(
+        threadName: threadName ?? this.threadName,
+        layerId: layerId ?? this.layerId,
+        sortOrder: sortOrder ?? this.sortOrder,
+      );
   ThreadLayer copyWithCompanion(ThreadLayersCompanion data) {
     return ThreadLayer(
       threadName: data.threadName.present
           ? data.threadName.value
           : this.threadName,
-      layerName: data.layerName.present ? data.layerName.value : this.layerName,
+      layerId: data.layerId.present ? data.layerId.value : this.layerId,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
@@ -3103,50 +3134,50 @@ class ThreadLayer extends DataClass implements Insertable<ThreadLayer> {
   String toString() {
     return (StringBuffer('ThreadLayer(')
           ..write('threadName: $threadName, ')
-          ..write('layerName: $layerName, ')
+          ..write('layerId: $layerId, ')
           ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(threadName, layerName, sortOrder);
+  int get hashCode => Object.hash(threadName, layerId, sortOrder);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ThreadLayer &&
           other.threadName == this.threadName &&
-          other.layerName == this.layerName &&
+          other.layerId == this.layerId &&
           other.sortOrder == this.sortOrder);
 }
 
 class ThreadLayersCompanion extends UpdateCompanion<ThreadLayer> {
   final Value<String> threadName;
-  final Value<String> layerName;
+  final Value<int> layerId;
   final Value<int> sortOrder;
   final Value<int> rowid;
   const ThreadLayersCompanion({
     this.threadName = const Value.absent(),
-    this.layerName = const Value.absent(),
+    this.layerId = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ThreadLayersCompanion.insert({
     required String threadName,
-    required String layerName,
+    required int layerId,
     this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : threadName = Value(threadName),
-       layerName = Value(layerName);
+       layerId = Value(layerId);
   static Insertable<ThreadLayer> custom({
     Expression<String>? threadName,
-    Expression<String>? layerName,
+    Expression<int>? layerId,
     Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (threadName != null) 'thread_name': threadName,
-      if (layerName != null) 'layer_name': layerName,
+      if (layerId != null) 'layer_id': layerId,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3154,13 +3185,13 @@ class ThreadLayersCompanion extends UpdateCompanion<ThreadLayer> {
 
   ThreadLayersCompanion copyWith({
     Value<String>? threadName,
-    Value<String>? layerName,
+    Value<int>? layerId,
     Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
     return ThreadLayersCompanion(
       threadName: threadName ?? this.threadName,
-      layerName: layerName ?? this.layerName,
+      layerId: layerId ?? this.layerId,
       sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
@@ -3172,8 +3203,8 @@ class ThreadLayersCompanion extends UpdateCompanion<ThreadLayer> {
     if (threadName.present) {
       map['thread_name'] = Variable<String>(threadName.value);
     }
-    if (layerName.present) {
-      map['layer_name'] = Variable<String>(layerName.value);
+    if (layerId.present) {
+      map['layer_id'] = Variable<int>(layerId.value);
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
@@ -3188,9 +3219,272 @@ class ThreadLayersCompanion extends UpdateCompanion<ThreadLayer> {
   String toString() {
     return (StringBuffer('ThreadLayersCompanion(')
           ..write('threadName: $threadName, ')
-          ..write('layerName: $layerName, ')
+          ..write('layerId: $layerId, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LayerConnectionsTable extends LayerConnections
+    with TableInfo<$LayerConnectionsTable, LayerConnection> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LayerConnectionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _sourceLayerIdMeta = const VerificationMeta(
+    'sourceLayerId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceLayerId = GeneratedColumn<int>(
+    'source_layer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES layers(id) ON DELETE CASCADE',
+  );
+  static const VerificationMeta _targetLayerIdMeta = const VerificationMeta(
+    'targetLayerId',
+  );
+  @override
+  late final GeneratedColumn<int> targetLayerId = GeneratedColumn<int>(
+    'target_layer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES layers(id) ON DELETE CASCADE',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, sourceLayerId, targetLayerId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'layer_connections';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LayerConnection> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_layer_id')) {
+      context.handle(
+        _sourceLayerIdMeta,
+        sourceLayerId.isAcceptableOrUnknown(
+          data['source_layer_id']!,
+          _sourceLayerIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceLayerIdMeta);
+    }
+    if (data.containsKey('target_layer_id')) {
+      context.handle(
+        _targetLayerIdMeta,
+        targetLayerId.isAcceptableOrUnknown(
+          data['target_layer_id']!,
+          _targetLayerIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetLayerIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LayerConnection map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LayerConnection(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      sourceLayerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_layer_id'],
+      )!,
+      targetLayerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_layer_id'],
+      )!,
+    );
+  }
+
+  @override
+  $LayerConnectionsTable createAlias(String alias) {
+    return $LayerConnectionsTable(attachedDatabase, alias);
+  }
+}
+
+class LayerConnection extends DataClass implements Insertable<LayerConnection> {
+  final int id;
+  final int sourceLayerId;
+  final int targetLayerId;
+  const LayerConnection({
+    required this.id,
+    required this.sourceLayerId,
+    required this.targetLayerId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['source_layer_id'] = Variable<int>(sourceLayerId);
+    map['target_layer_id'] = Variable<int>(targetLayerId);
+    return map;
+  }
+
+  LayerConnectionsCompanion toCompanion(bool nullToAbsent) {
+    return LayerConnectionsCompanion(
+      id: Value(id),
+      sourceLayerId: Value(sourceLayerId),
+      targetLayerId: Value(targetLayerId),
+    );
+  }
+
+  factory LayerConnection.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LayerConnection(
+      id: serializer.fromJson<int>(json['id']),
+      sourceLayerId: serializer.fromJson<int>(json['sourceLayerId']),
+      targetLayerId: serializer.fromJson<int>(json['targetLayerId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'sourceLayerId': serializer.toJson<int>(sourceLayerId),
+      'targetLayerId': serializer.toJson<int>(targetLayerId),
+    };
+  }
+
+  LayerConnection copyWith({int? id, int? sourceLayerId, int? targetLayerId}) =>
+      LayerConnection(
+        id: id ?? this.id,
+        sourceLayerId: sourceLayerId ?? this.sourceLayerId,
+        targetLayerId: targetLayerId ?? this.targetLayerId,
+      );
+  LayerConnection copyWithCompanion(LayerConnectionsCompanion data) {
+    return LayerConnection(
+      id: data.id.present ? data.id.value : this.id,
+      sourceLayerId: data.sourceLayerId.present
+          ? data.sourceLayerId.value
+          : this.sourceLayerId,
+      targetLayerId: data.targetLayerId.present
+          ? data.targetLayerId.value
+          : this.targetLayerId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LayerConnection(')
+          ..write('id: $id, ')
+          ..write('sourceLayerId: $sourceLayerId, ')
+          ..write('targetLayerId: $targetLayerId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, sourceLayerId, targetLayerId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LayerConnection &&
+          other.id == this.id &&
+          other.sourceLayerId == this.sourceLayerId &&
+          other.targetLayerId == this.targetLayerId);
+}
+
+class LayerConnectionsCompanion extends UpdateCompanion<LayerConnection> {
+  final Value<int> id;
+  final Value<int> sourceLayerId;
+  final Value<int> targetLayerId;
+  const LayerConnectionsCompanion({
+    this.id = const Value.absent(),
+    this.sourceLayerId = const Value.absent(),
+    this.targetLayerId = const Value.absent(),
+  });
+  LayerConnectionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int sourceLayerId,
+    required int targetLayerId,
+  }) : sourceLayerId = Value(sourceLayerId),
+       targetLayerId = Value(targetLayerId);
+  static Insertable<LayerConnection> custom({
+    Expression<int>? id,
+    Expression<int>? sourceLayerId,
+    Expression<int>? targetLayerId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sourceLayerId != null) 'source_layer_id': sourceLayerId,
+      if (targetLayerId != null) 'target_layer_id': targetLayerId,
+    });
+  }
+
+  LayerConnectionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? sourceLayerId,
+    Value<int>? targetLayerId,
+  }) {
+    return LayerConnectionsCompanion(
+      id: id ?? this.id,
+      sourceLayerId: sourceLayerId ?? this.sourceLayerId,
+      targetLayerId: targetLayerId ?? this.targetLayerId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (sourceLayerId.present) {
+      map['source_layer_id'] = Variable<int>(sourceLayerId.value);
+    }
+    if (targetLayerId.present) {
+      map['target_layer_id'] = Variable<int>(targetLayerId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LayerConnectionsCompanion(')
+          ..write('id: $id, ')
+          ..write('sourceLayerId: $sourceLayerId, ')
+          ..write('targetLayerId: $targetLayerId')
           ..write(')'))
         .toString();
   }
@@ -4199,6 +4493,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ExecutionLogsTable executionLogs = $ExecutionLogsTable(this);
   late final $ThreadsTable threads = $ThreadsTable(this);
   late final $ThreadLayersTable threadLayers = $ThreadLayersTable(this);
+  late final $LayerConnectionsTable layerConnections = $LayerConnectionsTable(
+    this,
+  );
   late final $ChatConversationsTable chatConversations =
       $ChatConversationsTable(this);
   late final $ChatMessagesTable chatMessages = $ChatMessagesTable(this);
@@ -4215,6 +4512,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     executionLogs,
     threads,
     threadLayers,
+    layerConnections,
     chatConversations,
     chatMessages,
     uiStates,
@@ -4265,6 +4563,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
+        'layers',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('layer_connections', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'layers',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('layer_connections', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
         'chat_conversations',
         limitUpdateKind: UpdateKind.delete,
       ),
@@ -4275,6 +4587,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 
 typedef $$LayersTableCreateCompanionBuilder =
     LayersCompanion Function({
+      Value<int> id,
       required String name,
       required String inputTypes,
       required String outputTypes,
@@ -4283,10 +4596,10 @@ typedef $$LayersTableCreateCompanionBuilder =
       Value<bool> enabled,
       Value<int> createdAt,
       Value<int> updatedAt,
-      Value<int> rowid,
     });
 typedef $$LayersTableUpdateCompanionBuilder =
     LayersCompanion Function({
+      Value<int> id,
       Value<String> name,
       Value<String> inputTypes,
       Value<String> outputTypes,
@@ -4295,7 +4608,6 @@ typedef $$LayersTableUpdateCompanionBuilder =
       Value<bool> enabled,
       Value<int> createdAt,
       Value<int> updatedAt,
-      Value<int> rowid,
     });
 
 final class $$LayersTableReferences
@@ -4306,14 +4618,14 @@ final class $$LayersTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.workers,
-    aliasName: $_aliasNameGenerator(db.layers.name, db.workers.layerName),
+    aliasName: $_aliasNameGenerator(db.layers.id, db.workers.layerId),
   );
 
   $$WorkersTableProcessedTableManager get workersRefs {
     final manager = $$WorkersTableTableManager(
       $_db,
       $_db.workers,
-    ).filter((f) => f.layerName.name.sqlEquals($_itemColumn<String>('name')!));
+    ).filter((f) => f.layerId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_workersRefsTable($_db));
     return ProcessedTableManager(
@@ -4325,14 +4637,14 @@ final class $$LayersTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.tasks,
-    aliasName: $_aliasNameGenerator(db.layers.name, db.tasks.layerName),
+    aliasName: $_aliasNameGenerator(db.layers.id, db.tasks.layerId),
   );
 
   $$TasksTableProcessedTableManager get tasksRefs {
     final manager = $$TasksTableTableManager(
       $_db,
       $_db.tasks,
-    ).filter((f) => f.layerName.name.sqlEquals($_itemColumn<String>('name')!));
+    ).filter((f) => f.layerId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_tasksRefsTable($_db));
     return ProcessedTableManager(
@@ -4343,14 +4655,14 @@ final class $$LayersTableReferences
   static MultiTypedResultKey<$ThreadLayersTable, List<ThreadLayer>>
   _threadLayersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.threadLayers,
-    aliasName: $_aliasNameGenerator(db.layers.name, db.threadLayers.layerName),
+    aliasName: $_aliasNameGenerator(db.layers.id, db.threadLayers.layerId),
   );
 
   $$ThreadLayersTableProcessedTableManager get threadLayersRefs {
     final manager = $$ThreadLayersTableTableManager(
       $_db,
       $_db.threadLayers,
-    ).filter((f) => f.layerName.name.sqlEquals($_itemColumn<String>('name')!));
+    ).filter((f) => f.layerId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_threadLayersRefsTable($_db));
     return ProcessedTableManager(
@@ -4368,6 +4680,11 @@ class $$LayersTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnFilters(column),
@@ -4413,9 +4730,9 @@ class $$LayersTableFilterComposer
   ) {
     final $$WorkersTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.name,
+      getCurrentColumn: (t) => t.id,
       referencedTable: $db.workers,
-      getReferencedColumn: (t) => t.layerName,
+      getReferencedColumn: (t) => t.layerId,
       builder:
           (
             joinBuilder, {
@@ -4438,9 +4755,9 @@ class $$LayersTableFilterComposer
   ) {
     final $$TasksTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.name,
+      getCurrentColumn: (t) => t.id,
       referencedTable: $db.tasks,
-      getReferencedColumn: (t) => t.layerName,
+      getReferencedColumn: (t) => t.layerId,
       builder:
           (
             joinBuilder, {
@@ -4463,9 +4780,9 @@ class $$LayersTableFilterComposer
   ) {
     final $$ThreadLayersTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.name,
+      getCurrentColumn: (t) => t.id,
       referencedTable: $db.threadLayers,
-      getReferencedColumn: (t) => t.layerName,
+      getReferencedColumn: (t) => t.layerId,
       builder:
           (
             joinBuilder, {
@@ -4493,6 +4810,11 @@ class $$LayersTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -4543,6 +4865,9 @@ class $$LayersTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
@@ -4578,9 +4903,9 @@ class $$LayersTableAnnotationComposer
   ) {
     final $$WorkersTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.name,
+      getCurrentColumn: (t) => t.id,
       referencedTable: $db.workers,
-      getReferencedColumn: (t) => t.layerName,
+      getReferencedColumn: (t) => t.layerId,
       builder:
           (
             joinBuilder, {
@@ -4603,9 +4928,9 @@ class $$LayersTableAnnotationComposer
   ) {
     final $$TasksTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.name,
+      getCurrentColumn: (t) => t.id,
       referencedTable: $db.tasks,
-      getReferencedColumn: (t) => t.layerName,
+      getReferencedColumn: (t) => t.layerId,
       builder:
           (
             joinBuilder, {
@@ -4628,9 +4953,9 @@ class $$LayersTableAnnotationComposer
   ) {
     final $$ThreadLayersTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.name,
+      getCurrentColumn: (t) => t.id,
       referencedTable: $db.threadLayers,
-      getReferencedColumn: (t) => t.layerName,
+      getReferencedColumn: (t) => t.layerId,
       builder:
           (
             joinBuilder, {
@@ -4681,6 +5006,7 @@ class $$LayersTableTableManager
               $$LayersTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> inputTypes = const Value.absent(),
                 Value<String> outputTypes = const Value.absent(),
@@ -4689,8 +5015,8 @@ class $$LayersTableTableManager
                 Value<bool> enabled = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
               }) => LayersCompanion(
+                id: id,
                 name: name,
                 inputTypes: inputTypes,
                 outputTypes: outputTypes,
@@ -4699,10 +5025,10 @@ class $$LayersTableTableManager
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
-                rowid: rowid,
               ),
           createCompanionCallback:
               ({
+                Value<int> id = const Value.absent(),
                 required String name,
                 required String inputTypes,
                 required String outputTypes,
@@ -4711,8 +5037,8 @@ class $$LayersTableTableManager
                 Value<bool> enabled = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
               }) => LayersCompanion.insert(
+                id: id,
                 name: name,
                 inputTypes: inputTypes,
                 outputTypes: outputTypes,
@@ -4721,7 +5047,6 @@ class $$LayersTableTableManager
                 enabled: enabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
-                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -4758,7 +5083,7 @@ class $$LayersTableTableManager
                               ).workersRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.layerName == item.name,
+                                (e) => e.layerId == item.id,
                               ),
                           typedResults: items,
                         ),
@@ -4771,7 +5096,7 @@ class $$LayersTableTableManager
                               $$LayersTableReferences(db, table, p0).tasksRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.layerName == item.name,
+                                (e) => e.layerId == item.id,
                               ),
                           typedResults: items,
                         ),
@@ -4792,7 +5117,7 @@ class $$LayersTableTableManager
                               ).threadLayersRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.layerName == item.name,
+                                (e) => e.layerId == item.id,
                               ),
                           typedResults: items,
                         ),
@@ -4825,7 +5150,7 @@ typedef $$LayersTableProcessedTableManager =
 typedef $$WorkersTableCreateCompanionBuilder =
     WorkersCompanion Function({
       required String name,
-      required String layerName,
+      required int layerId,
       required String systemPrompt,
       Value<String?> model,
       Value<double?> temperature,
@@ -4838,7 +5163,7 @@ typedef $$WorkersTableCreateCompanionBuilder =
 typedef $$WorkersTableUpdateCompanionBuilder =
     WorkersCompanion Function({
       Value<String> name,
-      Value<String> layerName,
+      Value<int> layerId,
       Value<String> systemPrompt,
       Value<String?> model,
       Value<double?> temperature,
@@ -4853,17 +5178,18 @@ final class $$WorkersTableReferences
     extends BaseReferences<_$AppDatabase, $WorkersTable, Worker> {
   $$WorkersTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $LayersTable _layerNameTable(_$AppDatabase db) => db.layers
-      .createAlias($_aliasNameGenerator(db.workers.layerName, db.layers.name));
+  static $LayersTable _layerIdTable(_$AppDatabase db) => db.layers.createAlias(
+    $_aliasNameGenerator(db.workers.layerId, db.layers.id),
+  );
 
-  $$LayersTableProcessedTableManager get layerName {
-    final $_column = $_itemColumn<String>('layer_name')!;
+  $$LayersTableProcessedTableManager get layerId {
+    final $_column = $_itemColumn<int>('layer_id')!;
 
     final manager = $$LayersTableTableManager(
       $_db,
       $_db.layers,
-    ).filter((f) => f.name.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_layerNameTable($_db));
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_layerIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -4939,12 +5265,12 @@ class $$WorkersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $$LayersTableFilterComposer get layerName {
+  $$LayersTableFilterComposer get layerId {
     final $$LayersTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -5037,12 +5363,12 @@ class $$WorkersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $$LayersTableOrderingComposer get layerName {
+  $$LayersTableOrderingComposer get layerId {
     final $$LayersTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -5098,12 +5424,12 @@ class $$WorkersTableAnnotationComposer
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  $$LayersTableAnnotationComposer get layerName {
+  $$LayersTableAnnotationComposer get layerId {
     final $$LayersTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -5160,7 +5486,7 @@ class $$WorkersTableTableManager
           $$WorkersTableUpdateCompanionBuilder,
           (Worker, $$WorkersTableReferences),
           Worker,
-          PrefetchHooks Function({bool layerName, bool tasksRefs})
+          PrefetchHooks Function({bool layerId, bool tasksRefs})
         > {
   $$WorkersTableTableManager(_$AppDatabase db, $WorkersTable table)
     : super(
@@ -5176,7 +5502,7 @@ class $$WorkersTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> name = const Value.absent(),
-                Value<String> layerName = const Value.absent(),
+                Value<int> layerId = const Value.absent(),
                 Value<String> systemPrompt = const Value.absent(),
                 Value<String?> model = const Value.absent(),
                 Value<double?> temperature = const Value.absent(),
@@ -5187,7 +5513,7 @@ class $$WorkersTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => WorkersCompanion(
                 name: name,
-                layerName: layerName,
+                layerId: layerId,
                 systemPrompt: systemPrompt,
                 model: model,
                 temperature: temperature,
@@ -5200,7 +5526,7 @@ class $$WorkersTableTableManager
           createCompanionCallback:
               ({
                 required String name,
-                required String layerName,
+                required int layerId,
                 required String systemPrompt,
                 Value<String?> model = const Value.absent(),
                 Value<double?> temperature = const Value.absent(),
@@ -5211,7 +5537,7 @@ class $$WorkersTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => WorkersCompanion.insert(
                 name: name,
-                layerName: layerName,
+                layerId: layerId,
                 systemPrompt: systemPrompt,
                 model: model,
                 temperature: temperature,
@@ -5229,7 +5555,7 @@ class $$WorkersTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({layerName = false, tasksRefs = false}) {
+          prefetchHooksCallback: ({layerId = false, tasksRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [if (tasksRefs) db.tasks],
@@ -5249,16 +5575,16 @@ class $$WorkersTableTableManager
                       dynamic
                     >
                   >(state) {
-                    if (layerName) {
+                    if (layerId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.layerName,
+                                currentColumn: table.layerId,
                                 referencedTable: $$WorkersTableReferences
-                                    ._layerNameTable(db),
+                                    ._layerIdTable(db),
                                 referencedColumn: $$WorkersTableReferences
-                                    ._layerNameTable(db)
-                                    .name,
+                                    ._layerIdTable(db)
+                                    .id,
                               )
                               as T;
                     }
@@ -5301,7 +5627,7 @@ typedef $$WorkersTableProcessedTableManager =
       $$WorkersTableUpdateCompanionBuilder,
       (Worker, $$WorkersTableReferences),
       Worker,
-      PrefetchHooks Function({bool layerName, bool tasksRefs})
+      PrefetchHooks Function({bool layerId, bool tasksRefs})
     >;
 typedef $$TasksTableCreateCompanionBuilder =
     TasksCompanion Function({
@@ -5314,7 +5640,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<int> maxRetries,
       Value<int> depth,
       Value<String?> parentTaskId,
-      Value<String?> layerName,
+      Value<int?> layerId,
       Value<String?> workerName,
       required int createdAt,
       required int updatedAt,
@@ -5331,7 +5657,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<int> maxRetries,
       Value<int> depth,
       Value<String?> parentTaskId,
-      Value<String?> layerName,
+      Value<int?> layerId,
       Value<String?> workerName,
       Value<int> createdAt,
       Value<int> updatedAt,
@@ -5342,17 +5668,18 @@ final class $$TasksTableReferences
     extends BaseReferences<_$AppDatabase, $TasksTable, Task> {
   $$TasksTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $LayersTable _layerNameTable(_$AppDatabase db) => db.layers
-      .createAlias($_aliasNameGenerator(db.tasks.layerName, db.layers.name));
+  static $LayersTable _layerIdTable(_$AppDatabase db) => db.layers.createAlias(
+    $_aliasNameGenerator(db.tasks.layerId, db.layers.id),
+  );
 
-  $$LayersTableProcessedTableManager? get layerName {
-    final $_column = $_itemColumn<String>('layer_name');
+  $$LayersTableProcessedTableManager? get layerId {
+    final $_column = $_itemColumn<int>('layer_id');
     if ($_column == null) return null;
     final manager = $$LayersTableTableManager(
       $_db,
       $_db.layers,
-    ).filter((f) => f.name.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_layerNameTable($_db));
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_layerIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -5458,12 +5785,12 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  $$LayersTableFilterComposer get layerName {
+  $$LayersTableFilterComposer get layerId {
     final $$LayersTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -5594,12 +5921,12 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $$LayersTableOrderingComposer get layerName {
+  $$LayersTableOrderingComposer get layerId {
     final $$LayersTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -5689,12 +6016,12 @@ class $$TasksTableAnnotationComposer
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  $$LayersTableAnnotationComposer get layerName {
+  $$LayersTableAnnotationComposer get layerId {
     final $$LayersTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -5775,7 +6102,7 @@ class $$TasksTableTableManager
           (Task, $$TasksTableReferences),
           Task,
           PrefetchHooks Function({
-            bool layerName,
+            bool layerId,
             bool workerName,
             bool executionLogsRefs,
           })
@@ -5802,7 +6129,7 @@ class $$TasksTableTableManager
                 Value<int> maxRetries = const Value.absent(),
                 Value<int> depth = const Value.absent(),
                 Value<String?> parentTaskId = const Value.absent(),
-                Value<String?> layerName = const Value.absent(),
+                Value<int?> layerId = const Value.absent(),
                 Value<String?> workerName = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
@@ -5817,7 +6144,7 @@ class $$TasksTableTableManager
                 maxRetries: maxRetries,
                 depth: depth,
                 parentTaskId: parentTaskId,
-                layerName: layerName,
+                layerId: layerId,
                 workerName: workerName,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -5834,7 +6161,7 @@ class $$TasksTableTableManager
                 Value<int> maxRetries = const Value.absent(),
                 Value<int> depth = const Value.absent(),
                 Value<String?> parentTaskId = const Value.absent(),
-                Value<String?> layerName = const Value.absent(),
+                Value<int?> layerId = const Value.absent(),
                 Value<String?> workerName = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
@@ -5849,7 +6176,7 @@ class $$TasksTableTableManager
                 maxRetries: maxRetries,
                 depth: depth,
                 parentTaskId: parentTaskId,
-                layerName: layerName,
+                layerId: layerId,
                 workerName: workerName,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -5863,7 +6190,7 @@ class $$TasksTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
-                layerName = false,
+                layerId = false,
                 workerName = false,
                 executionLogsRefs = false,
               }) {
@@ -5888,16 +6215,16 @@ class $$TasksTableTableManager
                           dynamic
                         >
                       >(state) {
-                        if (layerName) {
+                        if (layerId) {
                           state =
                               state.withJoin(
                                     currentTable: table,
-                                    currentColumn: table.layerName,
+                                    currentColumn: table.layerId,
                                     referencedTable: $$TasksTableReferences
-                                        ._layerNameTable(db),
+                                        ._layerIdTable(db),
                                     referencedColumn: $$TasksTableReferences
-                                        ._layerNameTable(db)
-                                        .name,
+                                        ._layerIdTable(db)
+                                        .id,
                                   )
                                   as T;
                         }
@@ -5961,7 +6288,7 @@ typedef $$TasksTableProcessedTableManager =
       (Task, $$TasksTableReferences),
       Task,
       PrefetchHooks Function({
-        bool layerName,
+        bool layerId,
         bool workerName,
         bool executionLogsRefs,
       })
@@ -6784,14 +7111,14 @@ typedef $$ThreadsTableProcessedTableManager =
 typedef $$ThreadLayersTableCreateCompanionBuilder =
     ThreadLayersCompanion Function({
       required String threadName,
-      required String layerName,
+      required int layerId,
       Value<int> sortOrder,
       Value<int> rowid,
     });
 typedef $$ThreadLayersTableUpdateCompanionBuilder =
     ThreadLayersCompanion Function({
       Value<String> threadName,
-      Value<String> layerName,
+      Value<int> layerId,
       Value<int> sortOrder,
       Value<int> rowid,
     });
@@ -6819,19 +7146,18 @@ final class $$ThreadLayersTableReferences
     );
   }
 
-  static $LayersTable _layerNameTable(_$AppDatabase db) =>
-      db.layers.createAlias(
-        $_aliasNameGenerator(db.threadLayers.layerName, db.layers.name),
-      );
+  static $LayersTable _layerIdTable(_$AppDatabase db) => db.layers.createAlias(
+    $_aliasNameGenerator(db.threadLayers.layerId, db.layers.id),
+  );
 
-  $$LayersTableProcessedTableManager get layerName {
-    final $_column = $_itemColumn<String>('layer_name')!;
+  $$LayersTableProcessedTableManager get layerId {
+    final $_column = $_itemColumn<int>('layer_id')!;
 
     final manager = $$LayersTableTableManager(
       $_db,
       $_db.layers,
-    ).filter((f) => f.name.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_layerNameTable($_db));
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_layerIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -6876,12 +7202,12 @@ class $$ThreadLayersTableFilterComposer
     return composer;
   }
 
-  $$LayersTableFilterComposer get layerName {
+  $$LayersTableFilterComposer get layerId {
     final $$LayersTableFilterComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -6937,12 +7263,12 @@ class $$ThreadLayersTableOrderingComposer
     return composer;
   }
 
-  $$LayersTableOrderingComposer get layerName {
+  $$LayersTableOrderingComposer get layerId {
     final $$LayersTableOrderingComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -6996,12 +7322,12 @@ class $$ThreadLayersTableAnnotationComposer
     return composer;
   }
 
-  $$LayersTableAnnotationComposer get layerName {
+  $$LayersTableAnnotationComposer get layerId {
     final $$LayersTableAnnotationComposer composer = $composerBuilder(
       composer: this,
-      getCurrentColumn: (t) => t.layerName,
+      getCurrentColumn: (t) => t.layerId,
       referencedTable: $db.layers,
-      getReferencedColumn: (t) => t.name,
+      getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
@@ -7033,7 +7359,7 @@ class $$ThreadLayersTableTableManager
           $$ThreadLayersTableUpdateCompanionBuilder,
           (ThreadLayer, $$ThreadLayersTableReferences),
           ThreadLayer,
-          PrefetchHooks Function({bool threadName, bool layerName})
+          PrefetchHooks Function({bool threadName, bool layerId})
         > {
   $$ThreadLayersTableTableManager(_$AppDatabase db, $ThreadLayersTable table)
     : super(
@@ -7049,24 +7375,24 @@ class $$ThreadLayersTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> threadName = const Value.absent(),
-                Value<String> layerName = const Value.absent(),
+                Value<int> layerId = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ThreadLayersCompanion(
                 threadName: threadName,
-                layerName: layerName,
+                layerId: layerId,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String threadName,
-                required String layerName,
+                required int layerId,
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ThreadLayersCompanion.insert(
                 threadName: threadName,
-                layerName: layerName,
+                layerId: layerId,
                 sortOrder: sortOrder,
                 rowid: rowid,
               ),
@@ -7078,7 +7404,7 @@ class $$ThreadLayersTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({threadName = false, layerName = false}) {
+          prefetchHooksCallback: ({threadName = false, layerId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -7111,16 +7437,16 @@ class $$ThreadLayersTableTableManager
                               )
                               as T;
                     }
-                    if (layerName) {
+                    if (layerId) {
                       state =
                           state.withJoin(
                                 currentTable: table,
-                                currentColumn: table.layerName,
+                                currentColumn: table.layerId,
                                 referencedTable: $$ThreadLayersTableReferences
-                                    ._layerNameTable(db),
+                                    ._layerIdTable(db),
                                 referencedColumn: $$ThreadLayersTableReferences
-                                    ._layerNameTable(db)
-                                    .name,
+                                    ._layerIdTable(db)
+                                    .id,
                               )
                               as T;
                     }
@@ -7148,7 +7474,382 @@ typedef $$ThreadLayersTableProcessedTableManager =
       $$ThreadLayersTableUpdateCompanionBuilder,
       (ThreadLayer, $$ThreadLayersTableReferences),
       ThreadLayer,
-      PrefetchHooks Function({bool threadName, bool layerName})
+      PrefetchHooks Function({bool threadName, bool layerId})
+    >;
+typedef $$LayerConnectionsTableCreateCompanionBuilder =
+    LayerConnectionsCompanion Function({
+      Value<int> id,
+      required int sourceLayerId,
+      required int targetLayerId,
+    });
+typedef $$LayerConnectionsTableUpdateCompanionBuilder =
+    LayerConnectionsCompanion Function({
+      Value<int> id,
+      Value<int> sourceLayerId,
+      Value<int> targetLayerId,
+    });
+
+final class $$LayerConnectionsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $LayerConnectionsTable, LayerConnection> {
+  $$LayerConnectionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LayersTable _sourceLayerIdTable(_$AppDatabase db) =>
+      db.layers.createAlias(
+        $_aliasNameGenerator(db.layerConnections.sourceLayerId, db.layers.id),
+      );
+
+  $$LayersTableProcessedTableManager get sourceLayerId {
+    final $_column = $_itemColumn<int>('source_layer_id')!;
+
+    final manager = $$LayersTableTableManager(
+      $_db,
+      $_db.layers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceLayerIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $LayersTable _targetLayerIdTable(_$AppDatabase db) =>
+      db.layers.createAlias(
+        $_aliasNameGenerator(db.layerConnections.targetLayerId, db.layers.id),
+      );
+
+  $$LayersTableProcessedTableManager get targetLayerId {
+    final $_column = $_itemColumn<int>('target_layer_id')!;
+
+    final manager = $$LayersTableTableManager(
+      $_db,
+      $_db.layers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_targetLayerIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$LayerConnectionsTableFilterComposer
+    extends Composer<_$AppDatabase, $LayerConnectionsTable> {
+  $$LayerConnectionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LayersTableFilterComposer get sourceLayerId {
+    final $$LayersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceLayerId,
+      referencedTable: $db.layers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LayersTableFilterComposer(
+            $db: $db,
+            $table: $db.layers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LayersTableFilterComposer get targetLayerId {
+    final $$LayersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetLayerId,
+      referencedTable: $db.layers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LayersTableFilterComposer(
+            $db: $db,
+            $table: $db.layers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LayerConnectionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LayerConnectionsTable> {
+  $$LayerConnectionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LayersTableOrderingComposer get sourceLayerId {
+    final $$LayersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceLayerId,
+      referencedTable: $db.layers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LayersTableOrderingComposer(
+            $db: $db,
+            $table: $db.layers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LayersTableOrderingComposer get targetLayerId {
+    final $$LayersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetLayerId,
+      referencedTable: $db.layers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LayersTableOrderingComposer(
+            $db: $db,
+            $table: $db.layers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LayerConnectionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LayerConnectionsTable> {
+  $$LayerConnectionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  $$LayersTableAnnotationComposer get sourceLayerId {
+    final $$LayersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceLayerId,
+      referencedTable: $db.layers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LayersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.layers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$LayersTableAnnotationComposer get targetLayerId {
+    final $$LayersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.targetLayerId,
+      referencedTable: $db.layers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LayersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.layers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$LayerConnectionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LayerConnectionsTable,
+          LayerConnection,
+          $$LayerConnectionsTableFilterComposer,
+          $$LayerConnectionsTableOrderingComposer,
+          $$LayerConnectionsTableAnnotationComposer,
+          $$LayerConnectionsTableCreateCompanionBuilder,
+          $$LayerConnectionsTableUpdateCompanionBuilder,
+          (LayerConnection, $$LayerConnectionsTableReferences),
+          LayerConnection,
+          PrefetchHooks Function({bool sourceLayerId, bool targetLayerId})
+        > {
+  $$LayerConnectionsTableTableManager(
+    _$AppDatabase db,
+    $LayerConnectionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LayerConnectionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LayerConnectionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LayerConnectionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> sourceLayerId = const Value.absent(),
+                Value<int> targetLayerId = const Value.absent(),
+              }) => LayerConnectionsCompanion(
+                id: id,
+                sourceLayerId: sourceLayerId,
+                targetLayerId: targetLayerId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int sourceLayerId,
+                required int targetLayerId,
+              }) => LayerConnectionsCompanion.insert(
+                id: id,
+                sourceLayerId: sourceLayerId,
+                targetLayerId: targetLayerId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$LayerConnectionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({sourceLayerId = false, targetLayerId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (sourceLayerId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sourceLayerId,
+                                    referencedTable:
+                                        $$LayerConnectionsTableReferences
+                                            ._sourceLayerIdTable(db),
+                                    referencedColumn:
+                                        $$LayerConnectionsTableReferences
+                                            ._sourceLayerIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (targetLayerId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.targetLayerId,
+                                    referencedTable:
+                                        $$LayerConnectionsTableReferences
+                                            ._targetLayerIdTable(db),
+                                    referencedColumn:
+                                        $$LayerConnectionsTableReferences
+                                            ._targetLayerIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$LayerConnectionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LayerConnectionsTable,
+      LayerConnection,
+      $$LayerConnectionsTableFilterComposer,
+      $$LayerConnectionsTableOrderingComposer,
+      $$LayerConnectionsTableAnnotationComposer,
+      $$LayerConnectionsTableCreateCompanionBuilder,
+      $$LayerConnectionsTableUpdateCompanionBuilder,
+      (LayerConnection, $$LayerConnectionsTableReferences),
+      LayerConnection,
+      PrefetchHooks Function({bool sourceLayerId, bool targetLayerId})
     >;
 typedef $$ChatConversationsTableCreateCompanionBuilder =
     ChatConversationsCompanion Function({
@@ -7968,6 +8669,8 @@ class $AppDatabaseManager {
       $$ThreadsTableTableManager(_db, _db.threads);
   $$ThreadLayersTableTableManager get threadLayers =>
       $$ThreadLayersTableTableManager(_db, _db.threadLayers);
+  $$LayerConnectionsTableTableManager get layerConnections =>
+      $$LayerConnectionsTableTableManager(_db, _db.layerConnections);
   $$ChatConversationsTableTableManager get chatConversations =>
       $$ChatConversationsTableTableManager(_db, _db.chatConversations);
   $$ChatMessagesTableTableManager get chatMessages =>

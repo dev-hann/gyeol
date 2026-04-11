@@ -94,12 +94,12 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
     final groups = layers.map((layer) {
       return MapEntry(
         layer,
-        workers.where((w) => w.layerName == layer.name).toList(),
+        workers.where((w) => w.layerId == layer.id).toList(),
       );
     }).toList();
 
     final unassigned = workers
-        .where((w) => !layers.any((l) => l.name == w.layerName))
+        .where((w) => !layers.any((l) => l.id == w.layerId))
         .toList();
 
     return ListView(

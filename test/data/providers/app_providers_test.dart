@@ -51,6 +51,7 @@ void main() {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
@@ -67,16 +68,22 @@ void main() {
     test('deleteLayer removes layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(name: 'temp', inputTypes: [], outputTypes: []),
+        const LayerDefinition(
+          id: 0,
+          name: 'temp',
+          inputTypes: [],
+          outputTypes: [],
+        ),
       );
 
-      await container.read(layersProvider.future);
+      final layers = await container.read(layersProvider.future);
+      expect(layers, hasLength(1));
 
-      await notifier.deleteLayer('temp');
+      await notifier.deleteLayer(layers.first.id);
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      final layers = await container.read(layersProvider.future);
-      expect(layers, isEmpty);
+      final updatedLayers = await container.read(layersProvider.future);
+      expect(updatedLayers, isEmpty);
     });
   });
 
@@ -91,16 +98,19 @@ void main() {
           .read(layersProvider.notifier)
           .saveLayer(
             const LayerDefinition(
+              id: 0,
               name: 'parse',
               inputTypes: ['text'],
               outputTypes: ['analysis'],
             ),
           );
+      final layers = await container.read(layersProvider.future);
+      final layerId = layers.first.id;
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
-        const WorkerDefinition(
+        WorkerDefinition(
           name: 'parser',
-          layerName: 'parse',
+          layerId: layerId,
           systemPrompt: 'Parse the text',
         ),
       );
@@ -108,22 +118,25 @@ void main() {
       final workers = await container.read(workersProvider.future);
       expect(workers, hasLength(1));
       expect(workers.first.name, 'parser');
-      expect(workers.first.layerName, 'parse');
+      expect(workers.first.layerId, layerId);
     });
 
     test('deleteWorker removes worker and refreshes list', () async {
       await container
           .read(layersProvider.notifier)
           .saveLayer(
-            const LayerDefinition(name: 'tmp', inputTypes: [], outputTypes: []),
+            const LayerDefinition(
+              id: 0,
+              name: 'tmp',
+              inputTypes: [],
+              outputTypes: [],
+            ),
           );
+      final layers = await container.read(layersProvider.future);
+      final layerId = layers.first.id;
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
-        const WorkerDefinition(
-          name: 'temp',
-          layerName: 'tmp',
-          systemPrompt: 'tmp',
-        ),
+        WorkerDefinition(name: 'temp', layerId: layerId, systemPrompt: 'tmp'),
       );
 
       await container.read(workersProvider.future);
@@ -213,7 +226,6 @@ void main() {
     test('copyWith preserves unchanged fields', () {
       const state = GraphState(
         nodePositions: {'a': Offset(1, 2)},
-        removedConnections: {('x', 'y')},
         viewportX: 10,
         viewportY: 20,
         viewportZoom: 1.5,
@@ -223,20 +235,17 @@ void main() {
       expect(updated.viewportY, 20);
       expect(updated.viewportZoom, 1.5);
       expect(updated.nodePositions, {'a': const Offset(1, 2)});
-      expect(updated.removedConnections, {('x', 'y')});
     });
 
     test('copyWith replaces all fields', () {
       const state = GraphState();
       final updated = state.copyWith(
         nodePositions: const {'b': Offset(3, 4)},
-        removedConnections: {('p', 'q')},
         viewportX: 5,
         viewportY: 6,
         viewportZoom: 2,
       );
       expect(updated.nodePositions, {'b': const Offset(3, 4)});
-      expect(updated.removedConnections, {('p', 'q')});
       expect(updated.viewportX, 5);
       expect(updated.viewportY, 6);
       expect(updated.viewportZoom, 2.0);
@@ -247,7 +256,6 @@ void main() {
     test('build returns default state when no saved data', () async {
       final state = await container.read(graphStateProvider.future);
       expect(state.nodePositions, isEmpty);
-      expect(state.removedConnections, isEmpty);
       expect(state.viewportX, 0);
       expect(state.viewportY, 0);
       expect(state.viewportZoom, 1);
@@ -259,14 +267,6 @@ void main() {
 
       final state = await container.read(graphStateProvider.future);
       expect(state.nodePositions, {'n1': const Offset(10, 20)});
-    });
-
-    test('saveRemovedConnections persists and updates state', () async {
-      final notifier = container.read(graphStateProvider.notifier);
-      await notifier.saveRemovedConnections({('a', 'b')});
-
-      final state = await container.read(graphStateProvider.future);
-      expect(state.removedConnections, {('a', 'b')});
     });
 
     test('saveViewport persists and updates state', () async {

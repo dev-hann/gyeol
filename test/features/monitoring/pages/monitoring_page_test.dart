@@ -6,6 +6,15 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
 import 'package:gyeol/features/monitoring/pages/monitoring_page.dart';
 
+List<LayerDefinition> fakeLayers() => [
+  const LayerDefinition(
+    id: 1,
+    name: 'Draft',
+    inputTypes: ['text'],
+    outputTypes: ['draft'],
+  ),
+];
+
 List<AppTask> fakeTasks() => [
   const AppTask(
     id: 't1',
@@ -13,7 +22,7 @@ List<AppTask> fakeTasks() => [
     payload: null,
     priority: TaskPriority.high,
     status: TaskStatus.running,
-    layerName: 'Draft',
+    layerId: 1,
     workerName: 'writer-1',
     depth: 1,
     createdAt: 1000,
@@ -25,7 +34,7 @@ List<AppTask> fakeTasks() => [
     payload: null,
     priority: TaskPriority.medium,
     status: TaskStatus.pending,
-    layerName: 'Review',
+    layerId: 1,
     depth: 2,
     retryCount: 1,
     createdAt: 2000,
@@ -91,6 +100,7 @@ void main() {
     WidgetTester tester, {
     List<AppTask>? tasks,
     List<ExecutionLog>? logs,
+    List<LayerDefinition>? layers,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -102,6 +112,9 @@ void main() {
           ),
           logsProvider.overrideWith(
             () => _FakeLogsNotifier(logs ?? fakeLogs()),
+          ),
+          layersProvider.overrideWith(
+            () => _FakeLayersNotifier(layers ?? fakeLayers()),
           ),
         ],
         child: const MaterialApp(home: MonitoringPage()),
@@ -219,6 +232,9 @@ void main() {
           overrides: [
             tasksProvider.overrideWith(_ErrorTasksNotifier.new),
             logsProvider.overrideWith(() => _FakeLogsNotifier(fakeLogs())),
+            layersProvider.overrideWith(
+              () => _FakeLayersNotifier(fakeLayers()),
+            ),
           ],
           child: const MaterialApp(home: MonitoringPage()),
         ),
@@ -352,6 +368,14 @@ class _FakeLogsNotifier extends LogsNotifier {
 
   @override
   Future<List<ExecutionLog>> build() async => _logs;
+}
+
+class _FakeLayersNotifier extends LayersNotifier {
+  _FakeLayersNotifier(this._layers);
+  final List<LayerDefinition> _layers;
+
+  @override
+  Future<List<LayerDefinition>> build() async => _layers;
 }
 
 class _ErrorTasksNotifier extends TasksNotifier {

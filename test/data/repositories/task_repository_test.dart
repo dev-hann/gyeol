@@ -35,7 +35,7 @@ void main() {
       expect(task.maxRetries, 3);
       expect(task.depth, 0);
       expect(task.parentTaskId, isNull);
-      expect(task.layerName, isNull);
+      expect(task.layerId, isNull);
       expect(task.workerName, isNull);
     });
 
@@ -95,17 +95,16 @@ void main() {
     test('updates existing task status and fields', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
       await repo.workers.saveWorker(
-        const WorkerDefinition(
-          name: 'w1',
-          layerName: 'L1',
-          systemPrompt: 'test',
-        ),
+        WorkerDefinition(name: 'w1', layerId: layerId, systemPrompt: 'test'),
       );
       final id = await repo.tasks.createTask('parse', {
         'data': 'x',
@@ -115,14 +114,14 @@ void main() {
 
       final updated = task.copyWith(
         status: TaskStatus.running,
-        layerName: 'L1',
+        layerId: layerId,
         workerName: 'w1',
       );
       await repo.tasks.saveTask(updated);
 
       task = await repo.tasks.getTask(id);
       expect(task!.status, TaskStatus.running);
-      expect(task.layerName, 'L1');
+      expect(task.layerId, layerId);
       expect(task.workerName, 'w1');
       expect(task.taskType, 'parse');
       expect(task.priority, TaskPriority.high);
@@ -191,7 +190,7 @@ void main() {
   });
 
   group('TaskRepository full lifecycle', () {
-    test('create → run → complete flow', () async {
+    test('create -> run -> complete flow', () async {
       final id = await repo.tasks.createTask('lifecycle', {
         'input': 'data',
       }, TaskPriority.high);
@@ -208,20 +207,19 @@ void main() {
       expect(task!.status, TaskStatus.done);
     });
 
-    test('create → run → fail with retry', () async {
+    test('create -> run -> fail with retry', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
       await repo.workers.saveWorker(
-        const WorkerDefinition(
-          name: 'w1',
-          layerName: 'L1',
-          systemPrompt: 'test',
-        ),
+        WorkerDefinition(name: 'w1', layerId: layerId, systemPrompt: 'test'),
       );
       final id = await repo.tasks.createTask(
         'retry_test',

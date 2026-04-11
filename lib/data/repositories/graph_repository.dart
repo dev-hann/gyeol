@@ -37,12 +37,6 @@ class GraphRepository {
     return _db.saveUiState('graph_node_positions', encoded);
   }
 
-  Future<Set<(String, String)>> loadRemovedConnections() =>
-      _loadStringPairSet('graph_removed_connections');
-
-  Future<void> saveRemovedConnections(Set<(String, String)> connections) =>
-      _saveStringPairSet('graph_removed_connections', connections);
-
   Future<(double, double, double)> loadViewport() async {
     final json = await _db.getUiState('graph_viewport');
     if (json == null) return (0.0, 0.0, 1.0);
@@ -66,31 +60,5 @@ class GraphRepository {
       'graph_viewport',
       jsonEncode({'x': x, 'y': y, 'zoom': zoom}),
     );
-  }
-
-  Future<Set<(String, String)>> _loadStringPairSet(String key) async {
-    final json = await _db.getUiState(key);
-    if (json == null) return {};
-    try {
-      final decoded = jsonDecode(json);
-      if (decoded is! List) return {};
-      final result = <(String, String)>{};
-      for (final e in decoded) {
-        if (e is List && e.length >= 2 && e[0] is String && e[1] is String) {
-          result.add((e[0] as String, e[1] as String));
-        }
-      }
-      return result;
-    } on FormatException {
-      return {};
-    }
-  }
-
-  Future<void> _saveStringPairSet(
-    String key,
-    Set<(String, String)> connections,
-  ) {
-    final encoded = jsonEncode(connections.map((c) => [c.$1, c.$2]).toList());
-    return _db.saveUiState(key, encoded);
   }
 }

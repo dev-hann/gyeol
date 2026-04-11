@@ -10,10 +10,11 @@ class LayerRepository {
 
   Future<void> saveLayer(LayerDefinition layer) {
     return _db.saveLayer(
-      LayersCompanion.insert(
-        name: layer.name,
-        inputTypes: jsonEncode(layer.inputTypes),
-        outputTypes: jsonEncode(layer.outputTypes),
+      LayersCompanion(
+        id: layer.id == 0 ? const Value.absent() : Value(layer.id),
+        name: Value(layer.name),
+        inputTypes: Value(jsonEncode(layer.inputTypes)),
+        outputTypes: Value(jsonEncode(layer.outputTypes)),
         layerPrompt: Value(layer.layerPrompt),
         sortOrder: Value(layer.order),
         enabled: Value(layer.enabled),
@@ -26,6 +27,7 @@ class LayerRepository {
     return rows
         .map(
           (r) => LayerDefinition(
+            id: r.id,
             name: r.name,
             inputTypes: _decodeStringList(r.inputTypes),
             outputTypes: _decodeStringList(r.outputTypes),
@@ -42,6 +44,7 @@ class LayerRepository {
       (rows) => rows
           .map(
             (r) => LayerDefinition(
+              id: r.id,
               name: r.name,
               inputTypes: _decodeStringList(r.inputTypes),
               outputTypes: _decodeStringList(r.outputTypes),
@@ -54,7 +57,7 @@ class LayerRepository {
     );
   }
 
-  Future<void> deleteLayer(String name) => _db.deleteLayer(name);
+  Future<void> deleteLayer(int id) => _db.deleteLayer(id);
 
   List<String> _decodeStringList(String json) {
     try {

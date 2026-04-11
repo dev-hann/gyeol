@@ -103,60 +103,6 @@ void main() {
     });
   });
 
-  group('loadRemovedConnections', () {
-    test('returns empty when no data stored', () async {
-      final connections = await repo.loadRemovedConnections();
-      expect(connections, isEmpty);
-    });
-
-    test('round-trips removed connections', () async {
-      final original = <(String, String)>{
-        ('layer-a', 'layer-b'),
-        ('layer-x', 'layer-y'),
-      };
-      await repo.saveRemovedConnections(original);
-
-      final loaded = await repo.loadRemovedConnections();
-      expect(loaded, equals(original));
-    });
-
-    test('returns empty on malformed JSON', () async {
-      await db.saveUiState('graph_removed_connections', '{bad json!!');
-
-      final connections = await repo.loadRemovedConnections();
-      expect(connections, isEmpty);
-    });
-
-    test('returns empty when stored value is not a list', () async {
-      await db.saveUiState('graph_removed_connections', '{"k":"v"}');
-
-      final connections = await repo.loadRemovedConnections();
-      expect(connections, isEmpty);
-    });
-
-    test('skips entries that are not string pairs', () async {
-      await db.saveUiState(
-        'graph_removed_connections',
-        '[["a","b"],[123,456],["c"]]',
-      );
-
-      final connections = await repo.loadRemovedConnections();
-      expect(connections, hasLength(1));
-      expect(connections, contains(('a', 'b')));
-    });
-  });
-
-  group('saveRemovedConnections', () {
-    test('overwrites previous connections', () async {
-      await repo.saveRemovedConnections({('a', 'b')});
-      await repo.saveRemovedConnections({('c', 'd')});
-
-      final loaded = await repo.loadRemovedConnections();
-      expect(loaded, hasLength(1));
-      expect(loaded, contains(('c', 'd')));
-    });
-  });
-
   group('loadViewport', () {
     test('returns default when no data stored', () async {
       final viewport = await repo.loadViewport();

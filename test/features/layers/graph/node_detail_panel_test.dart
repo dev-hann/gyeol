@@ -11,11 +11,13 @@ import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
+    id: 1,
     name: 'Draft',
     inputTypes: ['text', 'prompt'],
     outputTypes: ['draft'],
   ),
   const LayerDefinition(
+    id: 2,
     name: 'Review',
     inputTypes: ['draft'],
     outputTypes: ['review'],
@@ -27,7 +29,7 @@ List<LayerDefinition> fakeLayers() => [
 List<WorkerDefinition> fakeWorkers() => [
   const WorkerDefinition(
     name: 'writer-1',
-    layerName: 'Draft',
+    layerId: 1,
     systemPrompt: 'You are a creative writer producing excellent prose.',
     model: 'gpt-4o',
     temperature: 0.7,
@@ -35,24 +37,20 @@ List<WorkerDefinition> fakeWorkers() => [
   ),
   const WorkerDefinition(
     name: 'critic-1',
-    layerName: 'Draft',
+    layerId: 2,
     systemPrompt: 'Short prompt.',
     enabled: false,
   ),
 ];
 
 NodeFlowController<LayerGraphData, void> createTestController() {
-  final nodes = buildNodes(fakeLayers(), [], fakeWorkers());
-  final connections = buildConnections(fakeLayers(), <(String, String)>{});
-  return NodeFlowController<LayerGraphData, void>(
-    nodes: nodes,
-    connections: connections,
-  );
+  final nodes = buildNodes(fakeLayers(), [], fakeWorkers(), []);
+  return NodeFlowController<LayerGraphData, void>(nodes: nodes);
 }
 
 Future<void> pumpPanel(
   WidgetTester tester, {
-  String? layerName,
+  int? layerId,
   List<LayerDefinition>? layers,
   List<WorkerDefinition>? workers,
   VoidCallback? onClose,
@@ -72,7 +70,7 @@ Future<void> pumpPanel(
       child: MaterialApp(
         home: Scaffold(
           body: NodeDetailPanel(
-            layerName: layerName,
+            layerId: layerId,
             onClose: onClose ?? () {},
             controller: ctrl,
           ),
@@ -84,10 +82,8 @@ Future<void> pumpPanel(
 }
 
 void main() {
-  group('NodeDetailPanel — null layerName', () {
-    testWidgets('renders SizedBox.shrink when layerName is null', (
-      tester,
-    ) async {
+  group('NodeDetailPanel — null layerId', () {
+    testWidgets('renders SizedBox.shrink when layerId is null', (tester) async {
       await pumpPanel(tester);
       expect(find.byType(SizedBox), findsWidgets);
       expect(find.text('Draft'), findsNothing);
@@ -98,50 +94,50 @@ void main() {
     testWidgets('renders SizedBox.shrink when layer not in list', (
       tester,
     ) async {
-      await pumpPanel(tester, layerName: 'Missing');
+      await pumpPanel(tester, layerId: 999);
       expect(find.text('Missing'), findsNothing);
     });
   });
 
   group('NodeDetailPanel — view mode', () {
     testWidgets('renders layer name in header', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('Draft'), findsOneWidget);
     });
 
     testWidgets('renders input type tags', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('text'), findsOneWidget);
       expect(find.text('prompt'), findsOneWidget);
     });
 
     testWidgets('renders output type tags', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('draft'), findsOneWidget);
     });
 
     testWidgets('renders Active badge for enabled layer', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('Active'), findsOneWidget);
     });
 
     testWidgets('renders Disabled badge for disabled layer', (tester) async {
-      await pumpPanel(tester, layerName: 'Review');
+      await pumpPanel(tester, layerId: 2);
       expect(find.text('Disabled'), findsOneWidget);
     });
 
     testWidgets('renders Edit button', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('Edit'), findsOneWidget);
     });
 
     testWidgets('renders delete icon button for layer', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.byIcon(Icons.delete_outline), findsWidgets);
     });
 
     testWidgets('renders close button', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       final closeButtons = find.byIcon(Icons.close);
       expect(closeButtons, findsWidgets);
       expect(
@@ -154,7 +150,7 @@ void main() {
 
     testWidgets('onClose callback is invoked on close tap', (tester) async {
       var closed = false;
-      await pumpPanel(tester, layerName: 'Draft', onClose: () => closed = true);
+      await pumpPanel(tester, layerId: 1, onClose: () => closed = true);
       await tester.tap(
         find.byWidgetPredicate(
           (w) => w is Icon && w.icon == Icons.close && w.size == 18.0,
@@ -164,30 +160,29 @@ void main() {
     });
 
     testWidgets('renders worker count header', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
-      expect(find.text('Workers (2)'), findsOneWidget);
+      await pumpPanel(tester, layerId: 1);
+      expect(find.text('Workers (1)'), findsOneWidget);
     });
 
     testWidgets('renders worker names', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('writer-1'), findsOneWidget);
-      expect(find.text('critic-1'), findsOneWidget);
     });
 
     testWidgets('renders worker model badge', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('gpt-4o'), findsOneWidget);
     });
 
     testWidgets('renders Add worker button', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       expect(find.text('Add'), findsOneWidget);
     });
   });
 
   group('NodeDetailPanel — edit mode', () {
     testWidgets('tapping Edit shows edit form fields', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       await tester.tap(find.text('Edit'));
       await tester.pumpAndSettle();
       expect(find.text('Input Types (comma-separated)'), findsOneWidget);
@@ -198,7 +193,7 @@ void main() {
     });
 
     testWidgets('tapping Cancel returns to view mode', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       await tester.tap(find.text('Edit'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cancel'));
@@ -210,7 +205,7 @@ void main() {
 
   group('NodeDetailPanel — worker form', () {
     testWidgets('tapping Add shows New Worker form', (tester) async {
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       await tester.tap(find.text('Add'));
       await tester.pumpAndSettle();
       expect(find.text('New Worker'), findsOneWidget);
@@ -219,7 +214,7 @@ void main() {
     testWidgets('cancel hides worker form', (tester) async {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;
-      await pumpPanel(tester, layerName: 'Draft');
+      await pumpPanel(tester, layerId: 1);
       await tester.tap(find.text('Add'));
       await tester.pumpAndSettle();
       expect(find.text('New Worker'), findsOneWidget);
@@ -250,7 +245,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: NodeDetailPanel(
-                layerName: 'Draft',
+                layerId: 1,
                 onClose: () {},
                 controller: ctrl,
               ),
@@ -264,23 +259,25 @@ void main() {
   });
 
   group('NodeDetailPanel — didUpdateWidget syncs controllers', () {
-    testWidgets('updates input types text when layerName changes', (
+    testWidgets('updates input types text when layerId changes', (
       tester,
     ) async {
       final layers = [
         const LayerDefinition(
+          id: 1,
           name: 'A',
           inputTypes: ['alpha'],
           outputTypes: ['a-out'],
         ),
         const LayerDefinition(
+          id: 2,
           name: 'B',
           inputTypes: ['beta'],
           outputTypes: ['b-out'],
         ),
       ];
       final ctrl = NodeFlowController<LayerGraphData, void>(
-        nodes: buildNodes(layers, [], []),
+        nodes: buildNodes(layers, [], [], []),
       );
 
       await tester.pumpWidget(
@@ -292,7 +289,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: NodeDetailPanel(
-                layerName: 'A',
+                layerId: 1,
                 onClose: () {},
                 controller: ctrl,
               ),
@@ -314,7 +311,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: NodeDetailPanel(
-                layerName: 'B',
+                layerId: 2,
                 onClose: () {},
                 controller: ctrl,
               ),
@@ -330,8 +327,14 @@ void main() {
 
     testWidgets('updates enabled status when switching layers', (tester) async {
       final layers = [
-        const LayerDefinition(name: 'On', inputTypes: ['x'], outputTypes: []),
         const LayerDefinition(
+          id: 1,
+          name: 'On',
+          inputTypes: ['x'],
+          outputTypes: [],
+        ),
+        const LayerDefinition(
+          id: 2,
           name: 'Off',
           inputTypes: ['x'],
           outputTypes: [],
@@ -339,7 +342,7 @@ void main() {
         ),
       ];
       final ctrl = NodeFlowController<LayerGraphData, void>(
-        nodes: buildNodes(layers, [], []),
+        nodes: buildNodes(layers, [], [], []),
       );
 
       await tester.pumpWidget(
@@ -351,7 +354,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: NodeDetailPanel(
-                layerName: 'On',
+                layerId: 1,
                 onClose: () {},
                 controller: ctrl,
               ),
@@ -371,7 +374,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: NodeDetailPanel(
-                layerName: 'Off',
+                layerId: 2,
                 onClose: () {},
                 controller: ctrl,
               ),
@@ -388,9 +391,10 @@ void main() {
     testWidgets('shows None for empty input types', (tester) async {
       await pumpPanel(
         tester,
-        layerName: 'Empty',
+        layerId: 1,
         layers: [
           const LayerDefinition(
+            id: 1,
             name: 'Empty',
             inputTypes: [],
             outputTypes: ['out'],

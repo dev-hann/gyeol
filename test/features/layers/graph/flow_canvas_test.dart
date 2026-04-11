@@ -10,19 +10,15 @@ NodeFlowController<LayerGraphData, void> createTestController() {
   final nodes = buildNodes(
     [
       const LayerDefinition(
+        id: 1,
         name: 'TestLayer',
         inputTypes: ['text'],
         outputTypes: ['json'],
       ),
     ],
     [],
-    [
-      const WorkerDefinition(
-        name: 'w1',
-        layerName: 'TestLayer',
-        systemPrompt: 'test',
-      ),
-    ],
+    [const WorkerDefinition(name: 'w1', layerId: 1, systemPrompt: 'test')],
+    [],
   );
   return NodeFlowController<LayerGraphData, void>(nodes: nodes);
 }
@@ -77,12 +73,14 @@ void main() {
       final nodes = buildNodes(
         [
           const LayerDefinition(
+            id: 1,
             name: 'DisabledLayer',
             inputTypes: [],
             outputTypes: [],
             enabled: false,
           ),
         ],
+        [],
         [],
         [],
       );

@@ -10,13 +10,17 @@ class FlowCanvas extends StatelessWidget {
     required this.onNodeTap,
     this.onNodeDragEnd,
     this.onConnectionCreated,
+    this.onConnectionRemoved,
     this.onViewportChanged,
     super.key,
   });
   final NodeFlowController<LayerGraphData, void> controller;
-  final void Function(String layerName) onNodeTap;
+  final void Function(String nodeId) onNodeTap;
   final VoidCallback? onNodeDragEnd;
-  final VoidCallback? onConnectionCreated;
+  final void Function(String sourceNodeId, String targetNodeId)?
+  onConnectionCreated;
+  final void Function(String sourceNodeId, String targetNodeId)?
+  onConnectionRemoved;
   final VoidCallback? onViewportChanged;
 
   @override
@@ -51,7 +55,10 @@ class FlowCanvas extends StatelessWidget {
             onDragStop: (_) => onNodeDragEnd?.call(),
           ),
           connection: ConnectionEvents<LayerGraphData, void>(
-            onCreated: (_) => onConnectionCreated?.call(),
+            onCreated: (conn) =>
+                onConnectionCreated?.call(conn.sourceNodeId, conn.targetNodeId),
+            onDeleted: (conn) =>
+                onConnectionRemoved?.call(conn.sourceNodeId, conn.targetNodeId),
           ),
           viewport: ViewportEvents(onMoveEnd: (_) => onViewportChanged?.call()),
         ),
@@ -59,7 +66,7 @@ class FlowCanvas extends StatelessWidget {
           final data = node.data;
           final selected = controller.selectedNodeIds.contains(node.id);
           return GestureDetector(
-            onTap: () => onNodeTap(data.layerName),
+            onTap: () => onNodeTap(node.id),
             child: LayerNodeWidget(
               name: data.layerName,
               enabled: data.enabled,

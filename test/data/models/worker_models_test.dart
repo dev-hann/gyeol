@@ -6,11 +6,11 @@ void main() {
     test('required-only constructor sets defaults', () {
       const worker = WorkerDefinition(
         name: 'w1',
-        layerName: 'review',
+        layerId: 1,
         systemPrompt: 'You are a reviewer.',
       );
       expect(worker.name, 'w1');
-      expect(worker.layerName, 'review');
+      expect(worker.layerId, 1);
       expect(worker.systemPrompt, 'You are a reviewer.');
       expect(worker.model, isNull);
       expect(worker.temperature, isNull);
@@ -21,7 +21,7 @@ void main() {
     test('all-fields constructor holds every value', () {
       const worker = WorkerDefinition(
         name: 'w2',
-        layerName: 'analysis',
+        layerId: 2,
         systemPrompt: 'Analyze deeply.',
         model: 'gpt-4o',
         temperature: 0.7,
@@ -29,7 +29,7 @@ void main() {
         enabled: false,
       );
       expect(worker.name, 'w2');
-      expect(worker.layerName, 'analysis');
+      expect(worker.layerId, 2);
       expect(worker.systemPrompt, 'Analyze deeply.');
       expect(worker.model, 'gpt-4o');
       expect(worker.temperature, 0.7);
@@ -40,11 +40,11 @@ void main() {
     test('copyWith overrides specified fields', () {
       const worker = WorkerDefinition(
         name: 'w3',
-        layerName: 'draft',
+        layerId: 3,
         systemPrompt: 'Draft content.',
       );
       final copied = worker.copyWith(
-        layerName: 'refine',
+        layerId: 4,
         systemPrompt: 'Refine content.',
         model: 'claude-3',
         temperature: 0.5,
@@ -52,7 +52,7 @@ void main() {
         enabled: false,
       );
       expect(copied.name, 'w3');
-      expect(copied.layerName, 'refine');
+      expect(copied.layerId, 4);
       expect(copied.systemPrompt, 'Refine content.');
       expect(copied.model, 'claude-3');
       expect(copied.temperature, 0.5);
@@ -63,7 +63,7 @@ void main() {
     test('copyWith preserves unspecified fields', () {
       const worker = WorkerDefinition(
         name: 'w4',
-        layerName: 'parse',
+        layerId: 5,
         systemPrompt: 'Parse input.',
         model: 'llama3',
         temperature: 0.3,
@@ -71,7 +71,7 @@ void main() {
       );
       final copied = worker.copyWith();
       expect(copied.name, 'w4');
-      expect(copied.layerName, 'parse');
+      expect(copied.layerId, 5);
       expect(copied.systemPrompt, 'Parse input.');
       expect(copied.model, 'llama3');
       expect(copied.temperature, 0.3);
@@ -82,19 +82,15 @@ void main() {
     test('copyWith does not expose name parameter', () {
       const worker = WorkerDefinition(
         name: 'immutable',
-        layerName: 'L1',
+        layerId: 6,
         systemPrompt: 'prompt',
       );
-      final copied = worker.copyWith(layerName: 'L2');
+      final copied = worker.copyWith(layerId: 7);
       expect(copied.name, 'immutable');
     });
 
     test('equality uses identity (no manual operator override)', () {
-      const a = WorkerDefinition(
-        name: 'w5',
-        layerName: 'L1',
-        systemPrompt: 'p',
-      );
+      const a = WorkerDefinition(name: 'w5', layerId: 8, systemPrompt: 'p');
       final b = a.copyWith();
       expect(a == b, isFalse);
     });
@@ -102,7 +98,7 @@ void main() {
     test('is constructable as const', () {
       const worker = WorkerDefinition(
         name: 'const-w',
-        layerName: 'L1',
+        layerId: 9,
         systemPrompt: 'const prompt',
       );
       expect(worker.name, 'const-w');

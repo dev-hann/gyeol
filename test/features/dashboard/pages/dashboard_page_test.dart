@@ -5,6 +5,22 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
 import 'package:gyeol/features/dashboard/pages/dashboard_page.dart';
 
+List<LayerDefinition> fakeLayers() => [
+  const LayerDefinition(
+    id: 1,
+    name: 'Draft',
+    inputTypes: ['text'],
+    outputTypes: ['draft'],
+  ),
+  const LayerDefinition(
+    id: 2,
+    name: 'Review',
+    inputTypes: ['draft'],
+    outputTypes: ['review'],
+    order: 1,
+  ),
+];
+
 List<AppTask> fakeTasks() => [
   AppTask(
     id: 'aaaaaaaa-0000-0000-0000-000000000001',
@@ -21,7 +37,7 @@ List<AppTask> fakeTasks() => [
     payload: null,
     priority: TaskPriority.medium,
     status: TaskStatus.running,
-    layerName: 'Draft',
+    layerId: 1,
     workerName: 'writer-1',
     createdAt: DateTime(2025, 1, 1, 12, 1).millisecondsSinceEpoch,
     updatedAt: DateTime(2025, 1, 1, 12, 1).millisecondsSinceEpoch,
@@ -49,19 +65,19 @@ List<AppTask> fakeTasks() => [
 List<WorkerDefinition> fakeWorkers() => [
   const WorkerDefinition(
     name: 'writer-1',
-    layerName: 'Draft',
+    layerId: 1,
     systemPrompt: 'You are a writer',
     model: 'gpt-4o',
   ),
   const WorkerDefinition(
     name: 'reviewer-1',
-    layerName: 'Review',
+    layerId: 2,
     systemPrompt: 'You are a reviewer',
     model: 'claude-sonnet-4-20250514',
   ),
   const WorkerDefinition(
     name: 'disabled-worker',
-    layerName: 'Draft',
+    layerId: 2,
     systemPrompt: 'You are disabled',
     model: 'gpt-4o-mini',
     enabled: false,
@@ -82,6 +98,7 @@ void main() {
     WidgetTester tester, {
     List<AppTask>? tasks,
     List<WorkerDefinition>? workers,
+    List<LayerDefinition>? layers,
     ProviderSettings? settings,
     int queueSize = 2,
   }) async {
@@ -96,6 +113,9 @@ void main() {
           queueSizeProvider.overrideWith((ref) async => queueSize),
           workersProvider.overrideWith(
             () => _FakeWorkersNotifier(workers ?? fakeWorkers()),
+          ),
+          layersProvider.overrideWith(
+            () => _FakeLayersNotifier(layers ?? fakeLayers()),
           ),
           settingsProvider.overrideWith(
             () => _FakeSettingsNotifier(settings ?? fakeSettings()),
@@ -211,6 +231,9 @@ void main() {
             workersProvider.overrideWith(
               () => _FakeWorkersNotifier(fakeWorkers()),
             ),
+            layersProvider.overrideWith(
+              () => _FakeLayersNotifier(fakeLayers()),
+            ),
             settingsProvider.overrideWith(
               () => _FakeSettingsNotifier(fakeSettings()),
             ),
@@ -308,6 +331,14 @@ class _FakeWorkersNotifier extends WorkersNotifier {
 
   @override
   Future<List<WorkerDefinition>> build() async => _workers;
+}
+
+class _FakeLayersNotifier extends LayersNotifier {
+  _FakeLayersNotifier(this._layers);
+  final List<LayerDefinition> _layers;
+
+  @override
+  Future<List<LayerDefinition>> build() async => _layers;
 }
 
 class _FakeSettingsNotifier extends SettingsNotifier {

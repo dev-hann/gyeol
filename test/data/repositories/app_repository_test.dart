@@ -44,6 +44,7 @@ void main() {
     test('round-trips layerPrompt', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'with_prompt',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -59,6 +60,7 @@ void main() {
     test('layerPrompt defaults to null', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'no_prompt',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -85,7 +87,7 @@ void main() {
       expect(layers, hasLength(1));
       expect(layers.first.name, 'eval');
 
-      await repo.layers.deleteLayer('eval');
+      await repo.layers.deleteLayer(layers.first.id);
       layers = await repo.layers.listLayers();
       expect(layers, isEmpty);
     });
@@ -137,6 +139,7 @@ void main() {
     test('saveThread and listThreads round-trip', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
@@ -144,15 +147,19 @@ void main() {
       );
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'analyze',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const thread = ThreadDefinition(
+      final layers = await repo.layers.listLayers();
+      final parseId = layers.firstWhere((l) => l.name == 'parse').id;
+      final analyzeId = layers.firstWhere((l) => l.name == 'analyze').id;
+      final thread = ThreadDefinition(
         name: 'review',
         path: '/home/user/project',
-        layerNames: ['parse', 'analyze'],
+        layerIds: [parseId, analyzeId],
       );
       await repo.threads.saveThread(thread);
 
@@ -160,7 +167,7 @@ void main() {
       expect(threads, hasLength(1));
       expect(threads.first.name, 'review');
       expect(threads.first.path, '/home/user/project');
-      expect(threads.first.layerNames, ['parse', 'analyze']);
+      expect(threads.first.layerIds, [parseId, analyzeId]);
       expect(threads.first.enabled, true);
       expect(threads.first.status, ThreadStatus.idle);
     });
@@ -173,15 +180,18 @@ void main() {
     test('getThread returns saved thread', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'compile',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      const thread = ThreadDefinition(
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
+      final thread = ThreadDefinition(
         name: 'build',
         path: '/src',
-        layerNames: ['compile'],
+        layerIds: [layerId],
         status: ThreadStatus.running,
       );
       await repo.threads.saveThread(thread);
@@ -194,7 +204,7 @@ void main() {
 
     test('deleteThread removes thread', () async {
       await repo.threads.saveThread(
-        const ThreadDefinition(name: 'tmp', path: '/tmp', layerNames: []),
+        const ThreadDefinition(name: 'tmp', path: '/tmp', layerIds: []),
       );
       expect(await repo.threads.listThreads(), hasLength(1));
 
@@ -204,19 +214,32 @@ void main() {
 
     test('saveThread upserts existing thread', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(name: 'A', inputTypes: ['text'], outputTypes: []),
+        const LayerDefinition(
+          id: 0,
+          name: 'A',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(name: 'B', inputTypes: ['text'], outputTypes: []),
+        const LayerDefinition(
+          id: 0,
+          name: 'B',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      final layers = await repo.layers.listLayers();
+      final aId = layers.firstWhere((l) => l.name == 'A').id;
+      final bId = layers.firstWhere((l) => l.name == 'B').id;
+      await repo.threads.saveThread(
+        ThreadDefinition(name: 't1', path: '/old', layerIds: [aId]),
       );
       await repo.threads.saveThread(
-        const ThreadDefinition(name: 't1', path: '/old', layerNames: ['A']),
-      );
-      await repo.threads.saveThread(
-        const ThreadDefinition(
+        ThreadDefinition(
           name: 't1',
           path: '/new',
-          layerNames: ['A', 'B'],
+          layerIds: [aId, bId],
           enabled: false,
         ),
       );
@@ -224,23 +247,26 @@ void main() {
       final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
       expect(threads.first.path, '/new');
-      expect(threads.first.layerNames, ['A', 'B']);
+      expect(threads.first.layerIds, [aId, bId]);
       expect(threads.first.enabled, false);
     });
 
     test('round-trips contextPrompt', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
       await repo.threads.saveThread(
-        const ThreadDefinition(
+        ThreadDefinition(
           name: 'ctx_test',
           path: '/project',
-          layerNames: ['L1'],
+          layerIds: [layerId],
           contextPrompt: 'Legal document analysis pipeline',
         ),
       );
@@ -253,17 +279,16 @@ void main() {
     test('contextPrompt defaults to null', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
+      final layers = await repo.layers.listLayers();
+      final layerId = layers.first.id;
       await repo.threads.saveThread(
-        const ThreadDefinition(
-          name: 'no_ctx',
-          path: '/project',
-          layerNames: ['L1'],
-        ),
+        ThreadDefinition(name: 'no_ctx', path: '/project', layerIds: [layerId]),
       );
 
       final threads = await repo.threads.listThreads();
@@ -313,22 +338,35 @@ void main() {
 
     test('thread layers are persisted via join table', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(name: 'a', inputTypes: ['text'], outputTypes: []),
+        const LayerDefinition(
+          id: 0,
+          name: 'a',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(name: 'b', inputTypes: ['text'], outputTypes: []),
+        const LayerDefinition(
+          id: 0,
+          name: 'b',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
       );
+      final layers = await repo.layers.listLayers();
+      final aId = layers.firstWhere((l) => l.name == 'a').id;
+      final bId = layers.firstWhere((l) => l.name == 'b').id;
       await repo.threads.saveThread(
-        const ThreadDefinition(
+        ThreadDefinition(
           name: 'join-test',
           path: '/join',
-          layerNames: ['a', 'b'],
+          layerIds: [aId, bId],
         ),
       );
 
       final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
-      expect(threads.first.layerNames, ['a', 'b']);
+      expect(threads.first.layerIds, [aId, bId]);
     });
   });
 
@@ -369,20 +407,21 @@ void main() {
   });
 
   group('thread layers via join table', () {
-    test('empty layerNames for thread with no layers', () async {
+    test('empty layerIds for thread with no layers', () async {
       await repo.threads.saveThread(
-        const ThreadDefinition(name: 'empty', path: '/empty', layerNames: []),
+        const ThreadDefinition(name: 'empty', path: '/empty', layerIds: []),
       );
 
       final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
       expect(threads.first.name, 'empty');
-      expect(threads.first.layerNames, isEmpty);
+      expect(threads.first.layerIds, isEmpty);
     });
 
-    test('layerNames populated from join table', () async {
+    test('layerIds populated from join table', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
@@ -390,22 +429,26 @@ void main() {
       );
       await repo.layers.saveLayer(
         const LayerDefinition(
+          id: 0,
           name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
+      final layers = await repo.layers.listLayers();
+      final l1Id = layers.firstWhere((l) => l.name == 'L1').id;
+      final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
       await repo.threads.saveThread(
-        const ThreadDefinition(
+        ThreadDefinition(
           name: 'with-layers',
           path: '/p',
-          layerNames: ['L1', 'L2'],
+          layerIds: [l1Id, l2Id],
         ),
       );
 
       final threads = await repo.threads.listThreads();
       expect(threads, hasLength(1));
-      expect(threads.first.layerNames, ['L1', 'L2']);
+      expect(threads.first.layerIds, [l1Id, l2Id]);
     });
   });
 
@@ -415,13 +458,6 @@ void main() {
 
       final positions = await repo.graph.loadNodePositions();
       expect(positions, isEmpty);
-    });
-
-    test('loadRemovedConnections returns empty on type mismatch', () async {
-      await db.saveUiState('graph_removed_connections', '[123, 456]');
-
-      final connections = await repo.graph.loadRemovedConnections();
-      expect(connections, isEmpty);
     });
 
     test('loadViewport returns default on type mismatch', () async {

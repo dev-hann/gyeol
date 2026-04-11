@@ -1,5 +1,6 @@
 class LayerDefinition {
   const LayerDefinition({
+    required this.id,
     required this.name,
     required this.inputTypes,
     required this.outputTypes,
@@ -7,6 +8,7 @@ class LayerDefinition {
     this.order = 0,
     this.enabled = true,
   });
+  final int id;
   final String name;
   final List<String> inputTypes;
   final List<String> outputTypes;
@@ -15,6 +17,8 @@ class LayerDefinition {
   final bool enabled;
 
   LayerDefinition copyWith({
+    int? id,
+    String? name,
     List<String>? inputTypes,
     List<String>? outputTypes,
     String? layerPrompt,
@@ -22,7 +26,8 @@ class LayerDefinition {
     bool? enabled,
   }) {
     return LayerDefinition(
-      name: name,
+      id: id ?? this.id,
+      name: name ?? this.name,
       inputTypes: inputTypes ?? this.inputTypes,
       outputTypes: outputTypes ?? this.outputTypes,
       layerPrompt: layerPrompt ?? this.layerPrompt,
