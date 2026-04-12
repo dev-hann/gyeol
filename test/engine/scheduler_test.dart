@@ -488,7 +488,7 @@ void main() {
       final results = await scheduler.runOnce();
       expect(results, hasLength(1));
       expect(results.first.success, isFalse);
-      expect(results.first.error, contains('not set'));
+      expect(results.first.error, contains('not configured'));
     });
 
     test(

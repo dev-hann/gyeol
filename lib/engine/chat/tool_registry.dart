@@ -1304,7 +1304,11 @@ class ToolRegistry {
     AppRepository repo,
   ) async {
     final taskType = args['taskType'] as String;
-    final payload = (args['payload'] as Map).cast<String, dynamic>();
+    final rawPayload = args['payload'];
+    if (rawPayload is! Map<String, dynamic>) {
+      throw ArgumentError('payload must be a Map<String, dynamic>');
+    }
+    final payload = rawPayload;
     final priorityStr = args['priority'] as String? ?? 'medium';
     final priority = TaskPriority.values.firstWhere(
       (p) => p.name == priorityStr,

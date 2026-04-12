@@ -5,6 +5,7 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/chat_provider.dart';
 import 'package:gyeol/data/providers/core_providers.dart';
+import 'package:gyeol/data/providers/settings_provider.dart';
 
 void main() {
   late AppDatabase db;
@@ -195,7 +196,15 @@ void main() {
   });
 
   group('chatServiceProvider', () {
-    test('provides a ChatService instance', () {
+    test('provides a ChatService instance', () async {
+      final repo = container.read(repositoryProvider);
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          configs: {ProviderType.openAI: OpenAIConfig(apiKey: 'test-key')},
+        ),
+      );
+      await container.read(settingsProvider.future);
+
       final service = container.read(chatServiceProvider);
       expect(service, isNotNull);
     });

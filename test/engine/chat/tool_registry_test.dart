@@ -944,21 +944,21 @@ void main() {
         expect(tasks.first.priority, TaskPriority.medium);
       });
 
-      test('returns error when payload is not a Map', () async {
+      test('returns descriptive error when payload is not a Map', () async {
         final result = await ToolRegistry.executeTool('submit_task', {
           'taskType': 'work',
           'payload': 'not_a_map',
         }, repo);
         final decoded = jsonDecode(result) as Map<String, dynamic>;
-        expect(decoded['error'], isNotNull);
+        expect(decoded['error'], contains('payload'));
       });
 
-      test('returns error when payload is missing', () async {
+      test('returns descriptive error when payload is missing', () async {
         final result = await ToolRegistry.executeTool('submit_task', {
           'taskType': 'work',
         }, repo);
         final decoded = jsonDecode(result) as Map<String, dynamic>;
-        expect(decoded['error'], isNotNull);
+        expect(decoded['error'], contains('payload'));
       });
 
       test('returns error when taskType is not a String', () async {

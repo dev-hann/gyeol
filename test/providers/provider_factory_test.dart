@@ -89,53 +89,22 @@ void main() {
     });
 
     test('throws StateError when active OpenAI has empty apiKey', () {
-      const settings = ProviderSettings(
-        configs: {
-          ProviderType.openAI: OpenAIConfig(),
-          ProviderType.anthropic: AnthropicConfig(),
-          ProviderType.ollama: OllamaConfig(),
-          ProviderType.custom: CustomConfig(),
-        },
-      );
+      const settings = ProviderSettings();
       expect(() => createLlmProvider(settings), throwsStateError);
     });
 
     test('throws StateError when active Anthropic has empty apiKey', () {
-      const settings = ProviderSettings(
-        activeProvider: ProviderType.anthropic,
-        configs: {
-          ProviderType.openAI: OpenAIConfig(),
-          ProviderType.anthropic: AnthropicConfig(),
-          ProviderType.ollama: OllamaConfig(),
-          ProviderType.custom: CustomConfig(),
-        },
-      );
+      const settings = ProviderSettings(activeProvider: ProviderType.anthropic);
       expect(() => createLlmProvider(settings), throwsStateError);
     });
 
     test('throws StateError when active Ollama has empty baseUrl', () {
-      const settings = ProviderSettings(
-        activeProvider: ProviderType.ollama,
-        configs: {
-          ProviderType.openAI: OpenAIConfig(),
-          ProviderType.anthropic: AnthropicConfig(),
-          ProviderType.ollama: OllamaConfig(),
-          ProviderType.custom: CustomConfig(),
-        },
-      );
+      const settings = ProviderSettings(activeProvider: ProviderType.ollama);
       expect(() => createLlmProvider(settings), throwsStateError);
     });
 
     test('throws StateError when active Custom has empty baseUrl', () {
-      const settings = ProviderSettings(
-        activeProvider: ProviderType.custom,
-        configs: {
-          ProviderType.openAI: OpenAIConfig(),
-          ProviderType.anthropic: AnthropicConfig(),
-          ProviderType.ollama: OllamaConfig(),
-          ProviderType.custom: CustomConfig(),
-        },
-      );
+      const settings = ProviderSettings(activeProvider: ProviderType.custom);
       expect(() => createLlmProvider(settings), throwsStateError);
     });
   });

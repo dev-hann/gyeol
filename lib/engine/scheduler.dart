@@ -233,19 +233,20 @@ class Scheduler {
     String? threadPrompt,
     String? layerPrompt,
   }) async {
-    final settings = await _repo.settings.getSettings();
-    final provider = _createProvider(settings);
-
-    final systemParts = <String>[
-      if (threadPrompt != null) threadPrompt,
-      if (layerPrompt != null) layerPrompt,
-      worker.systemPrompt,
-    ];
-    final systemMessage = systemParts.join('\n\n');
-
-    final userMessage = 'Task: ${task.taskType}\nPayload: ${task.payload}';
-
+    LlmProvider? provider;
     try {
+      final settings = await _repo.settings.getSettings();
+      provider = _createProvider(settings);
+
+      final systemParts = <String>[
+        if (threadPrompt != null) threadPrompt,
+        if (layerPrompt != null) layerPrompt,
+        worker.systemPrompt,
+      ];
+      final systemMessage = systemParts.join('\n\n');
+
+      final userMessage = 'Task: ${task.taskType}\nPayload: ${task.payload}';
+
       final response = await provider.generateWithSystem(
         systemMessage,
         userMessage,
@@ -277,7 +278,7 @@ class Scheduler {
 
       return WorkerResult(success: false, error: e.toString());
     } finally {
-      provider.close();
+      provider?.close();
     }
   }
 
