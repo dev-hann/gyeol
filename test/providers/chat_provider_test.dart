@@ -756,6 +756,83 @@ void main() {
         throwsA(isA<LlmError>()),
       );
     });
+
+    test('throws LlmError on malformed JSON response', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('not valid json{{{', 200);
+      });
+
+      final provider = AnthropicProvider(
+        apiKey: 'test-key',
+        model: 'claude-3-sonnet',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      expect(
+        provider.generateChat(
+          messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
+        ),
+        throwsA(isA<LlmError>()),
+      );
+    });
+
+    test(
+      'sends assistant message with tool_calls as Anthropic format',
+      () async {
+        final mockClient = MockClient((request) async {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          final messages = body['messages'] as List<dynamic>;
+          final assistantMsg = messages[1] as Map<String, dynamic>;
+          expect(assistantMsg['role'], 'assistant');
+          final contentList = assistantMsg['content'] as List<dynamic>;
+          expect(contentList.length, 2);
+          final textBlock = contentList[0] as Map<String, dynamic>;
+          expect(textBlock['type'], 'text');
+          expect(textBlock['text'], 'I will create a layer.');
+          final toolBlock = contentList[1] as Map<String, dynamic>;
+          expect(toolBlock['type'], 'tool_use');
+          expect(toolBlock['id'], 'toolu_abc123');
+          expect(toolBlock['name'], 'create_layer');
+          expect(toolBlock['input'], {'name': 'Layer1'});
+
+          return http.Response(
+            jsonEncode({
+              'content': [
+                {'type': 'text', 'text': 'ok'},
+              ],
+            }),
+            200,
+          );
+        });
+
+        final provider = AnthropicProvider(
+          apiKey: 'test-key',
+          model: 'claude-3-sonnet',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        await provider.generateChat(
+          messages: [
+            const ChatMessageForApi(role: 'user', content: 'Create layer'),
+            const ChatMessageForApi(
+              role: 'assistant',
+              content: 'I will create a layer.',
+              toolCalls: [
+                ToolCall(
+                  id: 'toolu_abc123',
+                  name: 'create_layer',
+                  arguments: '{"name": "Layer1"}',
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   });
 
   group('OllamaProvider - generateChat', () {
@@ -979,6 +1056,138 @@ void main() {
           messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
         ),
         throwsA(isA<LlmError>()),
+      );
+    });
+
+    test('does not include tools array when tools is null', () async {
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body.containsKey('tools'), false);
+        expect(body.containsKey('tool_choice'), false);
+
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'ok'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      final response = await provider.generateChat(
+        messages: [const ChatMessageForApi(role: 'user', content: 'hi')],
+      );
+      expect(response.content, 'ok');
+    });
+
+    test('sends tool message with tool_call_id', () async {
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final messages = body['messages'] as List<dynamic>;
+        expect(messages.length, 3);
+        final toolMsg = messages[2] as Map<String, dynamic>;
+        expect(toolMsg['role'], 'tool');
+        expect(toolMsg['content'], '{"status": "ok"}');
+        expect(toolMsg['tool_call_id'], 'call_1');
+
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'done'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      await provider.generateChat(
+        messages: [
+          const ChatMessageForApi(role: 'user', content: 'Create'),
+          const ChatMessageForApi(
+            role: 'assistant',
+            toolCalls: [
+              ToolCall(id: 'call_1', name: 'create_layer', arguments: '{}'),
+            ],
+          ),
+          const ChatMessageForApi(
+            role: 'tool',
+            content: '{"status": "ok"}',
+            toolCallId: 'call_1',
+          ),
+        ],
+      );
+    });
+
+    test('sends assistant message with tool_calls in OpenAI format', () async {
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final messages = body['messages'] as List<dynamic>;
+        final assistantMsg = messages[1] as Map<String, dynamic>;
+        expect(assistantMsg['role'], 'assistant');
+        final tcList = assistantMsg['tool_calls'] as List<dynamic>;
+        expect(tcList.length, 1);
+        final tc = tcList[0] as Map<String, dynamic>;
+        expect(tc['id'], 'call_1');
+        expect(tc['type'], 'function');
+        final fn = tc['function'] as Map<String, dynamic>;
+        expect(fn['name'], 'create_layer');
+        expect(fn['arguments'], '{"name":"L1"}');
+
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'ok'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      await provider.generateChat(
+        messages: [
+          const ChatMessageForApi(role: 'user', content: 'go'),
+          const ChatMessageForApi(
+            role: 'assistant',
+            toolCalls: [
+              ToolCall(
+                id: 'call_1',
+                name: 'create_layer',
+                arguments: '{"name":"L1"}',
+              ),
+            ],
+          ),
+        ],
       );
     });
   });
