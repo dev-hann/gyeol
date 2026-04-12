@@ -286,6 +286,53 @@ void main() {
       expect(messages[3].content, 'new question');
     });
 
+    test('trims history to last 30 messages', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = List.generate(
+        50,
+        (i) => ChatMessage(
+          id: 'm$i',
+          conversationId: 'conv1',
+          role: i.isEven ? 'user' : 'assistant',
+          content: 'message $i',
+          createdAt: 1000 + i,
+        ),
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('new question', history);
+
+      final messages = provider.capturedMessages.first;
+      expect(messages.length, 32);
+      expect(messages.first.role, 'system');
+      expect(messages[1].content, 'message 20');
+      expect(messages[31].content, 'new question');
+    });
+
+    test('preserves all history when under limit', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = List.generate(
+        10,
+        (i) => ChatMessage(
+          id: 'm$i',
+          conversationId: 'conv1',
+          role: i.isEven ? 'user' : 'assistant',
+          content: 'message $i',
+          createdAt: 1000 + i,
+        ),
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('new question', history);
+
+      final messages = provider.capturedMessages.first;
+      expect(messages.length, 12);
+      expect(messages.first.role, 'system');
+      expect(messages[1].content, 'message 0');
+    });
+
     test('executeTool create_layer calls repo.saveLayer', () async {
       final provider = FakeLlmProvider([
         ChatResponse(

@@ -820,6 +820,32 @@ void main() {
         final tasks = await repo.tasks.listTasks();
         expect(tasks.first.priority, TaskPriority.medium);
       });
+
+      test('returns error when payload is not a Map', () async {
+        final result = await ToolRegistry.executeTool('submit_task', {
+          'taskType': 'work',
+          'payload': 'not_a_map',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], isNotNull);
+      });
+
+      test('returns error when payload is missing', () async {
+        final result = await ToolRegistry.executeTool('submit_task', {
+          'taskType': 'work',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], isNotNull);
+      });
+
+      test('returns error when taskType is not a String', () async {
+        final result = await ToolRegistry.executeTool('submit_task', {
+          'taskType': 42,
+          'payload': <String, dynamic>{},
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], isNotNull);
+      });
     });
   });
 }

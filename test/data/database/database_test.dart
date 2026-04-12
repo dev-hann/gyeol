@@ -473,5 +473,466 @@ void main() {
       expect(await db.getThread('doomed'), isNull);
       expect(await db.listThreadLayers(thread.id), isEmpty);
     });
+
+    test('getThreadById returns thread by integer id', () async {
+      await db.saveThread(ThreadsCompanion.insert(name: 't1', path: '/a'));
+      final saved = await db.getThread('t1');
+      expect(saved, isNotNull);
+
+      final byId = await db.getThreadById(saved!.id);
+      expect(byId, isNotNull);
+      expect(byId!.name, 't1');
+    });
+
+    test('getThreadById returns null for missing id', () async {
+      expect(await db.getThreadById(9999), isNull);
+    });
+  });
+
+  group('getTaskById / getWorkerById', () {
+    test('getTaskById returns task by integer id', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveTask(
+        TasksCompanion.insert(
+          uuid: 'u1',
+          taskType: 'parse',
+          payload: '{}',
+          priority: 'low',
+          status: 'pending',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      final saved = await db.getTask('u1');
+      expect(saved, isNotNull);
+
+      final byId = await db.getTaskById(saved!.id);
+      expect(byId, isNotNull);
+      expect(byId!.uuid, 'u1');
+    });
+
+    test('getTaskById returns null for missing id', () async {
+      expect(await db.getTaskById(9999), isNull);
+    });
+
+    test('getWorkerById returns worker by integer id', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'L1', inputTypes: '[]', outputTypes: '[]'),
+      );
+      final layers = await db.listLayers();
+      await db.saveWorker(
+        WorkersCompanion.insert(
+          name: 'w1',
+          layerId: layers.first.id,
+          systemPrompt: 'p',
+        ),
+      );
+      final saved = await db.getWorker('w1');
+      expect(saved, isNotNull);
+
+      final byId = await db.getWorkerById(saved!.id);
+      expect(byId, isNotNull);
+      expect(byId!.name, 'w1');
+    });
+
+    test('getWorkerById returns null for missing id', () async {
+      expect(await db.getWorkerById(9999), isNull);
+    });
+  });
+
+  group('connection operations', () {
+    test('saveConnection inserts and listConnections retrieves', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'src',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
+      );
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'dst',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
+      );
+      final layers = await db.listLayers();
+      final srcId = layers.firstWhere((l) => l.name == 'src').id;
+      final dstId = layers.firstWhere((l) => l.name == 'dst').id;
+
+      await db.saveConnection(
+        LayerConnectionsCompanion.insert(
+          sourceLayerId: srcId,
+          targetLayerId: dstId,
+        ),
+      );
+
+      final conns = await db.listConnections();
+      expect(conns, hasLength(1));
+      expect(conns.first.sourceLayerId, srcId);
+      expect(conns.first.targetLayerId, dstId);
+    });
+
+    test('saveConnection upserts on duplicate source+target', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'a', inputTypes: '[]', outputTypes: '[]'),
+      );
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'b', inputTypes: '[]', outputTypes: '[]'),
+      );
+      final layers = await db.listLayers();
+      final aId = layers.firstWhere((l) => l.name == 'a').id;
+      final bId = layers.firstWhere((l) => l.name == 'b').id;
+
+      await db.saveConnection(
+        LayerConnectionsCompanion.insert(
+          sourceLayerId: aId,
+          targetLayerId: bId,
+        ),
+      );
+      await db.saveConnection(
+        LayerConnectionsCompanion.insert(
+          sourceLayerId: aId,
+          targetLayerId: bId,
+        ),
+      );
+
+      final conns = await db.listConnections();
+      expect(conns, hasLength(1));
+    });
+
+    test('deleteConnection removes specific connection', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'x', inputTypes: '[]', outputTypes: '[]'),
+      );
+      await db.saveLayer(
+        LayersCompanion.insert(name: 'y', inputTypes: '[]', outputTypes: '[]'),
+      );
+      final layers = await db.listLayers();
+      final xId = layers.firstWhere((l) => l.name == 'x').id;
+      final yId = layers.firstWhere((l) => l.name == 'y').id;
+
+      await db.saveConnection(
+        LayerConnectionsCompanion.insert(
+          sourceLayerId: xId,
+          targetLayerId: yId,
+        ),
+      );
+      expect(await db.listConnections(), hasLength(1));
+
+      await db.deleteConnection(xId, yId);
+      expect(await db.listConnections(), isEmpty);
+    });
+
+    test(
+      'deleteConnectionsByLayerId removes all connections for layer',
+      () async {
+        await db.saveLayer(
+          LayersCompanion.insert(
+            name: 'l1',
+            inputTypes: '[]',
+            outputTypes: '[]',
+          ),
+        );
+        await db.saveLayer(
+          LayersCompanion.insert(
+            name: 'l2',
+            inputTypes: '[]',
+            outputTypes: '[]',
+          ),
+        );
+        await db.saveLayer(
+          LayersCompanion.insert(
+            name: 'l3',
+            inputTypes: '[]',
+            outputTypes: '[]',
+          ),
+        );
+        final layers = await db.listLayers();
+        final l1 = layers.firstWhere((l) => l.name == 'l1').id;
+        final l2 = layers.firstWhere((l) => l.name == 'l2').id;
+        final l3 = layers.firstWhere((l) => l.name == 'l3').id;
+
+        await db.saveConnection(
+          LayerConnectionsCompanion.insert(
+            sourceLayerId: l1,
+            targetLayerId: l2,
+          ),
+        );
+        await db.saveConnection(
+          LayerConnectionsCompanion.insert(
+            sourceLayerId: l3,
+            targetLayerId: l1,
+          ),
+        );
+        await db.saveConnection(
+          LayerConnectionsCompanion.insert(
+            sourceLayerId: l2,
+            targetLayerId: l3,
+          ),
+        );
+
+        await db.deleteConnectionsByLayerId(l1);
+        final remaining = await db.listConnections();
+        expect(remaining, hasLength(1));
+        expect(remaining.first.sourceLayerId, l2);
+        expect(remaining.first.targetLayerId, l3);
+      },
+    );
+  });
+
+  group('chat conversation and message operations', () {
+    test('saveChatConversation and listChatConversations round-trip', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveChatConversation(
+        ChatConversationsCompanion.insert(
+          id: 'conv1',
+          title: 'Test Chat',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      final convs = await db.listChatConversations();
+      expect(convs, hasLength(1));
+      expect(convs.first.id, 'conv1');
+      expect(convs.first.title, 'Test Chat');
+    });
+
+    test('updateChatConversationTitle updates title', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveChatConversation(
+        ChatConversationsCompanion.insert(
+          id: 'conv1',
+          title: 'Old Title',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+
+      await db.updateChatConversationTitle('conv1', 'New Title');
+      final convs = await db.listChatConversations();
+      expect(convs.first.title, 'New Title');
+    });
+
+    test('saveChatMessage and listChatMessages round-trip', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveChatConversation(
+        ChatConversationsCompanion.insert(
+          id: 'conv1',
+          title: 'Chat',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      await db.saveChatMessage(
+        ChatMessagesCompanion.insert(
+          id: 'msg1',
+          conversationId: 'conv1',
+          role: 'user',
+          content: 'Hello',
+          createdAt: Value(now),
+        ),
+      );
+      await db.saveChatMessage(
+        ChatMessagesCompanion.insert(
+          id: 'msg2',
+          conversationId: 'conv1',
+          role: 'assistant',
+          content: 'Hi there!',
+          createdAt: Value(now + 1),
+        ),
+      );
+
+      final msgs = await db.listChatMessages('conv1');
+      expect(msgs, hasLength(2));
+      expect(msgs[0].content, 'Hello');
+      expect(msgs[1].content, 'Hi there!');
+    });
+
+    test('deleteChatMessage removes single message', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveChatConversation(
+        ChatConversationsCompanion.insert(
+          id: 'c1',
+          title: 'T',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      await db.saveChatMessage(
+        ChatMessagesCompanion.insert(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'keep',
+          createdAt: Value(now),
+        ),
+      );
+      await db.saveChatMessage(
+        ChatMessagesCompanion.insert(
+          id: 'm2',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'delete me',
+          createdAt: Value(now),
+        ),
+      );
+
+      await db.deleteChatMessage('m2');
+      final msgs = await db.listChatMessages('c1');
+      expect(msgs, hasLength(1));
+      expect(msgs.first.id, 'm1');
+    });
+
+    test('deleteChatMessagesByConversation removes all messages', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveChatConversation(
+        ChatConversationsCompanion.insert(
+          id: 'c1',
+          title: 'T',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      await db.saveChatMessage(
+        ChatMessagesCompanion.insert(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'a',
+          createdAt: Value(now),
+        ),
+      );
+      await db.saveChatMessage(
+        ChatMessagesCompanion.insert(
+          id: 'm2',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'b',
+          createdAt: Value(now),
+        ),
+      );
+
+      await db.deleteChatMessagesByConversation('c1');
+      expect(await db.listChatMessages('c1'), isEmpty);
+    });
+
+    test('deleteChatConversation removes conversation and messages', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveChatConversation(
+        ChatConversationsCompanion.insert(
+          id: 'c1',
+          title: 'T',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      await db.saveChatMessage(
+        ChatMessagesCompanion.insert(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'x',
+          createdAt: Value(now),
+        ),
+      );
+
+      await db.deleteChatConversation('c1');
+      expect(await db.listChatConversations(), isEmpty);
+      expect(await db.listChatMessages('c1'), isEmpty);
+    });
+
+    test(
+      'listChatMessages returns empty for nonexistent conversation',
+      () async {
+        expect(await db.listChatMessages('ghost'), isEmpty);
+      },
+    );
+  });
+
+  group('ui state operations', () {
+    test('saveUiState and getUiState round-trip', () async {
+      await db.saveUiState('graph_position', '{"x":10,"y":20}');
+      expect(await db.getUiState('graph_position'), '{"x":10,"y":20}');
+    });
+
+    test('getUiState returns null for missing key', () async {
+      expect(await db.getUiState('nonexistent'), isNull);
+    });
+
+    test('saveUiState upserts on conflict', () async {
+      await db.saveUiState('key1', 'v1');
+      await db.saveUiState('key1', 'v2');
+      expect(await db.getUiState('key1'), 'v2');
+    });
+  });
+
+  group('json value operations', () {
+    test('saveJsonValue and getJsonValue round-trip', () async {
+      await db.saveJsonValue('custom_key', '{"a":1}');
+      expect(await db.getJsonValue('custom_key'), '{"a":1}');
+    });
+
+    test('getJsonValue returns null for missing key', () async {
+      expect(await db.getJsonValue('nonexistent'), isNull);
+    });
+
+    test('saveJsonValue upserts on conflict', () async {
+      await db.saveJsonValue('k', 'old');
+      await db.saveJsonValue('k', 'new');
+      expect(await db.getJsonValue('k'), 'new');
+    });
+  });
+
+  group('deleteOldExecutionLogs', () {
+    test('deletes logs older than cutoff', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveTask(
+        TasksCompanion.insert(
+          uuid: 't1',
+          taskType: 'parse',
+          payload: '{}',
+          priority: 'low',
+          status: 'pending',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      final taskId = (await db.getTask('t1'))!.id;
+
+      await db.logExecution(taskId: taskId, status: 'old');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await db.logExecution(taskId: taskId, status: 'new');
+
+      final deleted = await db.deleteOldExecutionLogs(olderThanMs: 25);
+      expect(deleted, 1);
+
+      final remaining = await db.listExecutionLogs();
+      expect(remaining, hasLength(1));
+      expect(remaining.first.status, 'new');
+    });
+
+    test('does nothing when all logs are recent', () async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.saveTask(
+        TasksCompanion.insert(
+          uuid: 't1',
+          taskType: 'parse',
+          payload: '{}',
+          priority: 'low',
+          status: 'pending',
+          createdAt: Value(now),
+          updatedAt: Value(now),
+        ),
+      );
+      final taskId = (await db.getTask('t1'))!.id;
+
+      await db.logExecution(taskId: taskId, status: 'ok');
+
+      final deleted = await db.deleteOldExecutionLogs();
+      expect(deleted, 0);
+      expect(await db.listExecutionLogs(), hasLength(1));
+    });
   });
 }

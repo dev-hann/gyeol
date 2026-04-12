@@ -21,7 +21,7 @@ class ToolRegistry {
     AppRepository repo,
   ) async {
     try {
-      return switch (name) {
+      return await switch (name) {
         'create_layer' => _createLayer(args, repo),
         'update_layer' => _updateLayer(args, repo),
         'delete_layer' => _deleteLayer(args, repo),
@@ -54,7 +54,7 @@ class ToolRegistry {
         'submit_task' => _submitTask(args, repo),
         _ => jsonEncode({'error': 'Unknown tool: $name'}),
       };
-    } on Exception catch (e) {
+    } on Object catch (e) {
       return jsonEncode({'error': e.toString()});
     }
   }
