@@ -191,11 +191,7 @@ class AppDatabase extends _$AppDatabase {
                 'INSERT INTO thread_layers '
                 '(thread_name, layer_name, sort_order) '
                 'VALUES (?, ?, ?)',
-                [
-                  Variable(threadName),
-                  Variable(decoded[i] as String),
-                  Variable(i),
-                ],
+                [threadName, decoded[i] as String, i],
               );
             }
           }
@@ -289,7 +285,7 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'INSERT INTO thread_layers_new '
           '(thread_name, layer_id, sort_order) VALUES (?, ?, ?)',
-          [Variable(tName), Variable(lId), Variable(sort)],
+          [tName, lId, sort],
         );
       }
     }
@@ -332,7 +328,7 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'INSERT INTO layer_connections '
             '(source_layer_id, target_layer_id) VALUES (?, ?)',
-            [Variable(srcId), Variable(dstId)],
+            [srcId, dstId],
           );
         }
       }
@@ -342,7 +338,7 @@ class AppDatabase extends _$AppDatabase {
     for (final entry in nameToId.entries) {
       await customStatement(
         'UPDATE workers SET layer_id = ? WHERE layer_name = ?',
-        [Variable(entry.value), Variable(entry.key)],
+        [entry.value, entry.key],
       );
     }
 
@@ -350,7 +346,7 @@ class AppDatabase extends _$AppDatabase {
     for (final entry in nameToId.entries) {
       await customStatement(
         'UPDATE tasks SET layer_id = ? WHERE layer_name = ?',
-        [Variable(entry.value), Variable(entry.key)],
+        [entry.value, entry.key],
       );
     }
 
@@ -445,7 +441,7 @@ class AppDatabase extends _$AppDatabase {
         if (newParentId != null) {
           await customStatement(
             'UPDATE tasks_new SET parent_task_id = ? WHERE rowid = ?',
-            [Variable(newParentId), Variable(newId)],
+            [newParentId, newId],
           );
         }
       }
@@ -461,7 +457,7 @@ class AppDatabase extends _$AppDatabase {
         if (wId != null) {
           await customStatement(
             'UPDATE tasks_new SET worker_id = ? WHERE rowid = ?',
-            [Variable(wId), Variable(newId)],
+            [wId, newId],
           );
         }
       }
@@ -519,7 +515,7 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'INSERT INTO thread_layers_new '
             '(thread_id, layer_id, sort_order) VALUES (?, ?, ?)',
-            [Variable(tId), Variable(lId), Variable(sort)],
+            [tId, lId, sort],
           );
         }
       }
@@ -561,11 +557,11 @@ class AppDatabase extends _$AppDatabase {
           '(task_id, worker_id, status, message, created_at) '
           'VALUES (?, ?, ?, ?, ?)',
           [
-            Variable(newTaskId),
-            Variable(wId),
-            Variable(row.read<String>('status')),
-            Variable(row.read<String?>('message')),
-            Variable(row.read<int>('created_at')),
+            newTaskId,
+            wId,
+            row.read<String>('status'),
+            row.read<String?>('message'),
+            row.read<int>('created_at'),
           ],
         );
       }
