@@ -69,7 +69,7 @@
 모든 워커 실행의 성공/실패가 기록됩니다:
 
 - 성공 시: 태스크 ID, 워커 이름, "success" 상태
-- 실패 시: 태스크 ID, 워커 이름, "failed" 상태, 에러 메시지
+- 실패 시: 태스크 ID, 워커 이름, "failed" 상태, 에러 메시지 (Exception 및 Error 모두 포착)
 
 실행 로그는 모니터링과 디버깅에 사용됩니다.
 
@@ -93,6 +93,6 @@
 |------------|----------|------|
 | Scheduler | `Scheduler` 클래스 | `lib/engine/scheduler.dart` |
 | Queue | `TaskQueue` 클래스 | `lib/engine/queue/task_queue.dart` |
-| Message Bus | `MessageBus` 클래스 | `lib/engine/scheduler.dart` |
-| Layer Registry | `LayerRegistry` 클래스 | `lib/engine/scheduler.dart` |
+| Message Bus | `MessageBus` 클래스 | `lib/engine/message_bus.dart` |
+| Layer Registry | `LayerRegistry` 클래스 | `lib/engine/layer_registry.dart` |
 | Execution Log | `ExecutionLogs` 테이블 | `lib/data/database/app_database.dart` |

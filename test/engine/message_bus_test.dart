@@ -97,5 +97,26 @@ void main() {
       bus.publish(_makeTask(taskType: 'analysis', status: TaskStatus.running));
       expect(received?.status, equals(TaskStatus.running));
     });
+
+    test('throwing subscriber does not prevent others from receiving', () {
+      var secondCalled = false;
+      bus.subscribe('analysis', (_) => throw Exception('boom'));
+      bus.subscribe('analysis', (_) => secondCalled = true);
+      bus.publish(_makeTask(taskType: 'analysis'));
+      expect(secondCalled, isTrue);
+    });
+
+    test('throwing subscriber does not propagate exception to publisher', () {
+      bus.subscribe('analysis', (_) => throw StateError('fail'));
+      bus.publish(_makeTask(taskType: 'analysis'));
+    });
+
+    test('throwing wildcard subscriber does not block specific subscriber', () {
+      var specificCalled = false;
+      bus.subscribe('*', (_) => throw Exception('wildcard fail'));
+      bus.subscribe('analysis', (_) => specificCalled = true);
+      bus.publish(_makeTask(taskType: 'analysis'));
+      expect(specificCalled, isTrue);
+    });
   });
 }

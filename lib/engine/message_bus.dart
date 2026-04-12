@@ -7,7 +7,10 @@ class MessageBus {
     final specific = _subscribers[task.taskType] ?? [];
     final wildcard = _subscribers['*'] ?? [];
     for (final handler in [...specific, ...wildcard]) {
-      handler(task);
+      try {
+        handler(task);
+        // ignore: empty_catches
+      } on Object {}
     }
   }
 

@@ -35,8 +35,8 @@
 |------------|--------|----------|
 | 스케줄러 | `Scheduler` | `lib/engine/scheduler.dart` |
 | 큐 | `TaskQueue` | `lib/engine/queue/task_queue.dart` |
-| 메시지 버스 | `MessageBus` | `lib/engine/scheduler.dart` |
-| 레이어 레지스트리 | `LayerRegistry` | `lib/engine/scheduler.dart` |
+| 메시지 버스 | `MessageBus` | `lib/engine/message_bus.dart` |
+| 레이어 레지스트리 | `LayerRegistry` | `lib/engine/layer_registry.dart` |
 | 채팅 서비스 | `ChatService` | `lib/engine/chat/chat_service.dart` |
 | 도구 레지스트리 | `ToolRegistry` | `lib/engine/chat/tool_registry.dart` |
 

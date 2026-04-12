@@ -778,6 +778,129 @@ void main() {
       });
     });
 
+    group('list_providers', () {
+      test('returns all four providers with default settings', () async {
+        final result = await ToolRegistry.executeTool(
+          'list_providers',
+          <String, dynamic>{},
+          repo,
+        );
+        final decoded = jsonDecode(result) as List<dynamic>;
+        expect(decoded, hasLength(4));
+
+        final names = decoded
+            .map((e) => (e as Map<String, dynamic>)['provider'] as String)
+            .toSet();
+        expect(names, containsAll(['openAI', 'anthropic', 'ollama', 'custom']));
+      });
+
+      test('marks all unconfigured when no API keys set', () async {
+        final result = await ToolRegistry.executeTool(
+          'list_providers',
+          <String, dynamic>{},
+          repo,
+        );
+        final decoded = jsonDecode(result) as List<dynamic>;
+        for (final entry in decoded) {
+          final provider = entry as Map<String, dynamic>;
+          expect(provider['is_configured'], isFalse);
+          expect(provider['available_models'], isEmpty);
+        }
+      });
+
+      test('marks configured provider and active provider', () async {
+        await repo.settings.saveSettings(
+          const ProviderSettings(
+            configs: {
+              ProviderType.openAI: OpenAIConfig(apiKey: 'sk-test'),
+              ProviderType.anthropic: AnthropicConfig(),
+              ProviderType.ollama: OllamaConfig(),
+              ProviderType.custom: CustomConfig(),
+            },
+          ),
+        );
+
+        final result = await ToolRegistry.executeTool(
+          'list_providers',
+          <String, dynamic>{},
+          repo,
+        );
+        final decoded = jsonDecode(result) as List<dynamic>;
+        final openai =
+            decoded.firstWhere(
+                  (e) => (e as Map<String, dynamic>)['provider'] == 'openAI',
+                )
+                as Map<String, dynamic>;
+        expect(openai['is_configured'], isTrue);
+        expect(openai['is_active'], isTrue);
+
+        final anthropic =
+            decoded.firstWhere(
+                  (e) => (e as Map<String, dynamic>)['provider'] == 'anthropic',
+                )
+                as Map<String, dynamic>;
+        expect(anthropic['is_configured'], isFalse);
+        expect(anthropic['is_active'], isFalse);
+      });
+
+      test('reflects active provider change', () async {
+        await repo.settings.saveSettings(
+          const ProviderSettings(
+            activeProvider: ProviderType.anthropic,
+            configs: {
+              ProviderType.openAI: OpenAIConfig(apiKey: 'sk-test'),
+              ProviderType.anthropic: AnthropicConfig(apiKey: 'sk-ant-test'),
+              ProviderType.ollama: OllamaConfig(),
+              ProviderType.custom: CustomConfig(),
+            },
+          ),
+        );
+
+        final result = await ToolRegistry.executeTool(
+          'list_providers',
+          <String, dynamic>{},
+          repo,
+        );
+        final decoded = jsonDecode(result) as List<dynamic>;
+        final anthropic =
+            decoded.firstWhere(
+                  (e) => (e as Map<String, dynamic>)['provider'] == 'anthropic',
+                )
+                as Map<String, dynamic>;
+        expect(anthropic['is_active'], isTrue);
+        expect(anthropic['is_configured'], isTrue);
+      });
+
+      test('includes current_model from config', () async {
+        await repo.settings.saveSettings(
+          const ProviderSettings(
+            configs: {
+              ProviderType.openAI: OpenAIConfig(
+                apiKey: 'sk-test',
+                model: 'gpt-4-turbo',
+              ),
+              ProviderType.anthropic: AnthropicConfig(),
+              ProviderType.ollama: OllamaConfig(),
+              ProviderType.custom: CustomConfig(),
+            },
+          ),
+        );
+
+        final result = await ToolRegistry.executeTool(
+          'list_providers',
+          <String, dynamic>{},
+          repo,
+        );
+        final decoded = jsonDecode(result) as List<dynamic>;
+        final openai =
+            decoded.firstWhere(
+                  (e) => (e as Map<String, dynamic>)['provider'] == 'openAI',
+                )
+                as Map<String, dynamic>;
+        expect(openai['current_model'], 'gpt-4-turbo');
+      });
+    });
+
     group('submit_task', () {
       test('creates a task with default medium priority', () async {
         final result = await ToolRegistry.executeTool('submit_task', {

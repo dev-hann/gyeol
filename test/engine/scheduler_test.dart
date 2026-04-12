@@ -433,5 +433,76 @@ void main() {
       expect(scheduler.queueLength, 0);
       expect(results, isNotEmpty);
     });
+
+    test('runOnce handles Error subtypes gracefully', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          id: 0,
+          name: 'L',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      final savedLayers = await repo.layers.listLayers();
+      final savedLayer = savedLayers.first;
+      registry.register(savedLayer);
+
+      await repo.workers.saveWorker(
+        WorkerDefinition(
+          id: 1,
+          name: 'w1',
+          layerId: savedLayer.id,
+          systemPrompt: 'test',
+        ),
+      );
+
+      await repo.settings.saveSettings(
+        const ProviderSettings(configs: {ProviderType.openAI: OpenAIConfig()}),
+      );
+
+      await scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+
+      final results = await scheduler.runOnce();
+      expect(results, hasLength(1));
+      expect(results.first.success, isFalse);
+      expect(results.first.error, contains('not set'));
+    });
+
+    test(
+      'runOnce catches LlmError from unconfigured Ollama provider',
+      () async {
+        await repo.layers.saveLayer(
+          const LayerDefinition(
+            id: 0,
+            name: 'L',
+            inputTypes: ['text'],
+            outputTypes: [],
+          ),
+        );
+        final savedLayers = await repo.layers.listLayers();
+        final savedLayer = savedLayers.first;
+        registry.register(savedLayer);
+
+        await repo.workers.saveWorker(
+          WorkerDefinition(
+            id: 1,
+            name: 'w1',
+            layerId: savedLayer.id,
+            systemPrompt: 'test',
+          ),
+        );
+
+        await repo.settings.saveSettings(
+          const ProviderSettings(activeProvider: ProviderType.ollama),
+        );
+
+        await scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+
+        final results = await scheduler.runOnce();
+        expect(results, hasLength(1));
+        expect(results.first.success, isFalse);
+        expect(results.first.error, isNotNull);
+      },
+    );
   });
 }

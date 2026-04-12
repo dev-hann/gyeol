@@ -244,7 +244,7 @@ class Scheduler {
         outputTasks: [outputTask],
         metadata: {'worker': worker.name},
       );
-    } on Exception catch (e) {
+    } on Object catch (e) {
       await _repo.logs.logExecution(
         taskId: task.id,
         workerId: worker.id,
