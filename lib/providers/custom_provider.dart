@@ -298,75 +298,7 @@ class CustomProvider implements LlmProvider {
   ) async {
     final url = resolveEndpoint(baseUrl, '/v1/messages');
 
-    String? systemPrompt;
-    final filteredMessages = <ChatMessageForApi>[];
-    for (final m in messages) {
-      if (m.role == 'system') {
-        systemPrompt = m.content;
-      } else if (m.role == 'tool') {
-        filteredMessages.add(
-          ChatMessageForApi(
-            role: 'user',
-            content: m.content,
-            toolCallId: m.toolCallId,
-          ),
-        );
-      } else {
-        filteredMessages.add(m);
-      }
-    }
-
-    final apiMessages = <Map<String, dynamic>>[];
-    var i = 0;
-    while (i < filteredMessages.length) {
-      final m = filteredMessages[i];
-      if (m.role == 'user' && m.toolCallId != null) {
-        final results = <Map<String, dynamic>>[
-          {
-            'type': 'tool_result',
-            'tool_use_id': m.toolCallId,
-            'content': m.content ?? '',
-          },
-        ];
-        while (i + 1 < filteredMessages.length &&
-            filteredMessages[i + 1].role == 'user' &&
-            filteredMessages[i + 1].toolCallId != null) {
-          i++;
-          final next = filteredMessages[i];
-          results.add({
-            'type': 'tool_result',
-            'tool_use_id': next.toolCallId,
-            'content': next.content ?? '',
-          });
-        }
-        apiMessages.add({'role': 'user', 'content': results});
-      } else if (m.role == 'assistant' && m.toolCalls != null) {
-        final contentList = <Map<String, dynamic>>[];
-        if (m.content != null) {
-          contentList.add({'type': 'text', 'text': m.content});
-        }
-        for (final tc in m.toolCalls!) {
-          Map<String, dynamic> input;
-          try {
-            input = jsonDecode(tc.arguments) as Map<String, dynamic>;
-          } on Object {
-            input = {};
-          }
-          contentList.add({
-            'type': 'tool_use',
-            'id': tc.id,
-            'name': tc.name,
-            'input': input,
-          });
-        }
-        apiMessages.add({'role': 'assistant', 'content': contentList});
-      } else {
-        final map = <String, dynamic>{'role': m.role};
-        map['content'] = m.content ?? '';
-        apiMessages.add(map);
-      }
-      i++;
-    }
+    final (systemPrompt, apiMessages) = _prepareAnthropicMessages(messages);
 
     final bodyMap = <String, dynamic>{
       'model': model,
@@ -576,21 +508,102 @@ class CustomProvider implements LlmProvider {
     yield const ChatStreamDelta(done: true);
   }
 
+  (String?, List<Map<String, dynamic>>) _prepareAnthropicMessages(
+    List<ChatMessageForApi> messages,
+  ) {
+    String? systemPrompt;
+    final filteredMessages = <ChatMessageForApi>[];
+    for (final m in messages) {
+      if (m.role == 'system') {
+        systemPrompt = m.content;
+      } else if (m.role == 'tool') {
+        filteredMessages.add(
+          ChatMessageForApi(
+            role: 'user',
+            content: m.content,
+            toolCallId: m.toolCallId,
+          ),
+        );
+      } else {
+        filteredMessages.add(m);
+      }
+    }
+
+    final apiMessages = <Map<String, dynamic>>[];
+    var i = 0;
+    while (i < filteredMessages.length) {
+      final m = filteredMessages[i];
+      if (m.role == 'user' && m.toolCallId != null) {
+        final results = <Map<String, dynamic>>[
+          {
+            'type': 'tool_result',
+            'tool_use_id': m.toolCallId,
+            'content': m.content ?? '',
+          },
+        ];
+        while (i + 1 < filteredMessages.length &&
+            filteredMessages[i + 1].role == 'user' &&
+            filteredMessages[i + 1].toolCallId != null) {
+          i++;
+          final next = filteredMessages[i];
+          results.add({
+            'type': 'tool_result',
+            'tool_use_id': next.toolCallId,
+            'content': next.content ?? '',
+          });
+        }
+        apiMessages.add({'role': 'user', 'content': results});
+      } else if (m.role == 'assistant' && m.toolCalls != null) {
+        final contentList = <Map<String, dynamic>>[];
+        if (m.content != null) {
+          contentList.add({'type': 'text', 'text': m.content});
+        }
+        for (final tc in m.toolCalls!) {
+          Map<String, dynamic> input;
+          try {
+            input = jsonDecode(tc.arguments) as Map<String, dynamic>;
+          } on Object {
+            input = {};
+          }
+          contentList.add({
+            'type': 'tool_use',
+            'id': tc.id,
+            'name': tc.name,
+            'input': input,
+          });
+        }
+        apiMessages.add({'role': 'assistant', 'content': contentList});
+      } else {
+        final map = <String, dynamic>{'role': m.role};
+        map['content'] = m.content ?? '';
+        apiMessages.add(map);
+      }
+      i++;
+    }
+
+    final mergedMessages = <Map<String, dynamic>>[];
+    for (final msg in apiMessages) {
+      if (mergedMessages.isNotEmpty &&
+          mergedMessages.last['role'] == msg['role'] &&
+          mergedMessages.last['content'] is String &&
+          msg['content'] is String) {
+        mergedMessages.last['content'] =
+            '${mergedMessages.last['content']}\n${msg['content']}';
+      } else {
+        mergedMessages.add(msg);
+      }
+    }
+
+    return (systemPrompt, mergedMessages);
+  }
+
   Stream<ChatStreamDelta> _streamAnthropic(
     List<ChatMessageForApi> messages,
     List<ToolDefinition>? tools,
   ) async* {
     final url = resolveEndpoint(baseUrl, '/v1/messages');
 
-    String? systemPrompt;
-    final apiMessages = <Map<String, dynamic>>[];
-    for (final m in messages) {
-      if (m.role == 'system') {
-        systemPrompt = m.content;
-      } else {
-        apiMessages.add({'role': m.role, 'content': m.content ?? ''});
-      }
-    }
+    final (systemPrompt, apiMessages) = _prepareAnthropicMessages(messages);
 
     final bodyMap = <String, dynamic>{
       'model': model,

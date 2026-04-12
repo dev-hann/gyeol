@@ -938,6 +938,121 @@ void main() {
       expect(deltas[0].content, 'partial');
       expect(deltas[1].done, true);
     });
+
+    test('converts tool messages to user with tool_result in stream', () async {
+      String? capturedBody;
+
+      final sseData = [
+        'event: message_stop',
+        'data: ${jsonEncode({'type': 'message_stop'})}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClientWithRequest((request) async {
+        capturedBody = (request as http.Request).body;
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'test-key',
+        client: client,
+      );
+
+      await provider
+          .generateChatStream(
+            messages: const [
+              ChatMessageForApi(
+                role: 'tool',
+                content: 'result data',
+                toolCallId: 'call_1',
+              ),
+              ChatMessageForApi(role: 'user', content: 'next'),
+            ],
+          )
+          .toList();
+
+      final body = jsonDecode(capturedBody!) as Map<String, dynamic>;
+      final messages = body['messages'] as List<dynamic>;
+      expect(messages.length, 2);
+
+      final toolMsg = messages[0] as Map<String, dynamic>;
+      expect(toolMsg['role'], 'user');
+      final toolContent = toolMsg['content'] as List<dynamic>;
+      expect(toolContent.length, 1);
+      expect((toolContent[0] as Map<String, dynamic>)['type'], 'tool_result');
+      expect((toolContent[0] as Map<String, dynamic>)['tool_use_id'], 'call_1');
+      expect(
+        (toolContent[0] as Map<String, dynamic>)['content'],
+        'result data',
+      );
+    });
+
+    test(
+      'converts assistant+toolCalls to Anthropic format in stream',
+      () async {
+        String? capturedBody;
+
+        final sseData = [
+          'event: message_stop',
+          'data: ${jsonEncode({'type': 'message_stop'})}',
+          '',
+        ].join('\n');
+
+        final client = _StreamClientWithRequest((request) async {
+          capturedBody = (request as http.Request).body;
+          return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+        });
+
+        final provider = CustomProvider(
+          baseUrl: 'http://localhost:8080',
+          model: 'my-model',
+          temperature: 0.7,
+          maxTokens: 100,
+          apiFormat: CustomApiFormat.anthropicCompatible,
+          apiKey: 'test-key',
+          client: client,
+        );
+
+        await provider
+            .generateChatStream(
+              messages: [
+                const ChatMessageForApi(
+                  role: 'assistant',
+                  content: 'thinking',
+                  toolCalls: [
+                    ToolCall(
+                      id: 'tc_1',
+                      name: 'search',
+                      arguments: '{"q":"test"}',
+                    ),
+                  ],
+                ),
+                const ChatMessageForApi(role: 'user', content: 'go'),
+              ],
+            )
+            .toList();
+
+        final body = jsonDecode(capturedBody!) as Map<String, dynamic>;
+        final messages = body['messages'] as List<dynamic>;
+        expect(messages.length, 2);
+
+        final assistantMsg = messages[0] as Map<String, dynamic>;
+        expect(assistantMsg['role'], 'assistant');
+        final content = assistantMsg['content'] as List<dynamic>;
+        expect(content.length, 2);
+        expect((content[0] as Map<String, dynamic>)['type'], 'text');
+        expect((content[0] as Map<String, dynamic>)['text'], 'thinking');
+        expect((content[1] as Map<String, dynamic>)['type'], 'tool_use');
+        expect((content[1] as Map<String, dynamic>)['id'], 'tc_1');
+        expect((content[1] as Map<String, dynamic>)['name'], 'search');
+        expect((content[1] as Map<String, dynamic>)['input'], {'q': 'test'});
+      },
+    );
   });
 
   group('CustomProvider - Ollama Compatible - generateChatStream', () {
@@ -1768,6 +1883,89 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('merges consecutive user messages with string content', () async {
+      late Map<String, dynamic> capturedBody;
+
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'content': [
+              {'type': 'text', 'text': 'ok'},
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'key',
+        client: mockClient,
+      );
+
+      await provider.generateChat(
+        messages: [
+          const ChatMessageForApi(role: 'user', content: 'Hello'),
+          const ChatMessageForApi(role: 'user', content: 'World'),
+        ],
+      );
+
+      final messages = (capturedBody['messages'] as List)
+          .cast<Map<String, dynamic>>();
+      expect(messages.length, 1);
+      expect(messages[0]['role'], 'user');
+      expect(messages[0]['content'], 'Hello\nWorld');
+    });
+
+    test('does not merge messages with different roles', () async {
+      late Map<String, dynamic> capturedBody;
+
+      final mockClient = MockClient((request) async {
+        capturedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'content': [
+              {'type': 'text', 'text': 'ok'},
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'key',
+        client: mockClient,
+      );
+
+      await provider.generateChat(
+        messages: [
+          const ChatMessageForApi(role: 'user', content: 'Hello'),
+          const ChatMessageForApi(role: 'assistant', content: 'Hi'),
+          const ChatMessageForApi(role: 'user', content: 'World'),
+        ],
+      );
+
+      final messages = (capturedBody['messages'] as List)
+          .cast<Map<String, dynamic>>();
+      expect(messages.length, 3);
+      expect(messages[0]['role'], 'user');
+      expect(messages[0]['content'], 'Hello');
+      expect(messages[1]['role'], 'assistant');
+      expect(messages[1]['content'], 'Hi');
+      expect(messages[2]['role'], 'user');
+      expect(messages[2]['content'], 'World');
     });
   });
 }
