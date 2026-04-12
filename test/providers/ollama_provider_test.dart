@@ -421,4 +421,417 @@ void main() {
       expect(deltas[1].done, true);
     });
   });
+
+  group('OllamaProvider - generateChat', () {
+    test('returns ChatResponse with content on success', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'Hello from Ollama chat!'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      final result = await provider.generateChat(messages: _hiMsg);
+      expect(result.content, 'Hello from Ollama chat!');
+      expect(result.toolCalls, isNull);
+    });
+
+    test('returns ChatResponse with tool calls', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'tool_calls': [
+                    {
+                      'id': 'call_abc',
+                      'type': 'function',
+                      'function': {
+                        'name': 'get_weather',
+                        'arguments': '{"city":"Seoul"}',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      final result = await provider.generateChat(messages: _hiMsg);
+      expect(result.content, isNull);
+      expect(result.toolCalls, isNotNull);
+      expect(result.toolCalls!.length, 1);
+      expect(result.toolCalls![0].id, 'call_abc');
+      expect(result.toolCalls![0].name, 'get_weather');
+      expect(result.toolCalls![0].arguments, '{"city":"Seoul"}');
+    });
+
+    test('returns ChatResponse with both content and tool calls', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'content': 'Let me check the weather.',
+                  'tool_calls': [
+                    {
+                      'id': 'call_1',
+                      'type': 'function',
+                      'function': {
+                        'name': 'get_weather',
+                        'arguments': '{"city":"Tokyo"}',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      final result = await provider.generateChat(messages: _hiMsg);
+      expect(result.content, 'Let me check the weather.');
+      expect(result.toolCalls!.length, 1);
+    });
+
+    test('throws LlmError on non-200 status', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('{"error": "rate limited"}', 429);
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      expect(provider.generateChat(messages: _hiMsg), throwsA(isA<LlmError>()));
+    });
+
+    test('throws LlmError on malformed JSON', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('not json at all', 200);
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      expect(provider.generateChat(messages: _hiMsg), throwsA(isA<LlmError>()));
+    });
+
+    test(
+      'returns null content and null toolCalls when choices empty',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'choices': <Map<String, dynamic>>[]}),
+            200,
+          );
+        });
+
+        final provider = OllamaProvider(
+          baseUrl: 'http://localhost:11434',
+          model: 'llama3',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: mockClient,
+        );
+
+        final result = await provider.generateChat(messages: _hiMsg);
+        expect(result.content, isNull);
+        expect(result.toolCalls, isNull);
+      },
+    );
+
+    test('returns nulls when choices is null', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode({}), 200);
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      final result = await provider.generateChat(messages: _hiMsg);
+      expect(result.content, isNull);
+      expect(result.toolCalls, isNull);
+    });
+
+    test('sends tools in request body when provided', () async {
+      late String capturedBody;
+
+      final mockClient = MockClient((request) async {
+        capturedBody = request.body;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'tool response'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      const tools = [
+        ToolDefinition(
+          name: 'get_weather',
+          description: 'Get weather',
+          parameters: {'type': 'object', 'properties': <String, dynamic>{}},
+        ),
+      ];
+
+      await provider.generateChat(messages: _hiMsg, tools: tools);
+
+      final body = jsonDecode(capturedBody) as Map<String, dynamic>;
+      expect(body['tool_choice'], 'auto');
+      final bodyTools = body['tools'] as List<dynamic>;
+      expect(bodyTools.length, 1);
+      final fn =
+          (bodyTools[0] as Map<String, dynamic>)['function']
+              as Map<String, dynamic>;
+      expect(fn['name'], 'get_weather');
+      expect(fn['description'], 'Get weather');
+    });
+
+    test('sends messages with tool_calls and tool_call_id', () async {
+      late String capturedBody;
+
+      final mockClient = MockClient((request) async {
+        capturedBody = request.body;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'result'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      const messages = [
+        ChatMessageForApi(role: 'user', content: 'weather'),
+        ChatMessageForApi(
+          role: 'assistant',
+          toolCalls: [
+            ToolCall(
+              id: 'call_1',
+              name: 'get_weather',
+              arguments: '{"city":"Seoul"}',
+            ),
+          ],
+        ),
+        ChatMessageForApi(
+          role: 'tool',
+          content: '{"temp": 22}',
+          toolCallId: 'call_1',
+        ),
+      ];
+
+      await provider.generateChat(messages: messages);
+
+      final body = jsonDecode(capturedBody) as Map<String, dynamic>;
+      final bodyMessages = body['messages'] as List<dynamic>;
+
+      expect(bodyMessages.length, 3);
+
+      final msg0 = bodyMessages[0] as Map<String, dynamic>;
+      expect(msg0['role'], 'user');
+      expect(msg0['content'], 'weather');
+
+      final msg1 = bodyMessages[1] as Map<String, dynamic>;
+      expect(msg1['role'], 'assistant');
+      expect(msg1['tool_calls'], isNotNull);
+      final tc =
+          (msg1['tool_calls'] as List<dynamic>)[0] as Map<String, dynamic>;
+      expect(tc['id'], 'call_1');
+      expect(tc['type'], 'function');
+      final tcFn = tc['function'] as Map<String, dynamic>;
+      expect(tcFn['name'], 'get_weather');
+
+      final msg2 = bodyMessages[2] as Map<String, dynamic>;
+      expect(msg2['role'], 'tool');
+      expect(msg2['tool_call_id'], 'call_1');
+      expect(msg2['content'], '{"temp": 22}');
+    });
+
+    test('omits tools key when tools list is empty', () async {
+      late String capturedBody;
+
+      final mockClient = MockClient((request) async {
+        capturedBody = request.body;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'ok'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      await provider.generateChat(messages: _hiMsg, tools: []);
+
+      final body = jsonDecode(capturedBody) as Map<String, dynamic>;
+      expect(body.containsKey('tools'), isFalse);
+      expect(body.containsKey('tool_choice'), isFalse);
+    });
+
+    test('throws LlmError on non-map JSON body', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode([1, 2, 3]), 200);
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      expect(provider.generateChat(messages: _hiMsg), throwsA(isA<LlmError>()));
+    });
+
+    test('uses resolveEndpoint for URL', () async {
+      late Uri capturedUrl;
+
+      final mockClient = MockClient((request) async {
+        capturedUrl = request.url;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'ok'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      await provider.generateChat(messages: _hiMsg);
+      expect(
+        capturedUrl.toString(),
+        'http://localhost:11434/v1/chat/completions',
+      );
+    });
+
+    test('includes top_p in request body', () async {
+      late String capturedBody;
+
+      final mockClient = MockClient((request) async {
+        capturedBody = request.body;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'ok'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = OllamaProvider(
+        baseUrl: 'http://localhost:11434',
+        model: 'llama3',
+        temperature: 0.7,
+        maxTokens: 100,
+        topP: 0.9,
+        client: mockClient,
+      );
+
+      await provider.generateChat(messages: _hiMsg);
+
+      final body = jsonDecode(capturedBody) as Map<String, dynamic>;
+      expect(body['top_p'], 0.9);
+    });
+  });
 }
