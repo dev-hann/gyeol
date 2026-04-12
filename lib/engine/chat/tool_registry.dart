@@ -63,6 +63,19 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'create_layer: "name" must be a non-null String',
+      });
+    }
+    if (args['inputTypes'] is! List) {
+      return jsonEncode({'error': 'create_layer: "inputTypes" must be a List'});
+    }
+    if (args['outputTypes'] is! List) {
+      return jsonEncode({
+        'error': 'create_layer: "outputTypes" must be a List',
+      });
+    }
     final name = args['name'] as String;
     final inputTypes = (args['inputTypes'] as List)
         .map((e) => e as String)
@@ -126,6 +139,21 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'create_worker: "name" must be a non-null String',
+      });
+    }
+    if (args['layerName'] is! String) {
+      return jsonEncode({
+        'error': 'create_worker: "layerName" must be a non-null String',
+      });
+    }
+    if (args['systemPrompt'] is! String) {
+      return jsonEncode({
+        'error': 'create_worker: "systemPrompt" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final layerName = args['layerName'] as String;
     final systemPrompt = args['systemPrompt'] as String;

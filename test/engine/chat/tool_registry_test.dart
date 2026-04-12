@@ -47,6 +47,53 @@ void main() {
         expect(layers.first.inputTypes, ['text']);
         expect(layers.first.outputTypes, ['tokens']);
       });
+
+      test('returns descriptive error when name is missing', () async {
+        final result = await ToolRegistry.executeTool('create_layer', {
+          'inputTypes': ['text'],
+          'outputTypes': ['tokens'],
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
+      test('returns descriptive error when inputTypes is missing', () async {
+        final result = await ToolRegistry.executeTool('create_layer', {
+          'name': 'L',
+          'outputTypes': ['tokens'],
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('inputTypes'));
+      });
+
+      test('returns descriptive error when outputTypes is missing', () async {
+        final result = await ToolRegistry.executeTool('create_layer', {
+          'name': 'L',
+          'inputTypes': ['text'],
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('outputTypes'));
+      });
+
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('create_layer', {
+          'name': 123,
+          'inputTypes': ['text'],
+          'outputTypes': ['tokens'],
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
+      test('returns descriptive error when inputTypes is not a List', () async {
+        final result = await ToolRegistry.executeTool('create_layer', {
+          'name': 'L',
+          'inputTypes': 'not-a-list',
+          'outputTypes': ['tokens'],
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('inputTypes'));
+      });
     });
 
     group('list_layers', () {
@@ -168,6 +215,69 @@ void main() {
         expect(worker.model, 'gpt-4');
         expect(worker.temperature, 0.5);
         expect(worker.maxTokens, 2048);
+      });
+
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('create_worker', {
+          'name': 123,
+          'layerName': 'L1',
+          'systemPrompt': 'prompt',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
+      test('returns descriptive error when name is missing', () async {
+        final result = await ToolRegistry.executeTool('create_worker', {
+          'layerName': 'L1',
+          'systemPrompt': 'prompt',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
+      test(
+        'returns descriptive error when layerName is not a String',
+        () async {
+          final result = await ToolRegistry.executeTool('create_worker', {
+            'name': 'W1',
+            'layerName': 456,
+            'systemPrompt': 'prompt',
+          }, repo);
+          final decoded = jsonDecode(result) as Map<String, dynamic>;
+          expect(decoded['error'], contains('layerName'));
+        },
+      );
+
+      test('returns descriptive error when layerName is missing', () async {
+        final result = await ToolRegistry.executeTool('create_worker', {
+          'name': 'W1',
+          'systemPrompt': 'prompt',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('layerName'));
+      });
+
+      test(
+        'returns descriptive error when systemPrompt is not a String',
+        () async {
+          final result = await ToolRegistry.executeTool('create_worker', {
+            'name': 'W1',
+            'layerName': 'L1',
+            'systemPrompt': true,
+          }, repo);
+          final decoded = jsonDecode(result) as Map<String, dynamic>;
+          expect(decoded['error'], contains('systemPrompt'));
+        },
+      );
+
+      test('returns descriptive error when systemPrompt is missing', () async {
+        final result = await ToolRegistry.executeTool('create_worker', {
+          'name': 'W1',
+          'layerName': 'L1',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('systemPrompt'));
       });
     });
 
