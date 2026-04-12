@@ -16,7 +16,12 @@ class LayersNotifier extends AsyncNotifier<List<LayerDefinition>> {
   Future<List<LayerDefinition>> build() async {
     final repo = ref.watch(repositoryProvider);
     await _sub?.cancel();
-    _sub = repo.layers.watchLayers().listen((data) => state = AsyncData(data));
+    _sub = repo.layers.watchLayers().listen(
+      (data) => state = AsyncData(data),
+      onError: (Object e, StackTrace st) {
+        state = AsyncError(e, st);
+      },
+    );
     ref.onDispose(() => _sub?.cancel());
     return repo.layers.listLayers();
   }

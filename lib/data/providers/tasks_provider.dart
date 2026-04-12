@@ -15,7 +15,12 @@ class TasksNotifier extends AsyncNotifier<List<AppTask>> {
   Future<List<AppTask>> build() async {
     final repo = ref.watch(repositoryProvider);
     await _sub?.cancel();
-    _sub = repo.tasks.watchTasks().listen((data) => state = AsyncData(data));
+    _sub = repo.tasks.watchTasks().listen(
+      (data) => state = AsyncData(data),
+      onError: (Object e, StackTrace st) {
+        state = AsyncError(e, st);
+      },
+    );
     ref.onDispose(() => _sub?.cancel());
     return repo.tasks.listTasks();
   }

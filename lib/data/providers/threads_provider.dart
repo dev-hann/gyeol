@@ -18,6 +18,9 @@ class ThreadsNotifier extends AsyncNotifier<List<ThreadDefinition>> {
     await _sub?.cancel();
     _sub = repo.threads.watchThreads().listen(
       (data) => state = AsyncData(data),
+      onError: (Object e, StackTrace st) {
+        state = AsyncError(e, st);
+      },
     );
     ref.onDispose(() => _sub?.cancel());
     return repo.threads.listThreads();

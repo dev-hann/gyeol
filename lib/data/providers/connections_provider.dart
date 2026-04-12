@@ -18,6 +18,9 @@ class ConnectionsNotifier extends AsyncNotifier<List<LayerConnectionData>> {
     await _sub?.cancel();
     _sub = repo.connections.watchConnections().listen(
       (data) => state = AsyncData(data),
+      onError: (Object e, StackTrace st) {
+        state = AsyncError(e, st);
+      },
     );
     ref.onDispose(() => _sub?.cancel());
     return repo.connections.listConnections();

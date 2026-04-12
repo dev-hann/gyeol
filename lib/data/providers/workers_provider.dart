@@ -18,6 +18,9 @@ class WorkersNotifier extends AsyncNotifier<List<WorkerDefinition>> {
     await _sub?.cancel();
     _sub = repo.workers.watchWorkers().listen(
       (data) => state = AsyncData(data),
+      onError: (Object e, StackTrace st) {
+        state = AsyncError(e, st);
+      },
     );
     ref.onDispose(() => _sub?.cancel());
     return repo.workers.listWorkers();

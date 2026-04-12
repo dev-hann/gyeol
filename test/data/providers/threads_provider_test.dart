@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +7,15 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/core_providers.dart';
 import 'package:gyeol/data/providers/threads_provider.dart';
+
+class _ErrorInjectDb extends AppDatabase {
+  _ErrorInjectDb(this.controller) : super.forTesting(NativeDatabase.memory());
+
+  final StreamController<List<Thread>> controller;
+
+  @override
+  Stream<List<Thread>> watchThreads() => controller.stream;
+}
 
 void main() {
   late AppDatabase db;
@@ -148,6 +159,25 @@ void main() {
       final threads = await container.read(threadsProvider.future);
       expect(threads, hasLength(1));
       expect(threads.first.name, 'keep');
+    });
+
+    test('stream error transitions state to AsyncError', () async {
+      final controller = StreamController<List<Thread>>();
+      final errDb = _ErrorInjectDb(controller);
+      final errContainer = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(errDb)],
+      );
+
+      await errContainer.read(threadsProvider.future);
+      controller.addError(StateError('db broken'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final state = errContainer.read(threadsProvider);
+      expect(state.hasError, isTrue);
+
+      await controller.close();
+      errContainer.dispose();
+      await errDb.close();
     });
   });
 }
