@@ -180,6 +180,37 @@ void main() {
       expect(results.length, 1);
     });
 
+    test('logs failure when layer has no workers', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          id: 0,
+          name: 'L1',
+          inputTypes: ['raw'],
+          outputTypes: ['parsed'],
+          order: 1,
+        ),
+      );
+      final savedLayers = await repo.layers.listLayers();
+      final l1 = savedLayers.first;
+
+      registry.register(l1);
+
+      final thread = ThreadDefinition(
+        id: 0,
+        name: 'no_worker_thread',
+        path: '/tmp',
+        layerIds: [l1.id],
+      );
+
+      final results = await scheduler.runThread(thread);
+      expect(results, isEmpty);
+
+      final logs = await repo.logs.listExecutionLogs();
+      expect(logs, isNotEmpty);
+      expect(logs.first.status, 'failed');
+      expect(logs.first.message, contains('no workers'));
+    });
+
     test('includes path context in task payload', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(

@@ -403,6 +403,29 @@ void main() {
       expect(scheduler.queueLength, 0);
     });
 
+    test('marks task as failed when layer has no workers', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          id: 0,
+          name: 'L',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+      final savedLayers = await repo.layers.listLayers();
+      registry.register(savedLayers.first);
+
+      final id = await scheduler.submit(
+        AppTask.create('text', null, TaskPriority.high),
+      );
+
+      await scheduler.runOnce();
+
+      final tasks = await repo.tasks.listTasks();
+      final task = tasks.firstWhere((t) => t.id == id);
+      expect(task.status, TaskStatus.failed);
+    });
+
     test('drains queue and processes task with db workers', () async {
       await repo.layers.saveLayer(
         const LayerDefinition(

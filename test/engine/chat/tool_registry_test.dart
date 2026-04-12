@@ -970,5 +970,231 @@ void main() {
         expect(decoded['error'], isNotNull);
       });
     });
+
+    group('switch_provider', () {
+      test('returns error for unknown provider name', () async {
+        final result = await ToolRegistry.executeTool('switch_provider', {
+          'provider': 'unknown',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('Unknown provider'));
+      });
+
+      test('returns error for unconfigured provider', () async {
+        await repo.settings.saveSettings(const ProviderSettings());
+        final result = await ToolRegistry.executeTool('switch_provider', {
+          'provider': 'openai',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('not configured'));
+      });
+
+      test('switches to configured provider', () async {
+        await repo.settings.saveSettings(
+          const ProviderSettings(
+            configs: {
+              ProviderType.openAI: OpenAIConfig(apiKey: 'sk-test'),
+              ProviderType.anthropic: AnthropicConfig(),
+              ProviderType.ollama: OllamaConfig(),
+              ProviderType.custom: CustomConfig(),
+            },
+          ),
+        );
+        final result = await ToolRegistry.executeTool('switch_provider', {
+          'provider': 'openai',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['success'], true);
+        expect(decoded['activeProvider'], 'openai');
+      });
+    });
+
+    group('rename_conversation', () {
+      test('renames existing conversation', () async {
+        final conv = ChatConversation.create('Old Title');
+        await repo.chat.saveConversation(conv);
+        final result = await ToolRegistry.executeTool('rename_conversation', {
+          'conversationId': conv.id,
+          'title': 'New Title',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['success'], true);
+        final convs = await repo.chat.listConversations();
+        expect(convs.first.title, 'New Title');
+      });
+
+      test('returns error for non-existent conversation', () async {
+        final result = await ToolRegistry.executeTool('rename_conversation', {
+          'conversationId': 'nonexistent',
+          'title': 'New',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], isNotNull);
+      });
+    });
+
+    group('search_messages', () {
+      test('finds matching messages across conversations', () async {
+        final conv = ChatConversation.create('Test');
+        await repo.chat.saveConversation(conv);
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'user',
+            content: 'Hello world',
+          ),
+        );
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'assistant',
+            content: 'Hi there',
+          ),
+        );
+        final result = await ToolRegistry.executeTool('search_messages', {
+          'query': 'hello',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        final messages = (decoded['messages'] as List)
+            .cast<Map<String, dynamic>>();
+        expect(messages, hasLength(1));
+        expect(messages.first['content'], contains('Hello'));
+      });
+
+      test('returns empty for no matches', () async {
+        final conv = ChatConversation.create('Test');
+        await repo.chat.saveConversation(conv);
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'user',
+            content: 'Hello world',
+          ),
+        );
+        final result = await ToolRegistry.executeTool('search_messages', {
+          'query': 'xyz_not_found',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['messages'], isEmpty);
+      });
+
+      test('respects limit parameter', () async {
+        final conv = ChatConversation.create('Test');
+        await repo.chat.saveConversation(conv);
+        for (var i = 0; i < 5; i++) {
+          await repo.chat.saveMessage(
+            ChatMessage.create(
+              conversationId: conv.id,
+              role: 'user',
+              content: 'test query $i',
+            ),
+          );
+        }
+        final result = await ToolRegistry.executeTool('search_messages', {
+          'query': 'test query',
+          'limit': 2,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        final messages = (decoded['messages'] as List)
+            .cast<Map<String, dynamic>>();
+        expect(messages, hasLength(2));
+      });
+
+      test('filters by conversationId', () async {
+        final conv1 = ChatConversation.create('C1');
+        final conv2 = ChatConversation.create('C2');
+        await repo.chat.saveConversation(conv1);
+        await repo.chat.saveConversation(conv2);
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv1.id,
+            role: 'user',
+            content: 'unique keyword alpha',
+          ),
+        );
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv2.id,
+            role: 'user',
+            content: 'unique keyword beta',
+          ),
+        );
+        final result = await ToolRegistry.executeTool('search_messages', {
+          'query': 'unique keyword',
+          'conversationId': conv1.id,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        final messages = (decoded['messages'] as List)
+            .cast<Map<String, dynamic>>();
+        expect(messages, hasLength(1));
+        expect(messages.first['content'], contains('alpha'));
+      });
+    });
+
+    group('clear_conversation', () {
+      test('clears all messages from conversation', () async {
+        final conv = ChatConversation.create('Test');
+        await repo.chat.saveConversation(conv);
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'user',
+            content: 'Hello',
+          ),
+        );
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'assistant',
+            content: 'Hi',
+          ),
+        );
+        final result = await ToolRegistry.executeTool('clear_conversation', {
+          'conversationId': conv.id,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['success'], true);
+        final messages = await repo.chat.listMessages(conv.id);
+        expect(messages, isEmpty);
+      });
+    });
+
+    group('export_conversation', () {
+      test('exports conversation as markdown', () async {
+        final conv = ChatConversation.create('My Chat');
+        await repo.chat.saveConversation(conv);
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'user',
+            content: 'Hello',
+          ),
+        );
+        await repo.chat.saveMessage(
+          ChatMessage.create(
+            conversationId: conv.id,
+            role: 'assistant',
+            content: 'World',
+          ),
+        );
+        final result = await ToolRegistry.executeTool('export_conversation', {
+          'conversationId': conv.id,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['markdown'], contains('My Chat'));
+        expect(decoded['markdown'], contains('User'));
+        expect(decoded['markdown'], contains('Hello'));
+        expect(decoded['markdown'], contains('Assistant'));
+        expect(decoded['markdown'], contains('World'));
+      });
+
+      test('returns error for non-existent conversation', () async {
+        final result = await ToolRegistry.executeTool('export_conversation', {
+          'conversationId': 'nonexistent',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], isNotNull);
+      });
+    });
   });
 }

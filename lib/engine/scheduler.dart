@@ -68,6 +68,16 @@ class Scheduler {
           .where((w) => w.layerId == layer.id)
           .toList();
 
+      if (layerWorkers.isEmpty) {
+        await _repo.tasks.saveTask(
+          resolvedTask.copyWith(
+            status: TaskStatus.failed,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+        continue;
+      }
+
       for (final worker in layerWorkers) {
         taken++;
         futures.add(
@@ -159,10 +169,26 @@ class Scheduler {
       final savedTask = await _repo.tasks.getTask(updatedTask.uuid);
       final resolvedThreadTask = savedTask ?? updatedTask;
 
-      final layerFutures = <Future<WorkerResult>>[];
       final layerWorkers = (await _repo.workers.listWorkers()).where(
         (w) => w.layerId == layer.id,
       );
+
+      if (layerWorkers.isEmpty) {
+        await _repo.tasks.saveTask(
+          resolvedThreadTask.copyWith(
+            status: TaskStatus.failed,
+            updatedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+        await _repo.logs.logExecution(
+          taskId: resolvedThreadTask.id,
+          status: 'failed',
+          message: 'Layer "${layer.name}" has no workers',
+        );
+        continue;
+      }
+
+      final layerFutures = <Future<WorkerResult>>[];
       for (final worker in layerWorkers) {
         layerFutures.add(
           _executeWorker(
