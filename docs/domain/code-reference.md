@@ -50,6 +50,7 @@
 | Ollama | `OllamaProvider` | `lib/providers/ollama_provider.dart` |
 | Custom | `CustomProvider` | `lib/providers/custom_provider.dart` |
 | 모델 조회 | `ModelFetcher` | `lib/providers/model_fetcher.dart` |
+| 제공자 팩토리 | `createLlmProvider()` | `lib/providers/provider_factory.dart` |
 
 ## DB 스키마 버전 이력
 

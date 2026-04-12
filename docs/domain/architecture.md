@@ -72,6 +72,7 @@ lib/
 │   ├── ollama_provider.dart               # Ollama 구현
 │   ├── custom_provider.dart               # 커스텀 API 구현 (멀티 포맷)
 │   ├── model_fetcher.dart                 # 모델 목록 조회 + 프로토콜 감지
+│   ├── provider_factory.dart              # LLM 제공자 팩토리 (공유)
 │   └── providers.dart                     # 배럴 익스포트
 ├── features/
 │   ├── chat/chat_panel.dart               # 채팅 UI (오버레이 사이드바)
