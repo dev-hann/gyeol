@@ -7,6 +7,11 @@ import 'package:gyeol/providers/openai_provider.dart';
 
 LlmProvider createLlmProvider(ProviderSettings settings) {
   final config = settings.active;
+  if (!config.isConfigured) {
+    throw StateError(
+      '${settings.activeProvider.name} provider is not configured',
+    );
+  }
   return switch (config) {
     OpenAIConfig(:final apiKey) => OpenAIProvider(
       apiKey: apiKey,

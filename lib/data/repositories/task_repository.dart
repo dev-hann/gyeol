@@ -77,12 +77,20 @@ class TaskRepository {
     );
   }
 
+  Object? _safeDecodePayload(String payload) {
+    try {
+      return jsonDecode(payload);
+    } on FormatException {
+      return null;
+    }
+  }
+
   AppTask _taskFromRow(Task r) {
     return AppTask(
       id: r.id,
       uuid: r.uuid,
       taskType: r.taskType,
-      payload: jsonDecode(r.payload),
+      payload: _safeDecodePayload(r.payload),
       priority: TaskPriority.values.firstWhere(
         (p) => p.name == r.priority,
         orElse: () => TaskPriority.low,

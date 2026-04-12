@@ -259,4 +259,103 @@ void main() {
       expect(task.workerId, worker.id);
     });
   });
+
+  group('TaskRepository malformed data resilience', () {
+    test('returns null payload when stored JSON is malformed', () async {
+      await db
+          .into(db.tasks)
+          .insert(
+            TasksCompanion.insert(
+              uuid: 'malformed-uuid',
+              taskType: 'broken',
+              payload: 'not-valid-json{{{',
+              priority: 'low',
+              status: 'pending',
+            ),
+          );
+
+      final tasks = await repo.tasks.listTasks();
+      expect(tasks, hasLength(1));
+      expect(tasks.first.uuid, 'malformed-uuid');
+      expect(tasks.first.payload, isNull);
+    });
+
+    test('returns null payload when stored JSON is truncated', () async {
+      await db
+          .into(db.tasks)
+          .insert(
+            TasksCompanion.insert(
+              uuid: 'truncated-uuid',
+              taskType: 'truncated',
+              payload: '{"key":',
+              priority: 'medium',
+              status: 'running',
+            ),
+          );
+
+      final tasks = await repo.tasks.listTasks();
+      expect(tasks, hasLength(1));
+      expect(tasks.first.payload, isNull);
+    });
+
+    test('getTask returns null payload for malformed row', () async {
+      await db
+          .into(db.tasks)
+          .insert(
+            TasksCompanion.insert(
+              uuid: 'get-bad-uuid',
+              taskType: 'test',
+              payload: 'broken',
+              priority: 'high',
+              status: 'done',
+            ),
+          );
+
+      final task = await repo.tasks.getTask('get-bad-uuid');
+      expect(task, isNotNull);
+      expect(task!.payload, isNull);
+    });
+
+    test(
+      'handles payload that is valid JSON but wrong type (number)',
+      () async {
+        await db
+            .into(db.tasks)
+            .insert(
+              TasksCompanion.insert(
+                uuid: 'number-payload',
+                taskType: 'numtest',
+                payload: '42',
+                priority: 'low',
+                status: 'pending',
+              ),
+            );
+
+        final tasks = await repo.tasks.listTasks();
+        expect(tasks, hasLength(1));
+        expect(tasks.first.payload, 42);
+      },
+    );
+
+    test(
+      'handles payload that is valid JSON but wrong type (boolean)',
+      () async {
+        await db
+            .into(db.tasks)
+            .insert(
+              TasksCompanion.insert(
+                uuid: 'bool-payload',
+                taskType: 'booltest',
+                payload: 'true',
+                priority: 'low',
+                status: 'pending',
+              ),
+            );
+
+        final tasks = await repo.tasks.listTasks();
+        expect(tasks, hasLength(1));
+        expect(tasks.first.payload, true);
+      },
+    );
+  });
 }

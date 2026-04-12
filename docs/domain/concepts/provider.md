@@ -67,6 +67,10 @@ WorkerDefinition
 
 워커에 개별 temperature/maxTokens가 설정되어 있으면 그 값을 사용하고, 없으면 시스템 기본값을 사용합니다.
 
+## 검증
+
+`createLlmProvider()`는 활성 제공자가 구성되지 않은 경우(`apiKey` 또는 `baseUrl`이 비어 있음) `StateError`를 발생시킵니다. 이 검증은 실제 API 호출 전에 수행되어 잘못된 설정으로 인한 런타임 오류를 방지합니다.
+
 ## 모델 목록 조회
 
 시스템은 각 제공자에서 사용 가능한 모델 목록을 동적으로 조회할 수 있습니다:
@@ -93,3 +97,4 @@ WorkerDefinition
 | Provider 설정 | `ProviderSettings` 클래스 | `lib/data/models/app_models.dart` |
 | API 포맷 | `CustomApiFormat` enum | `lib/data/models/app_models.dart` |
 | 모델 조회 | `ModelFetcher` | `lib/providers/model_fetcher.dart` |
+| Provider 생성 | `createLlmProvider()` | `lib/providers/provider_factory.dart` |
