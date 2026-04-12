@@ -698,7 +698,16 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> saveConnection(LayerConnectionsCompanion conn) {
-    return into(layerConnections).insertOnConflictUpdate(conn);
+    return into(layerConnections).insert(
+      conn,
+      onConflict: DoUpdate(
+        (old) => conn,
+        target: [
+          layerConnections.sourceLayerId,
+          layerConnections.targetLayerId,
+        ],
+      ),
+    );
   }
 
   Future<void> deleteConnection(int sourceLayerId, int targetLayerId) {
