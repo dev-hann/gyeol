@@ -317,18 +317,29 @@ class CustomProvider implements LlmProvider {
     }
 
     final apiMessages = <Map<String, dynamic>>[];
-    for (final m in filteredMessages) {
+    var i = 0;
+    while (i < filteredMessages.length) {
+      final m = filteredMessages[i];
       if (m.role == 'user' && m.toolCallId != null) {
-        apiMessages.add({
-          'role': 'user',
-          'content': [
-            {
-              'type': 'tool_result',
-              'tool_use_id': m.toolCallId,
-              'content': m.content ?? '',
-            },
-          ],
-        });
+        final results = <Map<String, dynamic>>[
+          {
+            'type': 'tool_result',
+            'tool_use_id': m.toolCallId,
+            'content': m.content ?? '',
+          },
+        ];
+        while (i + 1 < filteredMessages.length &&
+            filteredMessages[i + 1].role == 'user' &&
+            filteredMessages[i + 1].toolCallId != null) {
+          i++;
+          final next = filteredMessages[i];
+          results.add({
+            'type': 'tool_result',
+            'tool_use_id': next.toolCallId,
+            'content': next.content ?? '',
+          });
+        }
+        apiMessages.add({'role': 'user', 'content': results});
       } else if (m.role == 'assistant' && m.toolCalls != null) {
         final contentList = <Map<String, dynamic>>[];
         if (m.content != null) {
@@ -354,6 +365,7 @@ class CustomProvider implements LlmProvider {
         map['content'] = m.content ?? '';
         apiMessages.add(map);
       }
+      i++;
     }
 
     final bodyMap = <String, dynamic>{

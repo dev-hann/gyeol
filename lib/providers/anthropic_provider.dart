@@ -103,18 +103,29 @@ class AnthropicProvider implements LlmProvider {
     }
 
     final apiMessages = <Map<String, dynamic>>[];
-    for (final m in filteredMessages) {
+    var i = 0;
+    while (i < filteredMessages.length) {
+      final m = filteredMessages[i];
       if (m.role == 'user' && m.toolCallId != null) {
-        apiMessages.add({
-          'role': 'user',
-          'content': [
-            {
-              'type': 'tool_result',
-              'tool_use_id': m.toolCallId,
-              'content': m.content ?? '',
-            },
-          ],
-        });
+        final results = <Map<String, dynamic>>[
+          {
+            'type': 'tool_result',
+            'tool_use_id': m.toolCallId,
+            'content': m.content ?? '',
+          },
+        ];
+        while (i + 1 < filteredMessages.length &&
+            filteredMessages[i + 1].role == 'user' &&
+            filteredMessages[i + 1].toolCallId != null) {
+          i++;
+          final next = filteredMessages[i];
+          results.add({
+            'type': 'tool_result',
+            'tool_use_id': next.toolCallId,
+            'content': next.content ?? '',
+          });
+        }
+        apiMessages.add({'role': 'user', 'content': results});
       } else if (m.role == 'assistant' && m.toolCalls != null) {
         final contentList = <Map<String, dynamic>>[];
         if (m.content != null) {
@@ -140,6 +151,7 @@ class AnthropicProvider implements LlmProvider {
         map['content'] = m.content ?? '';
         apiMessages.add(map);
       }
+      i++;
     }
 
     final bodyMap = <String, dynamic>{
@@ -227,13 +239,73 @@ class AnthropicProvider implements LlmProvider {
     if (apiKey.isEmpty) throw LlmError('Anthropic API key not set');
 
     String? systemPrompt;
-    final apiMessages = <Map<String, dynamic>>[];
+    final filteredMessages = <ChatMessageForApi>[];
     for (final m in messages) {
       if (m.role == 'system') {
         systemPrompt = m.content;
+      } else if (m.role == 'tool') {
+        filteredMessages.add(
+          ChatMessageForApi(
+            role: 'user',
+            content: m.content,
+            toolCallId: m.toolCallId,
+          ),
+        );
       } else {
-        apiMessages.add({'role': m.role, 'content': m.content ?? ''});
+        filteredMessages.add(m);
       }
+    }
+
+    final apiMessages = <Map<String, dynamic>>[];
+    var i = 0;
+    while (i < filteredMessages.length) {
+      final m = filteredMessages[i];
+      if (m.role == 'user' && m.toolCallId != null) {
+        final results = <Map<String, dynamic>>[
+          {
+            'type': 'tool_result',
+            'tool_use_id': m.toolCallId,
+            'content': m.content ?? '',
+          },
+        ];
+        while (i + 1 < filteredMessages.length &&
+            filteredMessages[i + 1].role == 'user' &&
+            filteredMessages[i + 1].toolCallId != null) {
+          i++;
+          final next = filteredMessages[i];
+          results.add({
+            'type': 'tool_result',
+            'tool_use_id': next.toolCallId,
+            'content': next.content ?? '',
+          });
+        }
+        apiMessages.add({'role': 'user', 'content': results});
+      } else if (m.role == 'assistant' && m.toolCalls != null) {
+        final contentList = <Map<String, dynamic>>[];
+        if (m.content != null) {
+          contentList.add({'type': 'text', 'text': m.content});
+        }
+        for (final tc in m.toolCalls!) {
+          Map<String, dynamic> input;
+          try {
+            input = jsonDecode(tc.arguments) as Map<String, dynamic>;
+          } on Object {
+            input = {};
+          }
+          contentList.add({
+            'type': 'tool_use',
+            'id': tc.id,
+            'name': tc.name,
+            'input': input,
+          });
+        }
+        apiMessages.add({'role': 'assistant', 'content': contentList});
+      } else {
+        final map = <String, dynamic>{'role': m.role};
+        map['content'] = m.content ?? '';
+        apiMessages.add(map);
+      }
+      i++;
     }
 
     final bodyMap = <String, dynamic>{
