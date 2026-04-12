@@ -310,6 +310,105 @@ void main() {
       expect(messages[31].content, 'new question');
     });
 
+    test('strips orphaned tool messages from history', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = [
+        const ChatMessage(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'list layers',
+          createdAt: 1000,
+        ),
+        const ChatMessage(
+          id: 'm2',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: '',
+          createdAt: 1001,
+        ),
+        const ChatMessage(
+          id: 'm3',
+          conversationId: 'c1',
+          role: 'tool',
+          content: '{"layers":[]}',
+          createdAt: 1002,
+          toolName: 'list_layers',
+          toolCallId: 'call_1',
+        ),
+        const ChatMessage(
+          id: 'm4',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'No layers found.',
+          createdAt: 1003,
+        ),
+      ];
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('thanks', history);
+
+      final messages = provider.capturedMessages.first;
+      final toolMsgs = messages.where((m) => m.role == 'tool').toList();
+      expect(toolMsgs, isEmpty);
+    });
+
+    test(
+      'strips orphaned assistant message preceding stripped tool message',
+      () async {
+        final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+        final history = [
+          const ChatMessage(
+            id: 'm1',
+            conversationId: 'c1',
+            role: 'user',
+            content: 'list layers',
+            createdAt: 1000,
+          ),
+          const ChatMessage(
+            id: 'm2',
+            conversationId: 'c1',
+            role: 'assistant',
+            content: '',
+            createdAt: 1001,
+          ),
+          const ChatMessage(
+            id: 'm3',
+            conversationId: 'c1',
+            role: 'tool',
+            content: '{"layers":[]}',
+            createdAt: 1002,
+            toolName: 'list_layers',
+            toolCallId: 'call_1',
+          ),
+          const ChatMessage(
+            id: 'm4',
+            conversationId: 'c1',
+            role: 'user',
+            content: 'now what',
+            createdAt: 1003,
+          ),
+        ];
+
+        final service = ChatService(provider: provider, repo: repo);
+        await service.handleMessage('thanks', history);
+
+        final messages = provider.capturedMessages.first;
+        final contentMsgs = messages.where((m) => m.role != 'system').toList();
+        final roles = contentMsgs.map((m) => m.role).toList();
+        expect(roles, isNot(contains('tool')));
+        expect(
+          roles,
+          isNot(contains('assistant')),
+          reason:
+              'empty assistant preceding stripped tool '
+              'should also be removed',
+        );
+      },
+    );
+
     test('preserves all history when under limit', () async {
       final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
 

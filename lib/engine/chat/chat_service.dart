@@ -245,14 +245,22 @@ class ChatService {
     final trimmed = history.length > _maxHistoryMessages
         ? history.sublist(history.length - _maxHistoryMessages)
         : history;
+    final filtered = <ChatMessage>[];
+    for (var i = 0; i < trimmed.length; i++) {
+      final m = trimmed[i];
+      if (m.role == 'tool') continue;
+      if (m.role == 'assistant' &&
+          m.content.isEmpty &&
+          i + 1 < trimmed.length &&
+          trimmed[i + 1].role == 'tool') {
+        continue;
+      }
+      filtered.add(m);
+    }
     return [
       const ChatMessageForApi(role: 'system', content: _systemPrompt),
-      ...trimmed.map(
-        (m) => ChatMessageForApi(
-          role: m.role,
-          content: m.content,
-          toolCallId: m.role == 'tool' ? m.toolCallId : null,
-        ),
+      ...filtered.map(
+        (m) => ChatMessageForApi(role: m.role, content: m.content),
       ),
       ChatMessageForApi(role: 'user', content: userMessage),
     ];

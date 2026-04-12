@@ -111,6 +111,22 @@ void main() {
       bus.publish(_makeTask(taskType: 'analysis'));
     });
 
+    test('publish returns errors from throwing subscribers', () {
+      final errors = <Object>[];
+      bus.subscribe('analysis', (_) => throw StateError('boom'));
+      bus.publish(_makeTask(taskType: 'analysis'), onError: errors.add);
+      expect(errors, hasLength(1));
+      expect(errors.first.toString(), contains('boom'));
+    });
+
+    test('publish collects errors from multiple failing subscribers', () {
+      final errors = <Object>[];
+      bus.subscribe('analysis', (_) => throw StateError('e1'));
+      bus.subscribe('analysis', (_) => throw ArgumentError('e2'));
+      bus.publish(_makeTask(taskType: 'analysis'), onError: errors.add);
+      expect(errors, hasLength(2));
+    });
+
     test('throwing wildcard subscriber does not block specific subscriber', () {
       var specificCalled = false;
       bus.subscribe('*', (_) => throw Exception('wildcard fail'));
