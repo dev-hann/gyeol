@@ -20,6 +20,58 @@ void main() {
     await db.close();
   });
 
+  group('ToolRegistry.getAllTools', () {
+    test('returns non-empty list of tool definitions', () {
+      final tools = ToolRegistry.getAllTools();
+      expect(tools, isNotEmpty);
+      for (final tool in tools) {
+        expect(tool.name, isNotEmpty);
+        expect(tool.description, isNotEmpty);
+        expect(tool.parameters, isA<Map<String, dynamic>>());
+      }
+    });
+
+    test('includes all core tools', () {
+      final names = ToolRegistry.getAllTools().map((t) => t.name).toSet();
+      expect(
+        names,
+        containsAll([
+          'create_layer',
+          'update_layer',
+          'delete_layer',
+          'create_worker',
+          'update_worker',
+          'delete_worker',
+          'list_layers',
+          'list_workers',
+          'list_threads',
+          'create_thread',
+          'run_thread',
+          'get_status',
+          'switch_provider',
+          'submit_task',
+        ]),
+      );
+    });
+  });
+
+  group('ToolRegistry.getToolByName', () {
+    test('returns tool definition for known tool', () {
+      final tool = ToolRegistry.getToolByName('create_layer');
+      expect(tool, isNotNull);
+      expect(tool!.name, 'create_layer');
+      expect(tool.description, isNotEmpty);
+      expect(
+        (tool.parameters['required'] as List<dynamic>).cast<String>(),
+        containsAll(['name', 'inputTypes', 'outputTypes']),
+      );
+    });
+
+    test('returns null for unknown tool', () {
+      expect(ToolRegistry.getToolByName('nonexistent'), isNull);
+    });
+  });
+
   group('ToolRegistry.executeTool', () {
     test('unknown tool returns error json', () async {
       final result = await ToolRegistry.executeTool(
