@@ -1711,4 +1711,286 @@ void main() {
       expect(toolEvents[1].toolName, 'list_workers');
     });
   });
+
+  group('ChatService _buildApiMessages merge verification', () {
+    late AppDatabase db;
+    late AppRepository repo;
+
+    setUp(() {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      repo = AppRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('three consecutive same-role messages merge into one', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = [
+        const ChatMessage(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'first',
+          createdAt: 1000,
+        ),
+        const ChatMessage(
+          id: 'm2',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'second',
+          createdAt: 1001,
+        ),
+        const ChatMessage(
+          id: 'm3',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'third',
+          createdAt: 1002,
+        ),
+      ];
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('new question', history);
+
+      final messages = provider.capturedMessages.first;
+      final nonSystem = messages.where((m) => m.role != 'system').toList();
+      expect(nonSystem.length, 1);
+      expect(nonSystem[0].role, 'user');
+      expect(nonSystem[0].content, 'first\nsecond\nthird\nnew question');
+    });
+
+    test('merge preserves content in original order', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = [
+        const ChatMessage(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'A',
+          createdAt: 1000,
+        ),
+        const ChatMessage(
+          id: 'm2',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'B',
+          createdAt: 1001,
+        ),
+        const ChatMessage(
+          id: 'm3',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'C',
+          createdAt: 1002,
+        ),
+      ];
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('go', history);
+
+      final messages = provider.capturedMessages.first;
+      final merged = messages[1];
+      expect(merged.role, 'assistant');
+      expect(merged.content, 'A\nB\nC');
+    });
+
+    test(
+      'history with only tool messages results in system + user only',
+      () async {
+        final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+        final history = [
+          const ChatMessage(
+            id: 'm1',
+            conversationId: 'c1',
+            role: 'tool',
+            content: 'result1',
+            createdAt: 1000,
+            toolName: 'list_layers',
+            toolCallId: 'call_1',
+          ),
+          const ChatMessage(
+            id: 'm2',
+            conversationId: 'c1',
+            role: 'tool',
+            content: 'result2',
+            createdAt: 1001,
+            toolName: 'list_workers',
+            toolCallId: 'call_2',
+          ),
+        ];
+
+        final service = ChatService(provider: provider, repo: repo);
+        await service.handleMessage('hello', history);
+
+        final messages = provider.capturedMessages.first;
+        expect(messages.length, 2);
+        expect(messages[0].role, 'system');
+        expect(messages[1].role, 'user');
+        expect(messages[1].content, 'hello');
+      },
+    );
+
+    test('interleaved same-role pairs merge independently', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = [
+        const ChatMessage(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'q1',
+          createdAt: 1000,
+        ),
+        const ChatMessage(
+          id: 'm2',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'q2',
+          createdAt: 1001,
+        ),
+        const ChatMessage(
+          id: 'm3',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'a1',
+          createdAt: 1002,
+        ),
+        const ChatMessage(
+          id: 'm4',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'a2',
+          createdAt: 1003,
+        ),
+        const ChatMessage(
+          id: 'm5',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'q3',
+          createdAt: 1004,
+        ),
+      ];
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('next', history);
+
+      final messages = provider.capturedMessages.first;
+      final nonSystem = messages.where((m) => m.role != 'system').toList();
+      final roles = nonSystem.map((m) => m.role).toList();
+      expect(roles, ['user', 'assistant', 'user']);
+      expect(nonSystem[0].content, 'q1\nq2');
+      expect(nonSystem[1].content, 'a1\na2');
+      expect(nonSystem[2].content, 'q3\nnext');
+    });
+
+    test('empty user message appends empty user message at end', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = [
+        const ChatMessage(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'previous',
+          createdAt: 1000,
+        ),
+      ];
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('', history);
+
+      final messages = provider.capturedMessages.first;
+      final last = messages.last;
+      expect(last.role, 'user');
+      expect(last.content, isEmpty);
+    });
+
+    test(
+      'empty user message does not merge with preceding user in history',
+      () async {
+        final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+        final history = [
+          const ChatMessage(
+            id: 'm1',
+            conversationId: 'c1',
+            role: 'user',
+            content: 'existing',
+            createdAt: 1000,
+          ),
+        ];
+
+        final service = ChatService(provider: provider, repo: repo);
+        await service.handleMessage('', history);
+
+        final messages = provider.capturedMessages.first;
+        final nonSystem = messages.where((m) => m.role != 'system').toList();
+        expect(nonSystem.length, 2);
+        expect(nonSystem[0].content, 'existing');
+        expect(nonSystem[1].content, isEmpty);
+      },
+    );
+
+    test('history trimming at exact 30-message boundary', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = List.generate(
+        30,
+        (i) => ChatMessage(
+          id: 'm$i',
+          conversationId: 'c1',
+          role: i.isEven ? 'user' : 'assistant',
+          content: 'msg $i',
+          createdAt: 1000 + i,
+        ),
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('new', history);
+
+      final messages = provider.capturedMessages.first;
+      expect(messages.length, 32);
+      expect(messages.first.role, 'system');
+      expect(messages[1].content, 'msg 0');
+      expect(messages.last.content, 'new');
+    });
+
+    test('history trimming at 31 messages drops first', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = List.generate(
+        31,
+        (i) => ChatMessage(
+          id: 'm$i',
+          conversationId: 'c1',
+          role: i.isEven ? 'user' : 'assistant',
+          content: 'msg $i',
+          createdAt: 1000 + i,
+        ),
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('new', history);
+
+      final messages = provider.capturedMessages.first;
+      expect(messages.length, 31);
+      expect(messages[1].content, 'msg 1');
+    });
+
+    test('system prompt is always first message', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('test', []);
+
+      final messages = provider.capturedMessages.first;
+      expect(messages.first.role, 'system');
+      expect(messages.first.content, contains('Gyeol AI Assistant'));
+    });
+  });
 }

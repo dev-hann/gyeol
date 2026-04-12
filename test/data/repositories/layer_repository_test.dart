@@ -232,4 +232,83 @@ void main() {
       expect(layers.first.name, 'keep');
     });
   });
+
+  group('LayerRepository malformed data resilience', () {
+    test('returns empty inputTypes when stored JSON is malformed', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'bad-input',
+          inputTypes: 'not-valid-json{{{',
+          outputTypes: '["ok"]',
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.name, 'bad-input');
+      expect(layers.first.inputTypes, isEmpty);
+      expect(layers.first.outputTypes, ['ok']);
+    });
+
+    test('returns empty outputTypes when stored JSON is malformed', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'bad-output',
+          inputTypes: '["text"]',
+          outputTypes: '{"broken":true}',
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.inputTypes, ['text']);
+      expect(layers.first.outputTypes, isEmpty);
+    });
+
+    test('returns empty list when stored value is not a JSON array', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'not-array',
+          inputTypes: '"a_string"',
+          outputTypes: '42',
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.inputTypes, isEmpty);
+      expect(layers.first.outputTypes, isEmpty);
+    });
+
+    test('filters non-string elements from stored list', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'mixed-types',
+          inputTypes: '["text", 42, true, "json"]',
+          outputTypes: '[null, "analysis"]',
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.inputTypes, ['text', 'json']);
+      expect(layers.first.outputTypes, ['analysis']);
+    });
+
+    test('handles both fields corrupted gracefully', () async {
+      await db.saveLayer(
+        LayersCompanion.insert(
+          name: 'both-bad',
+          inputTypes: 'broken',
+          outputTypes: '{invalid',
+        ),
+      );
+
+      final layers = await repo.layers.listLayers();
+      expect(layers, hasLength(1));
+      expect(layers.first.name, 'both-bad');
+      expect(layers.first.inputTypes, isEmpty);
+      expect(layers.first.outputTypes, isEmpty);
+    });
+  });
 }
