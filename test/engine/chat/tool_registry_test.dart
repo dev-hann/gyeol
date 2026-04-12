@@ -131,6 +131,14 @@ void main() {
     });
 
     group('update_layer', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('update_layer', {
+          'name': 123,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
       test('returns error when layer not found', () async {
         final result = await ToolRegistry.executeTool('update_layer', {
           'name': 'missing',
@@ -182,6 +190,20 @@ void main() {
 
         final layers = await repo.layers.listLayers();
         expect(layers, isEmpty);
+      });
+
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('delete_layer', {
+          'name': 123,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
+      test('returns descriptive error when name is missing', () async {
+        final result = await ToolRegistry.executeTool('delete_layer', {}, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
       });
     });
 
@@ -331,6 +353,14 @@ void main() {
     });
 
     group('update_worker', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('update_worker', {
+          'name': 456,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
       test('returns error when worker not found', () async {
         final result = await ToolRegistry.executeTool('update_worker', {
           'name': 'ghost',
@@ -370,6 +400,14 @@ void main() {
     });
 
     group('delete_worker', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('delete_worker', {
+          'name': 789,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
       test('deletes a worker by name', () async {
         await repo.layers.saveLayer(
           const LayerDefinition(
@@ -400,6 +438,36 @@ void main() {
     });
 
     group('create_thread', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('create_thread', {
+          'name': 100,
+          'path': '/a',
+          'layerNames': ['L1'],
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
+      test('returns descriptive error when path is not a String', () async {
+        final result = await ToolRegistry.executeTool('create_thread', {
+          'name': 'T1',
+          'path': 42,
+          'layerNames': ['L1'],
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('path'));
+      });
+
+      test('returns descriptive error when layerNames is not a List', () async {
+        final result = await ToolRegistry.executeTool('create_thread', {
+          'name': 'T1',
+          'path': '/a',
+          'layerNames': 'not-a-list',
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('layerNames'));
+      });
+
       test('creates a thread and returns success', () async {
         await repo.layers.saveLayer(
           const LayerDefinition(
@@ -460,6 +528,14 @@ void main() {
     });
 
     group('run_thread', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('run_thread', {
+          'name': 999,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
       test('returns error when thread not found', () async {
         final result = await ToolRegistry.executeTool('run_thread', {
           'name': 'ghost',
@@ -537,6 +613,30 @@ void main() {
     });
 
     group('assign_worker / unassign_worker', () {
+      test(
+        'assign_worker returns error when workerName is not a String',
+        () async {
+          final result = await ToolRegistry.executeTool('assign_worker', {
+            'workerName': 123,
+            'layerName': 'L1',
+          }, repo);
+          final decoded = jsonDecode(result) as Map<String, dynamic>;
+          expect(decoded['error'], contains('workerName'));
+        },
+      );
+
+      test(
+        'assign_worker returns error when layerName is not a String',
+        () async {
+          final result = await ToolRegistry.executeTool('assign_worker', {
+            'workerName': 'W1',
+            'layerName': 456,
+          }, repo);
+          final decoded = jsonDecode(result) as Map<String, dynamic>;
+          expect(decoded['error'], contains('layerName'));
+        },
+      );
+
       test('assign_worker returns error when layer not found', () async {
         await repo.layers.saveLayer(
           const LayerDefinition(
@@ -664,6 +764,14 @@ void main() {
     });
 
     group('update_thread', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('update_thread', {
+          'name': 222,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
       test('returns error when thread not found', () async {
         final result = await ToolRegistry.executeTool('update_thread', {
           'name': 'ghost',
@@ -705,6 +813,14 @@ void main() {
     });
 
     group('delete_thread', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('delete_thread', {
+          'name': 333,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
       test('deletes a thread by name', () async {
         await repo.threads.saveThread(
           const ThreadDefinition(id: 0, name: 'T1', path: '/a', layerIds: []),
@@ -801,6 +917,14 @@ void main() {
     });
 
     group('get_worker_details', () {
+      test('returns descriptive error when name is not a String', () async {
+        final result = await ToolRegistry.executeTool('get_worker_details', {
+          'name': 555,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('name'));
+      });
+
       test('returns error when worker not found', () async {
         final result = await ToolRegistry.executeTool('get_worker_details', {
           'name': 'ghost',
@@ -1082,6 +1206,14 @@ void main() {
     });
 
     group('switch_provider', () {
+      test('returns descriptive error when provider is not a String', () async {
+        final result = await ToolRegistry.executeTool('switch_provider', {
+          'provider': 404,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('provider'));
+      });
+
       test('returns error for unknown provider name', () async {
         final result = await ToolRegistry.executeTool('switch_provider', {
           'provider': 'unknown',
@@ -1120,6 +1252,27 @@ void main() {
     });
 
     group('rename_conversation', () {
+      test(
+        'returns descriptive error when conversationId is not a String',
+        () async {
+          final result = await ToolRegistry.executeTool('rename_conversation', {
+            'conversationId': 111,
+            'title': 'Title',
+          }, repo);
+          final decoded = jsonDecode(result) as Map<String, dynamic>;
+          expect(decoded['error'], contains('conversationId'));
+        },
+      );
+
+      test('returns descriptive error when title is not a String', () async {
+        final result = await ToolRegistry.executeTool('rename_conversation', {
+          'conversationId': 'abc',
+          'title': 222,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('title'));
+      });
+
       test('renames existing conversation', () async {
         final conv = ChatConversation.create('Old Title');
         await repo.chat.saveConversation(conv);
@@ -1144,6 +1297,14 @@ void main() {
     });
 
     group('search_messages', () {
+      test('returns descriptive error when query is not a String', () async {
+        final result = await ToolRegistry.executeTool('search_messages', {
+          'query': 333,
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('query'));
+      });
+
       test('finds matching messages across conversations', () async {
         final conv = ChatConversation.create('Test');
         await repo.chat.saveConversation(conv);
@@ -1242,6 +1403,17 @@ void main() {
     });
 
     group('clear_conversation', () {
+      test(
+        'returns descriptive error when conversationId is not a String',
+        () async {
+          final result = await ToolRegistry.executeTool('clear_conversation', {
+            'conversationId': 444,
+          }, repo);
+          final decoded = jsonDecode(result) as Map<String, dynamic>;
+          expect(decoded['error'], contains('conversationId'));
+        },
+      );
+
       test('clears all messages from conversation', () async {
         final conv = ChatConversation.create('Test');
         await repo.chat.saveConversation(conv);
@@ -1270,6 +1442,17 @@ void main() {
     });
 
     group('export_conversation', () {
+      test(
+        'returns descriptive error when conversationId is not a String',
+        () async {
+          final result = await ToolRegistry.executeTool('export_conversation', {
+            'conversationId': 555,
+          }, repo);
+          final decoded = jsonDecode(result) as Map<String, dynamic>;
+          expect(decoded['error'], contains('conversationId'));
+        },
+      );
+
       test('exports conversation as markdown', () async {
         final conv = ChatConversation.create('My Chat');
         await repo.chat.saveConversation(conv);

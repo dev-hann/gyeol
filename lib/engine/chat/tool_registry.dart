@@ -99,6 +99,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'update_layer: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final layers = await repo.layers.listLayers();
     final existing = layers.where((l) => l.name == name).firstOrNull;
@@ -125,6 +130,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'delete_layer: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final layers = await repo.layers.listLayers();
     final layer = layers.where((l) => l.name == name).firstOrNull;
@@ -185,6 +195,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'update_worker: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final existing = await repo.workers.getWorker(name);
     if (existing == null) {
@@ -220,6 +235,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'delete_worker: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final worker = await repo.workers.getWorker(name);
     if (worker == null) {
@@ -305,6 +325,21 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'create_thread: "name" must be a non-null String',
+      });
+    }
+    if (args['path'] is! String) {
+      return jsonEncode({
+        'error': 'create_thread: "path" must be a non-null String',
+      });
+    }
+    if (args['layerNames'] is! List) {
+      return jsonEncode({
+        'error': 'create_thread: "layerNames" must be a List',
+      });
+    }
     final name = args['name'] as String;
     final path = args['path'] as String;
     final layerNames = (args['layerNames'] as List)
@@ -333,6 +368,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'run_thread: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final thread = await repo.threads.getThread(name);
     if (thread == null) {
@@ -353,6 +393,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'update_thread: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final existing = await repo.threads.getThread(name);
     if (existing == null) {
@@ -387,6 +432,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'delete_thread: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final thread = await repo.threads.getThread(name);
     if (thread == null) {
@@ -400,6 +450,16 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['workerName'] is! String) {
+      return jsonEncode({
+        'error': 'assign_worker: "workerName" must be a non-null String',
+      });
+    }
+    if (args['layerName'] is! String) {
+      return jsonEncode({
+        'error': 'assign_worker: "layerName" must be a non-null String',
+      });
+    }
     final workerName = args['workerName'] as String;
     final layerName = args['layerName'] as String;
 
@@ -431,6 +491,16 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['workerName'] is! String) {
+      return jsonEncode({
+        'error': 'unassign_worker: "workerName" must be a non-null String',
+      });
+    }
+    if (args['layerName'] is! String) {
+      return jsonEncode({
+        'error': 'unassign_worker: "layerName" must be a non-null String',
+      });
+    }
     final workerName = args['workerName'] as String;
     final layerName = args['layerName'] as String;
 
@@ -528,6 +598,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['provider'] is! String) {
+      return jsonEncode({
+        'error': 'switch_provider: "provider" must be a non-null String',
+      });
+    }
     final providerName = args['provider'] as String;
     final providerType = switch (providerName.toLowerCase()) {
       'openai' => ProviderType.openAI,
@@ -1149,6 +1224,17 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['conversationId'] is! String) {
+      return jsonEncode({
+        'error':
+            'rename_conversation: "conversationId" must be a non-null String',
+      });
+    }
+    if (args['title'] is! String) {
+      return jsonEncode({
+        'error': 'rename_conversation: "title" must be a non-null String',
+      });
+    }
     final conversationId = args['conversationId'] as String;
     final title = args['title'] as String;
 
@@ -1169,6 +1255,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['query'] is! String) {
+      return jsonEncode({
+        'error': 'search_messages: "query" must be a non-null String',
+      });
+    }
     final query = (args['query'] as String).toLowerCase();
     final conversationId = args['conversationId'] as String?;
     final limit = (args['limit'] as num?)?.toInt() ?? 20;
@@ -1203,6 +1294,12 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['conversationId'] is! String) {
+      return jsonEncode({
+        'error':
+            'clear_conversation: "conversationId" must be a non-null String',
+      });
+    }
     final conversationId = args['conversationId'] as String;
     await repo.chat.clearMessages(conversationId);
     return jsonEncode({
@@ -1215,6 +1312,12 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['conversationId'] is! String) {
+      return jsonEncode({
+        'error':
+            'export_conversation: "conversationId" must be a non-null String',
+      });
+    }
     final conversationId = args['conversationId'] as String;
 
     final convs = await repo.chat.listConversations();
@@ -1247,6 +1350,11 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['name'] is! String) {
+      return jsonEncode({
+        'error': 'get_worker_details: "name" must be a non-null String',
+      });
+    }
     final name = args['name'] as String;
     final worker = await repo.workers.getWorker(name);
     if (worker == null) {
