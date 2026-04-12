@@ -98,7 +98,9 @@ void main() {
     });
 
     test('create factory sets status to pending', () {
-      final task = AppTask.create('analyze', {'data': 1}, TaskPriority.high);
+      final task = AppTask.create('analyze', const {
+        'data': 1,
+      }, TaskPriority.high);
 
       expect(task.status, TaskStatus.pending);
       expect(task.taskType, 'analyze');

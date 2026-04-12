@@ -11,7 +11,7 @@ AppTask _makeTask({
     id: 0,
     uuid: 'test-id',
     taskType: taskType,
-    payload: <String, dynamic>{},
+    payload: const <String, dynamic>{},
     priority: TaskPriority.medium,
     status: status,
     createdAt: 1000,

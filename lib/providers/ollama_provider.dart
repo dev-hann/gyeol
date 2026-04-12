@@ -30,7 +30,7 @@ class OllamaProvider implements LlmProvider {
 
   @override
   Future<String> generateWithSystem(String system, String user) async {
-    final url = '${baseUrl.replaceAll(RegExp(r'/$'), '')}/api/chat';
+    final url = '${baseUrl.replaceAll(RegExp(r'/+$'), '')}/api/chat';
 
     final body = jsonEncode({
       'model': model,

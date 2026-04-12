@@ -193,7 +193,7 @@ void main() {
       final received = <AppTask>[];
       bus.subscribe('analysis', received.add);
 
-      final task = AppTask.create('analysis', <String, dynamic>{
+      final task = AppTask.create('analysis', const <String, dynamic>{
         'k': 'v',
       }, TaskPriority.high);
       bus.publish(task);
@@ -207,7 +207,7 @@ void main() {
       final received = <AppTask>[];
       bus.subscribe('analysis', received.add);
 
-      final task = AppTask.create('translation', <String, dynamic>{
+      final task = AppTask.create('translation', const <String, dynamic>{
         'k': 'v',
       }, TaskPriority.low);
       bus.publish(task);
@@ -222,12 +222,12 @@ void main() {
 
       final task1 = AppTask.create(
         'analysis',
-        <String, dynamic>{},
+        const <String, dynamic>{},
         TaskPriority.high,
       );
       final task2 = AppTask.create(
         'translation',
-        <String, dynamic>{},
+        const <String, dynamic>{},
         TaskPriority.low,
       );
       bus
@@ -246,7 +246,7 @@ void main() {
 
       final task = AppTask.create(
         'analysis',
-        <String, dynamic>{},
+        const <String, dynamic>{},
         TaskPriority.medium,
       );
       bus.publish(task);
@@ -264,7 +264,7 @@ void main() {
 
       final task = AppTask.create(
         'analysis',
-        <String, dynamic>{},
+        const <String, dynamic>{},
         TaskPriority.high,
       );
       bus.publish(task);
@@ -293,7 +293,7 @@ void main() {
     });
 
     test('returns task id and increments queueLength', () async {
-      final task = AppTask.create('text', {'k': 'v'}, TaskPriority.high);
+      final task = AppTask.create('text', const {'k': 'v'}, TaskPriority.high);
       final id = await scheduler.submit(task);
       expect(id, greaterThan(0));
       expect(scheduler.queueLength, 1);

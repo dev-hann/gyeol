@@ -4,7 +4,9 @@ import 'package:gyeol/data/models/app_models.dart';
 void main() {
   group('AppTask', () {
     test('create factory sets timestamps and pending status', () {
-      final task = AppTask.create('parse', {'text': 'hi'}, TaskPriority.high);
+      final task = AppTask.create('parse', const {
+        'text': 'hi',
+      }, TaskPriority.high);
 
       expect(task.id, 0);
       expect(task.uuid, isNotEmpty);
@@ -99,7 +101,7 @@ void main() {
 
   group('AppTask payload type safety', () {
     test('payload accepts Map<String, Object>', () {
-      final task = AppTask.create('parse', <String, Object>{
+      final task = AppTask.create('parse', const <String, Object>{
         'text': 'hi',
         'count': 42,
       }, TaskPriority.high);
@@ -112,7 +114,7 @@ void main() {
     });
 
     test('payload accepts List<String>', () {
-      final task = AppTask.create('batch', <String>[
+      final task = AppTask.create('batch', const <String>[
         'a',
         'b',
       ], TaskPriority.medium);
@@ -120,7 +122,7 @@ void main() {
     });
 
     test('copyWith preserves payload type', () {
-      final task = AppTask.create('parse', <String, dynamic>{
+      final task = AppTask.create('parse', const <String, dynamic>{
         'key': 'val',
       }, TaskPriority.high);
       final copied = task.copyWith(status: TaskStatus.done);
@@ -131,7 +133,7 @@ void main() {
 
   group('AppTask equality', () {
     test('tasks with same id are equal', () {
-      final a = AppTask.create('parse', {'x': 1}, TaskPriority.high);
+      final a = AppTask.create('parse', const {'x': 1}, TaskPriority.high);
       final b = a.copyWith(status: TaskStatus.running);
       expect(a, b);
       expect(a.hashCode, b.hashCode);

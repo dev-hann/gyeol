@@ -103,11 +103,16 @@ class ChatService {
       );
 
       for (final call in response.toolCalls!) {
-        final args = jsonDecode(call.arguments) as Map<String, dynamic>;
+        Map<String, dynamic> args;
+        try {
+          args = jsonDecode(call.arguments) as Map<String, dynamic>;
+        } on Object {
+          args = {};
+        }
 
         String result;
         if (call.name == 'run_thread' && onRunThread != null) {
-          final threadName = args['name'] as String;
+          final threadName = args['name'] as String? ?? '';
           result = await onRunThread!(threadName);
         } else {
           result = await ToolRegistry.executeTool(call.name, args, repo);
@@ -207,7 +212,7 @@ class ChatService {
         String result;
         try {
           if (call.name == 'run_thread' && onRunThread != null) {
-            final threadName = args['name'] as String;
+            final threadName = args['name'] as String? ?? '';
             result = await onRunThread!(threadName);
           } else {
             result = await ToolRegistry.executeTool(call.name, args, repo);

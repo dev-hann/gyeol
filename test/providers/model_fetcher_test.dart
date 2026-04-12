@@ -3,6 +3,54 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/providers/model_fetcher.dart';
 
 void main() {
+  group('resolveEndpoint', () {
+    test('appends path to base url', () {
+      expect(
+        resolveEndpoint('https://api.example.com', '/v1/models'),
+        'https://api.example.com/v1/models',
+      );
+    });
+
+    test('strips trailing slash from base url', () {
+      expect(
+        resolveEndpoint('https://api.example.com/', '/v1/models'),
+        'https://api.example.com/v1/models',
+      );
+    });
+
+    test('returns clean url when it already ends with path', () {
+      expect(
+        resolveEndpoint('https://api.example.com/v1/models', '/v1/models'),
+        'https://api.example.com/v1/models',
+      );
+    });
+
+    test('strips v1 prefix from path when base already has version suffix', () {
+      expect(
+        resolveEndpoint('https://api.example.com/v2', '/v1/models'),
+        'https://api.example.com/v2/models',
+      );
+    });
+
+    test('does not strip v1 prefix when base has no version suffix', () {
+      expect(
+        resolveEndpoint('https://api.example.com', '/v1/models'),
+        'https://api.example.com/v1/models',
+      );
+    });
+
+    test('handles multiple trailing slashes', () {
+      expect(
+        resolveEndpoint('https://api.example.com///', '/v1/chat'),
+        'https://api.example.com/v1/chat',
+      );
+    });
+
+    test('handles empty base url', () {
+      expect(resolveEndpoint('', '/v1/models'), '/v1/models');
+    });
+  });
+
   group('ModelFetcher', () {
     test('fetchModels returns Anthropic hardcoded models', () async {
       final models = await ModelFetcher.fetchModels(

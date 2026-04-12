@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 enum TaskPriority { low, medium, high }
 
 enum TaskStatus { pending, running, done, failed }
 
+@immutable
 class AppTask {
   const AppTask({
     required this.id,

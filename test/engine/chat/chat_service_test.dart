@@ -196,6 +196,32 @@ void main() {
       expect(provider.capturedMessages.length, 3);
     });
 
+    test('handles tool call with malformed JSON arguments', () async {
+      final provider = FakeLlmProvider([
+        const ChatResponse(
+          toolCalls: [
+            ToolCall(
+              id: 'call_1',
+              name: 'list_layers',
+              arguments: 'not-valid-json',
+            ),
+          ],
+        ),
+        const ChatResponse(content: 'I listed the layers.'),
+      ]);
+
+      final service = ChatService(provider: provider, repo: repo);
+      final result = await service.handleMessage('List layers', []);
+
+      expect(result.assistantResponse, 'I listed the layers.');
+      expect(
+        result.newMessages.any(
+          (m) => m.role == 'tool' && m.toolName == 'list_layers',
+        ),
+        isTrue,
+      );
+    });
+
     test('respects max 5 iteration limit', () async {
       final responses = List.generate(
         10,

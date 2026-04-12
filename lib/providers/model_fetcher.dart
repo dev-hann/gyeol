@@ -3,7 +3,7 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:http/http.dart' as http;
 
 String resolveEndpoint(String baseUrl, String path) {
-  final clean = baseUrl.replaceAll(RegExp(r'/$'), '');
+  final clean = baseUrl.replaceAll(RegExp(r'/+$'), '');
   if (clean.endsWith(path)) return clean;
   if (RegExp(r'/v\d+$').hasMatch(clean) && path.startsWith('/v1/')) {
     return '$clean${path.substring(3)}';
@@ -34,7 +34,7 @@ class ModelFetcher {
     String baseUrl,
     String apiKey,
   ) async {
-    final clean = baseUrl.replaceAll(RegExp(r'/$'), '');
+    final clean = baseUrl.replaceAll(RegExp(r'/+$'), '');
     if (clean.isEmpty) return CustomApiFormat.openAICompatible;
 
     if (await _probeOpenAI(clean, apiKey)) {
@@ -140,7 +140,7 @@ class ModelFetcher {
 
   static Future<List<String>> _fetchOllama(String baseUrl) async {
     try {
-      final url = '${baseUrl.replaceAll(RegExp(r'/$'), '')}/api/tags';
+      final url = '${baseUrl.replaceAll(RegExp(r'/+$'), '')}/api/tags';
       final response = await http.get(Uri.parse(url));
       if (response.statusCode != 200) return [];
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -159,7 +159,7 @@ class ModelFetcher {
     String apiKey,
     CustomApiFormat apiFormat,
   ) async {
-    final clean = baseUrl.replaceAll(RegExp(r'/$'), '');
+    final clean = baseUrl.replaceAll(RegExp(r'/+$'), '');
     return switch (apiFormat) {
       CustomApiFormat.openAICompatible => _fetchCustomOpenAI(clean, apiKey),
       CustomApiFormat.ollamaCompatible => _fetchOllama(clean),

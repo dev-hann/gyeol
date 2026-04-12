@@ -12,7 +12,7 @@ AppTask _makeTask({
     id: 0,
     uuid: uuid,
     taskType: taskType,
-    payload: <String, dynamic>{},
+    payload: const <String, dynamic>{},
     priority: priority,
     status: TaskStatus.pending,
     createdAt: createdAt,
