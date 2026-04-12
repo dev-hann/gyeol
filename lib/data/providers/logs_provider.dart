@@ -17,6 +17,9 @@ class LogsNotifier extends AsyncNotifier<List<ExecutionLog>> {
     await _sub?.cancel();
     _sub = repo.logs.watchExecutionLogs().listen(
       (data) => state = AsyncData(data),
+      onError: (Object e, StackTrace st) {
+        state = AsyncError(e, st);
+      },
     );
     ref.onDispose(() => _sub?.cancel());
     return repo.logs.listExecutionLogs();

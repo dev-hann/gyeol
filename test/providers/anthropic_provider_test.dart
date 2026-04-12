@@ -511,6 +511,43 @@ void main() {
       expect(response.content, 'combined');
     });
 
+    test('merges consecutive user messages into single message', () async {
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final messages = body['messages'] as List<dynamic>;
+        expect(messages.length, 1);
+        final msg = messages[0] as Map<String, dynamic>;
+        expect(msg['role'], 'user');
+        expect(msg['content'], 'hello\nworld');
+
+        return http.Response(
+          jsonEncode({
+            'content': [
+              {'type': 'text', 'text': 'merged!'},
+            ],
+          }),
+          200,
+        );
+      });
+
+      final provider = AnthropicProvider(
+        apiKey: 'test-key',
+        model: 'claude-3-sonnet',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: mockClient,
+      );
+
+      final response = await provider.generateChat(
+        messages: const [
+          ChatMessageForApi(role: 'user', content: 'hello'),
+          ChatMessageForApi(role: 'user', content: 'world'),
+        ],
+      );
+
+      expect(response.content, 'merged!');
+    });
+
     test('throws LlmError on non-200 status', () async {
       final mockClient = MockClient((request) async {
         return http.Response('{"error": "unauthorized"}', 401);
@@ -1001,6 +1038,47 @@ void main() {
         expect((content[1] as Map<String, dynamic>)['id'], 'tc_1');
         expect((content[1] as Map<String, dynamic>)['name'], 'search');
         expect((content[1] as Map<String, dynamic>)['input'], {'q': 'test'});
+      },
+    );
+
+    test(
+      'merges consecutive user messages into single message in stream',
+      () async {
+        String? capturedBody;
+
+        final sseData = [
+          'data: ${jsonEncode({'type': 'message_stop'})}',
+          '',
+        ].join('\n');
+
+        final client = _StreamClientWithRequest((request) async {
+          capturedBody = (request as http.Request).body;
+          return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+        });
+
+        final provider = AnthropicProvider(
+          apiKey: 'test-key',
+          model: 'claude-3-sonnet',
+          temperature: 0.7,
+          maxTokens: 100,
+          client: client,
+        );
+
+        await provider
+            .generateChatStream(
+              messages: const [
+                ChatMessageForApi(role: 'user', content: 'hello'),
+                ChatMessageForApi(role: 'user', content: 'world'),
+              ],
+            )
+            .toList();
+
+        final body = jsonDecode(capturedBody!) as Map<String, dynamic>;
+        final messages = body['messages'] as List<dynamic>;
+        expect(messages.length, 1);
+        final msg = messages[0] as Map<String, dynamic>;
+        expect(msg['role'], 'user');
+        expect(msg['content'], 'hello\nworld');
       },
     );
 
