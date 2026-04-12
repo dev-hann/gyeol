@@ -363,7 +363,7 @@ class AnthropicProvider implements LlmProvider {
               }
             }
           }
-        } on FormatException {
+        } on Object {
           continue;
         }
       }

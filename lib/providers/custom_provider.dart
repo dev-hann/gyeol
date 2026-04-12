@@ -565,7 +565,7 @@ class CustomProvider implements LlmProvider {
               );
             }
           }
-        } on FormatException {
+        } on Object {
           continue;
         }
       }
@@ -695,7 +695,7 @@ class CustomProvider implements LlmProvider {
               }
             }
           }
-        } on FormatException {
+        } on Object {
           continue;
         }
       }

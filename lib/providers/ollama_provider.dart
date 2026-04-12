@@ -219,22 +219,29 @@ class OllamaProvider implements LlmProvider {
           if (content != null) {
             yield ChatStreamDelta(content: content);
           }
-          final rawToolCalls = delta?['tool_calls'] as List<dynamic>?;
-          if (rawToolCalls != null) {
+          final rawToolCalls = delta?['tool_calls'];
+          if (rawToolCalls is List<dynamic>) {
             yield ChatStreamDelta(
               toolCalls: rawToolCalls.map((tc) {
-                final map = tc as Map<String, dynamic>;
-                final fn = map['function'] as Map<String, dynamic>?;
+                final map = tc is Map<String, dynamic>
+                    ? tc
+                    : <String, dynamic>{};
+                final fn = map['function'];
+                final fnMap = fn is Map<String, dynamic> ? fn : null;
                 return ToolCallDelta(
-                  index: map['index'] as int?,
-                  id: map['id'] as String?,
-                  name: fn?['name'] as String?,
-                  arguments: fn?['arguments'] as String?,
+                  index: map['index'] is int ? map['index'] as int : null,
+                  id: map['id'] is String ? map['id'] as String : null,
+                  name: fnMap?['name'] is String
+                      ? fnMap!['name'] as String
+                      : null,
+                  arguments: fnMap?['arguments'] is String
+                      ? fnMap!['arguments'] as String
+                      : null,
                 );
               }).toList(),
             );
           }
-        } on FormatException {
+        } on Object {
           continue;
         }
       }

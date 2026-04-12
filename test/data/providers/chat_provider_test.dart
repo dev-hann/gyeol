@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +9,16 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/chat_provider.dart';
 import 'package:gyeol/data/providers/core_providers.dart';
 import 'package:gyeol/data/providers/settings_provider.dart';
+
+class _ErrorInjectDb extends AppDatabase {
+  _ErrorInjectDb(this.controller) : super.forTesting(NativeDatabase.memory());
+
+  final StreamController<List<ChatConversationRow>> controller;
+
+  @override
+  Stream<List<ChatConversationRow>> watchChatConversations() =>
+      controller.stream;
+}
 
 void main() {
   late AppDatabase db;
@@ -132,6 +145,25 @@ void main() {
       final titles = convs.map((c) => c.title).toList();
       expect(titles, containsAll(['First', 'Second', 'Third']));
     });
+
+    test('stream error transitions state to AsyncError', () async {
+      final controller = StreamController<List<ChatConversationRow>>();
+      final errDb = _ErrorInjectDb(controller);
+      final errContainer = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(errDb)],
+      );
+
+      await errContainer.read(conversationsProvider.future);
+      controller.addError(StateError('db broken'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final state = errContainer.read(conversationsProvider);
+      expect(state.hasError, isTrue);
+
+      await controller.close();
+      errContainer.dispose();
+      await errDb.close();
+    });
   });
 
   group('chatMessagesProvider', () {
@@ -207,6 +239,37 @@ void main() {
 
       final service = container.read(chatServiceProvider);
       expect(service, isNotNull);
+    });
+
+    test('onRunThread returns error JSON when thread not found', () async {
+      final repo = container.read(repositoryProvider);
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          configs: {ProviderType.openAI: OpenAIConfig(apiKey: 'test-key')},
+        ),
+      );
+      await container.read(settingsProvider.future);
+
+      final service = container.read(chatServiceProvider);
+      final result = await service.onRunThread!('nonexistent');
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded, contains('error'));
+      expect(decoded['error'] as String, contains('nonexistent'));
+    });
+
+    test('onRunThread returns error JSON on scheduler exception', () async {
+      final repo = container.read(repositoryProvider);
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          configs: {ProviderType.openAI: OpenAIConfig(apiKey: 'test-key')},
+        ),
+      );
+      await container.read(settingsProvider.future);
+
+      final service = container.read(chatServiceProvider);
+      final result = await service.onRunThread!('nonexistent');
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      expect(decoded, contains('error'));
     });
   });
 }

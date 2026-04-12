@@ -25,6 +25,9 @@ class ConversationsNotifier extends AsyncNotifier<List<ChatConversation>> {
     await _sub?.cancel();
     _sub = repo.chat.watchConversations().listen(
       (data) => state = AsyncData(data),
+      onError: (Object e, StackTrace st) {
+        state = AsyncError(e, st);
+      },
     );
     ref.onDispose(() => _sub?.cancel());
     return repo.chat.listConversations();
@@ -85,24 +88,31 @@ final chatServiceProvider = Provider<ChatService>((ref) {
       if (thread == null) {
         return jsonEncode({'error': 'Thread "$threadName" not found'});
       }
-      final results = await scheduler.runThread(thread);
-      ref
-        ..invalidate(tasksProvider)
-        ..invalidate(queueSizeProvider)
-        ..invalidate(logsProvider);
-      return jsonEncode({
-        'success': true,
-        'thread': threadName,
-        'results': results
-            .map(
-              (r) => <String, dynamic>{
-                'success': r.success,
-                'error': r.error,
-                'outputTasks': r.outputTasks.length,
-              },
-            )
-            .toList(),
-      });
+      try {
+        final results = await scheduler.runThread(thread);
+        ref
+          ..invalidate(tasksProvider)
+          ..invalidate(queueSizeProvider)
+          ..invalidate(logsProvider);
+        return jsonEncode({
+          'success': true,
+          'thread': threadName,
+          'results': results
+              .map(
+                (r) => <String, dynamic>{
+                  'success': r.success,
+                  'error': r.error,
+                  'outputTasks': r.outputTasks.length,
+                },
+              )
+              .toList(),
+        });
+      } on Object catch (e) {
+        return jsonEncode({
+          'success': false,
+          'error': 'Thread execution failed: $e',
+        });
+      }
     },
   );
 });

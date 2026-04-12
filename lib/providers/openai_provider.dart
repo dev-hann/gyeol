@@ -273,7 +273,7 @@ class OpenAIProvider implements LlmProvider {
               );
             }
           }
-        } on FormatException {
+        } on Object {
           continue;
         }
       }
