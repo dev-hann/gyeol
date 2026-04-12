@@ -413,7 +413,7 @@ void main() {
       thread = await db.getThread('thread1');
       await db.saveThreadLayerIds(thread!.id, [bId]);
 
-      expect(thread!.path, '/new/path');
+      expect(thread.path, '/new/path');
 
       final threadLayers = await db.listThreadLayers(thread.id);
       expect(threadLayers, hasLength(1));

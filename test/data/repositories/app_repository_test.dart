@@ -308,14 +308,14 @@ void main() {
 
   group('task CRUD', () {
     test('createTask stores and retrieves a task', () async {
-      final id = await repo.tasks.createTask('summarize', {
+      await repo.tasks.createTask('summarize', {
         'text': 'hello',
       }, TaskPriority.high);
 
       final taskList = await repo.tasks.listTasks();
       final task = taskList.first;
       expect(task, isNotNull);
-      expect(task!.taskType, 'summarize');
+      expect(task.taskType, 'summarize');
       expect(task.payload, {'text': 'hello'});
       expect(task.priority, TaskPriority.high);
       expect(task.status, TaskStatus.pending);
