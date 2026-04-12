@@ -1550,6 +1550,38 @@ void main() {
       expect(toolEvent.toolName, 'list_layers');
     });
 
+    test('skips tool call accumulators with empty id or name', () async {
+      final provider = FakeLlmProvider(
+        [],
+        streamResponses: [
+          [
+            const ChatStreamDelta(
+              toolCalls: [
+                ToolCallDelta(index: 0, arguments: '{"city":"Seoul"}'),
+              ],
+            ),
+            const ChatStreamDelta(done: true),
+          ],
+          [
+            const ChatStreamDelta(content: 'Done.'),
+            const ChatStreamDelta(done: true),
+          ],
+        ],
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream('Weather', [])) {
+        events.add(event);
+      }
+
+      expect(events.whereType<ChatStreamToolEvent>(), isEmpty);
+      expect(events.whereType<ChatStreamTextEvent>().map((e) => e.text), [
+        'Done.',
+      ]);
+    });
+
     test('handles multiple tool calls in single iteration', () async {
       final provider = FakeLlmProvider(
         [],

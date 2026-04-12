@@ -435,6 +435,61 @@ void main() {
       expect(deltas[1].done, true);
     });
 
+    test('handles tool_calls with missing function key', () async {
+      final sseData = [
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {
+                'tool_calls': [
+                  {'index': 0, 'id': 'call_1'},
+                ],
+              },
+            },
+          ],
+        })}',
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {
+                'tool_calls': [
+                  {
+                    'index': 0,
+                    'function': {'name': 'get_weather', 'arguments': '{}'},
+                  },
+                ],
+              },
+            },
+          ],
+        })}',
+        'data: [DONE]',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = OpenAIProvider(
+        apiKey: 'test-key',
+        model: 'gpt-4o',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 3);
+      expect(deltas[0].toolCalls, isNotNull);
+      expect(deltas[0].toolCalls![0].id, 'call_1');
+      expect(deltas[0].toolCalls![0].name, isNull);
+      expect(deltas[1].toolCalls![0].name, 'get_weather');
+      expect(deltas[2].done, true);
+    });
+
     test('sends stream:true in request body', () async {
       late String capturedBody;
 
@@ -456,6 +511,64 @@ void main() {
       final body = jsonDecode(capturedBody) as Map<String, dynamic>;
       expect(body['stream'], true);
       expect(body['model'], 'gpt-4o');
+    });
+
+    test('sends tool_calls and tool_call_id in messages', () async {
+      late String capturedBody;
+
+      final client = _StreamClientWithRequest((request) async {
+        capturedBody = (request as http.Request).body;
+        return http.StreamedResponse(Stream.value(_enc('data: [DONE]\n')), 200);
+      });
+
+      final provider = OpenAIProvider(
+        apiKey: 'test-key',
+        model: 'gpt-4o',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: client,
+      );
+
+      const messages = [
+        ChatMessageForApi(role: 'user', content: 'weather'),
+        ChatMessageForApi(
+          role: 'assistant',
+          toolCalls: [
+            ToolCall(
+              id: 'call_1',
+              name: 'get_weather',
+              arguments: '{"city":"Seoul"}',
+            ),
+          ],
+        ),
+        ChatMessageForApi(
+          role: 'tool',
+          content: '{"temp": 22}',
+          toolCallId: 'call_1',
+        ),
+      ];
+
+      await provider.generateChatStream(messages: messages).toList();
+
+      final body = jsonDecode(capturedBody) as Map<String, dynamic>;
+      final bodyMessages = body['messages'] as List<dynamic>;
+
+      expect(bodyMessages.length, 3);
+
+      final msg1 = bodyMessages[1] as Map<String, dynamic>;
+      expect(msg1['role'], 'assistant');
+      expect(msg1['tool_calls'], isNotNull);
+      final tc =
+          (msg1['tool_calls'] as List<dynamic>)[0] as Map<String, dynamic>;
+      expect(tc['id'], 'call_1');
+      expect(tc['type'], 'function');
+      final tcFn = tc['function'] as Map<String, dynamic>;
+      expect(tcFn['name'], 'get_weather');
+
+      final msg2 = bodyMessages[2] as Map<String, dynamic>;
+      expect(msg2['role'], 'tool');
+      expect(msg2['tool_call_id'], 'call_1');
+      expect(msg2['content'], '{"temp": 22}');
     });
   });
 

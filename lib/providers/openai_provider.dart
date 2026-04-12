@@ -92,23 +92,7 @@ class OpenAIProvider implements LlmProvider {
   }) async {
     if (apiKey.isEmpty) throw LlmError('OpenAI API key not set');
 
-    final messagesList = messages.map((m) {
-      final map = <String, dynamic>{'role': m.role};
-      if (m.content != null) map['content'] = m.content;
-      if (m.toolCalls != null) {
-        map['tool_calls'] = m.toolCalls!
-            .map(
-              (tc) => {
-                'id': tc.id,
-                'type': 'function',
-                'function': {'name': tc.name, 'arguments': tc.arguments},
-              },
-            )
-            .toList();
-      }
-      if (m.toolCallId != null) map['tool_call_id'] = m.toolCallId;
-      return map;
-    }).toList();
+    final messagesList = _buildApiMessagesList(messages);
 
     final bodyMap = <String, dynamic>{
       'model': model,
@@ -187,11 +171,7 @@ class OpenAIProvider implements LlmProvider {
   }) async* {
     if (apiKey.isEmpty) throw LlmError('OpenAI API key not set');
 
-    final messagesList = messages.map((m) {
-      final map = <String, dynamic>{'role': m.role};
-      if (m.content != null) map['content'] = m.content;
-      return map;
-    }).toList();
+    final messagesList = _buildApiMessagesList(messages);
 
     final bodyMap = <String, dynamic>{
       'model': model,
@@ -292,6 +272,28 @@ class OpenAIProvider implements LlmProvider {
         ..write(remaining);
     }
     yield const ChatStreamDelta(done: true);
+  }
+
+  List<Map<String, dynamic>> _buildApiMessagesList(
+    List<ChatMessageForApi> messages,
+  ) {
+    return messages.map((m) {
+      final map = <String, dynamic>{'role': m.role};
+      if (m.content != null) map['content'] = m.content;
+      if (m.toolCalls != null) {
+        map['tool_calls'] = m.toolCalls!
+            .map(
+              (tc) => {
+                'id': tc.id,
+                'type': 'function',
+                'function': {'name': tc.name, 'arguments': tc.arguments},
+              },
+            )
+            .toList();
+      }
+      if (m.toolCallId != null) map['tool_call_id'] = m.toolCallId;
+      return map;
+    }).toList();
   }
 
   @override

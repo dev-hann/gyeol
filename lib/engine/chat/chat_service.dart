@@ -188,6 +188,7 @@ class ChatService {
       if (toolCallAccumulators.isEmpty) return;
 
       final completeToolCalls = toolCallAccumulators.entries
+          .where((e) => e.value.id.isNotEmpty && e.value.name.isNotEmpty)
           .map(
             (e) => ToolCall(
               id: e.value.id,
@@ -196,6 +197,8 @@ class ChatService {
             ),
           )
           .toList();
+
+      if (completeToolCalls.isEmpty) continue;
 
       apiMessages.add(
         ChatMessageForApi(
