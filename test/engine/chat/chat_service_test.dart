@@ -10,9 +10,14 @@ import 'package:gyeol/engine/chat/tool_registry.dart';
 import 'package:gyeol/providers/lllm_provider.dart';
 
 class FakeLlmProvider implements LlmProvider {
-  FakeLlmProvider(this._responses);
+  FakeLlmProvider(
+    this._responses, {
+    List<List<ChatStreamDelta>>? streamResponses,
+  }) : _streamResponses = streamResponses;
   final List<ChatResponse> _responses;
+  final List<List<ChatStreamDelta>>? _streamResponses;
   int _callCount = 0;
+  int _streamCallCount = 0;
   final List<List<ChatMessageForApi>> capturedMessages = [];
 
   @override
@@ -38,7 +43,13 @@ class FakeLlmProvider implements LlmProvider {
     required List<ChatMessageForApi> messages,
     List<ToolDefinition>? tools,
   }) async* {
-    yield const ChatStreamDelta(content: '', done: true);
+    capturedMessages.add(List.of(messages));
+    final streams = _streamResponses;
+    if (streams != null && _streamCallCount < streams.length) {
+      yield* Stream.fromIterable(streams[_streamCallCount++]);
+    } else {
+      yield const ChatStreamDelta(done: true);
+    }
   }
 
   @override
@@ -440,6 +451,39 @@ void main() {
       await service.handleMessage('Run the thread', []);
 
       expect(triggeredThread, 'T1');
+    });
+
+    test('handleMessage catches tool execution error gracefully', () async {
+      final provider = FakeLlmProvider([
+        const ChatResponse(
+          toolCalls: [
+            ToolCall(
+              id: 'call_1',
+              name: 'run_thread',
+              arguments: '{"name":"T1"}',
+            ),
+          ],
+        ),
+        const ChatResponse(content: 'Recovered after error.'),
+      ]);
+
+      final service = ChatService(
+        provider: provider,
+        repo: repo,
+        onRunThread: (threadName) async {
+          throw Exception('Thread execution failed');
+        },
+      );
+
+      final result = await service.handleMessage('Run thread', []);
+
+      expect(result.assistantResponse, 'Recovered after error.');
+      expect(
+        result.newMessages.any(
+          (m) => m.role == 'tool' && m.content.contains('Error'),
+        ),
+        isTrue,
+      );
     });
   });
 
@@ -1110,6 +1154,297 @@ void main() {
 
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       expect(decoded['error'], isNotNull);
+    });
+  });
+
+  group('ChatService handleMessageStream', () {
+    late AppDatabase db;
+    late AppRepository repo;
+
+    setUp(() {
+      db = AppDatabase.forTesting(NativeDatabase.memory());
+      repo = AppRepository(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('yields text events for simple response', () async {
+      final provider = FakeLlmProvider(
+        [],
+        streamResponses: [
+          [
+            const ChatStreamDelta(content: 'Hello'),
+            const ChatStreamDelta(content: '!'),
+            const ChatStreamDelta(done: true),
+          ],
+        ],
+      );
+      final service = ChatService(provider: provider, repo: repo);
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream('Hi', [])) {
+        events.add(event);
+      }
+
+      expect(events.whereType<ChatStreamTextEvent>().length, 2);
+      expect(events.whereType<ChatStreamTextEvent>().map((e) => e.text), [
+        'Hello',
+        '!',
+      ]);
+    });
+
+    test('yields tool event for tool call then returns', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          id: 0,
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: ['analysis'],
+        ),
+      );
+
+      final provider = FakeLlmProvider(
+        [],
+        streamResponses: [
+          [
+            const ChatStreamDelta(
+              toolCalls: [
+                ToolCallDelta(
+                  index: 0,
+                  id: 'call_1',
+                  name: 'list_layers',
+                  arguments: '{}',
+                ),
+              ],
+            ),
+            const ChatStreamDelta(done: true),
+          ],
+          [
+            const ChatStreamDelta(content: 'Done.'),
+            const ChatStreamDelta(done: true),
+          ],
+        ],
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream(
+        'List layers',
+        [],
+      )) {
+        events.add(event);
+      }
+
+      expect(events.whereType<ChatStreamToolEvent>().length, 1);
+      final toolEvent = events.whereType<ChatStreamToolEvent>().first;
+      expect(toolEvent.toolName, 'list_layers');
+      expect(events.whereType<ChatStreamTextEvent>().map((e) => e.text), [
+        'Done.',
+      ]);
+    });
+
+    test('handles malformed JSON in tool call arguments', () async {
+      final provider = FakeLlmProvider(
+        [],
+        streamResponses: [
+          [
+            const ChatStreamDelta(
+              toolCalls: [
+                ToolCallDelta(
+                  index: 0,
+                  id: 'call_1',
+                  name: 'list_layers',
+                  arguments: 'not-json',
+                ),
+              ],
+            ),
+            const ChatStreamDelta(done: true),
+          ],
+          [
+            const ChatStreamDelta(content: 'Listed.'),
+            const ChatStreamDelta(done: true),
+          ],
+        ],
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream('List', [])) {
+        events.add(event);
+      }
+
+      expect(events.whereType<ChatStreamToolEvent>().length, 1);
+      expect(events.whereType<ChatStreamTextEvent>().first.text, 'Listed.');
+    });
+
+    test('handles tool execution error gracefully', () async {
+      final provider = FakeLlmProvider(
+        [],
+        streamResponses: [
+          [
+            const ChatStreamDelta(
+              toolCalls: [
+                ToolCallDelta(
+                  index: 0,
+                  id: 'call_1',
+                  name: 'run_thread',
+                  arguments: '{"name":"T1"}',
+                ),
+              ],
+            ),
+            const ChatStreamDelta(done: true),
+          ],
+          [
+            const ChatStreamDelta(content: 'Recovered.'),
+            const ChatStreamDelta(done: true),
+          ],
+        ],
+      );
+
+      final service = ChatService(
+        provider: provider,
+        repo: repo,
+        onRunThread: (threadName) async {
+          throw Exception('Thread execution failed');
+        },
+      );
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream('Run thread', [])) {
+        events.add(event);
+      }
+
+      final toolEvent = events.whereType<ChatStreamToolEvent>().first;
+      expect(toolEvent.content, contains('Error'));
+      expect(events.whereType<ChatStreamTextEvent>().first.text, 'Recovered.');
+    });
+
+    test('respects max 5 iteration limit', () async {
+      final streamResponses = List.generate(
+        10,
+        (i) => [
+          ChatStreamDelta(
+            toolCalls: [
+              ToolCallDelta(
+                index: 0,
+                id: 'call_$i',
+                name: 'list_layers',
+                arguments: '{}',
+              ),
+            ],
+          ),
+          const ChatStreamDelta(done: true),
+        ],
+      );
+
+      final provider = FakeLlmProvider([], streamResponses: streamResponses);
+
+      final service = ChatService(provider: provider, repo: repo);
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream(
+        'Keep listing',
+        [],
+      )) {
+        events.add(event);
+      }
+
+      expect(provider.capturedMessages.length, 5);
+      final textEvents = events.whereType<ChatStreamTextEvent>().toList();
+      expect(textEvents.last.text, contains('최대 반복'));
+    });
+
+    test('accumulates chunked tool call arguments', () async {
+      await repo.layers.saveLayer(
+        const LayerDefinition(
+          id: 0,
+          name: 'L1',
+          inputTypes: ['text'],
+          outputTypes: [],
+        ),
+      );
+
+      final provider = FakeLlmProvider(
+        [],
+        streamResponses: [
+          [
+            const ChatStreamDelta(
+              toolCalls: [
+                ToolCallDelta(index: 0, id: 'call_1', name: 'list_layers'),
+              ],
+            ),
+            const ChatStreamDelta(
+              toolCalls: [ToolCallDelta(index: 0, arguments: '{"lim')],
+            ),
+            const ChatStreamDelta(
+              toolCalls: [ToolCallDelta(index: 0, arguments: 'it":10}')],
+            ),
+            const ChatStreamDelta(done: true),
+          ],
+          [
+            const ChatStreamDelta(content: 'Got it.'),
+            const ChatStreamDelta(done: true),
+          ],
+        ],
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream('List', [])) {
+        events.add(event);
+      }
+
+      expect(events.whereType<ChatStreamToolEvent>().length, 1);
+      final toolEvent = events.whereType<ChatStreamToolEvent>().first;
+      expect(toolEvent.toolName, 'list_layers');
+    });
+
+    test('handles multiple tool calls in single iteration', () async {
+      final provider = FakeLlmProvider(
+        [],
+        streamResponses: [
+          [
+            const ChatStreamDelta(
+              toolCalls: [
+                ToolCallDelta(
+                  index: 0,
+                  id: 'c1',
+                  name: 'list_layers',
+                  arguments: '{}',
+                ),
+                ToolCallDelta(
+                  index: 1,
+                  id: 'c2',
+                  name: 'list_workers',
+                  arguments: '{}',
+                ),
+              ],
+            ),
+            const ChatStreamDelta(done: true),
+          ],
+          [
+            const ChatStreamDelta(content: 'All listed.'),
+            const ChatStreamDelta(done: true),
+          ],
+        ],
+      );
+
+      final service = ChatService(provider: provider, repo: repo);
+
+      final events = <Object>[];
+      await for (final event in service.handleMessageStream('List all', [])) {
+        events.add(event);
+      }
+
+      final toolEvents = events.whereType<ChatStreamToolEvent>().toList();
+      expect(toolEvents.length, 2);
+      expect(toolEvents[0].toolName, 'list_layers');
+      expect(toolEvents[1].toolName, 'list_workers');
     });
   });
 }

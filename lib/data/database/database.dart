@@ -606,7 +606,7 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('DROP INDEX IF EXISTS idx_conn_dst');
 
       await customStatement('COMMIT');
-    } catch (e) {
+    } on Object catch (_) {
       await customStatement('ROLLBACK');
       rethrow;
     }

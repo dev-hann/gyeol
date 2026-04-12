@@ -14,6 +14,36 @@ void main() {
     await db.close();
   });
 
+  group('index creation', () {
+    test('onCreate creates all expected indexes', () async {
+      final indexes = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type='index' "
+            "AND name LIKE 'idx_%'",
+          )
+          .get();
+      final indexNames = indexes.map((r) => r.read<String>('name')).toSet();
+
+      expect(
+        indexNames,
+        containsAll([
+          'idx_tasks_status_layer',
+          'idx_tasks_worker',
+          'idx_tasks_created',
+          'idx_tasks_uuid',
+          'idx_workers_layer',
+          'idx_logs_task',
+          'idx_logs_created',
+          'idx_msgs_conv',
+          'idx_msgs_created',
+          'idx_tl_thread',
+          'idx_tl_layer',
+          'idx_conn_unique',
+        ]),
+      );
+    });
+  });
+
   group('task operations', () {
     test('saveTask inserts and getTask retrieves', () async {
       final now = DateTime.now().millisecondsSinceEpoch;

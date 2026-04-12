@@ -111,11 +111,15 @@ class ChatService {
         }
 
         String result;
-        if (call.name == 'run_thread' && onRunThread != null) {
-          final threadName = args['name'] as String? ?? '';
-          result = await onRunThread!(threadName);
-        } else {
-          result = await ToolRegistry.executeTool(call.name, args, repo);
+        try {
+          if (call.name == 'run_thread' && onRunThread != null) {
+            final threadName = args['name'] as String? ?? '';
+            result = await onRunThread!(threadName);
+          } else {
+            result = await ToolRegistry.executeTool(call.name, args, repo);
+          }
+        } on Object catch (e) {
+          result = 'Error: $e';
         }
 
         apiMessages.add(
