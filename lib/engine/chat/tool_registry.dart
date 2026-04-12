@@ -140,6 +140,7 @@ class ToolRegistry {
     }
 
     final worker = WorkerDefinition(
+      id: 0,
       name: name,
       layerId: layer.id,
       systemPrompt: systemPrompt,
@@ -192,7 +193,11 @@ class ToolRegistry {
     AppRepository repo,
   ) async {
     final name = args['name'] as String;
-    await repo.workers.deleteWorker(name);
+    final worker = await repo.workers.getWorker(name);
+    if (worker == null) {
+      return jsonEncode({'error': 'Worker "$name" not found'});
+    }
+    await repo.workers.deleteWorker(worker.id);
     return jsonEncode({'success': true, 'message': 'Worker "$name" deleted'});
   }
 
@@ -285,7 +290,12 @@ class ToolRegistry {
         .whereType<int>()
         .toList();
 
-    final thread = ThreadDefinition(name: name, path: path, layerIds: layerIds);
+    final thread = ThreadDefinition(
+      id: 0,
+      name: name,
+      path: path,
+      layerIds: layerIds,
+    );
 
     await repo.threads.saveThread(thread);
     return jsonEncode({'success': true, 'message': 'Thread "$name" created'});
@@ -350,7 +360,11 @@ class ToolRegistry {
     AppRepository repo,
   ) async {
     final name = args['name'] as String;
-    await repo.threads.deleteThread(name);
+    final thread = await repo.threads.getThread(name);
+    if (thread == null) {
+      return jsonEncode({'error': 'Thread "$name" not found'});
+    }
+    await repo.threads.deleteThread(thread.id);
     return jsonEncode({'success': true, 'message': 'Thread "$name" deleted'});
   }
 
@@ -417,15 +431,19 @@ class ToolRegistry {
     AppRepository repo,
   ) async {
     final logs = await repo.logs.listExecutionLogs(
-      taskId: args['taskId'] as String?,
+      taskId: (args['taskId'] as num?)?.toInt(),
       limit: (args['limit'] as num?)?.toInt() ?? 50,
     );
+    final workers = await repo.workers.listWorkers();
+    final workerIdToName = <int, String>{for (final w in workers) w.id: w.name};
     final result = logs
         .map(
           (l) => {
             'id': l.id,
             'taskId': l.taskId,
-            'workerName': l.workerName,
+            'workerName': l.workerId != null
+                ? workerIdToName[l.workerId] ?? 'unknown'
+                : null,
             'status': l.status,
             'message': l.message,
             'createdAt': l.createdAt,
@@ -442,7 +460,9 @@ class ToolRegistry {
     final limit = (args['limit'] as num?)?.toInt() ?? 50;
     final tasks = await repo.tasks.listTasks(limit: limit);
     final layers = await repo.layers.listLayers();
+    final workers = await repo.workers.listWorkers();
     final idToName = <int, String>{for (final l in layers) l.id: l.name};
+    final workerIdToName = <int, String>{for (final w in workers) w.id: w.name};
     final result = tasks
         .map(
           (t) => {
@@ -451,7 +471,9 @@ class ToolRegistry {
             'priority': t.priority.name,
             'status': t.status.name,
             'layerName': t.layerId != null ? idToName[t.layerId] : null,
-            'workerName': t.workerName,
+            'workerName': t.workerId != null
+                ? workerIdToName[t.workerId]
+                : null,
             'retryCount': t.retryCount,
             'depth': t.depth,
             'createdAt': t.createdAt,
@@ -1208,7 +1230,7 @@ class ToolRegistry {
 
     final allLogs = await repo.logs.listExecutionLogs();
     final workerLogs = allLogs
-        .where((l) => l.workerName == name)
+        .where((l) => l.workerId == worker.id)
         .take(5)
         .map(
           (l) => {
@@ -1291,6 +1313,10 @@ class ToolRegistry {
 
     final task = AppTask.create(taskType, payload, priority);
     await repo.tasks.saveTask(task);
-    return jsonEncode({'success': true, 'taskId': task.id, 'status': 'queued'});
+    return jsonEncode({
+      'success': true,
+      'taskId': task.uuid,
+      'status': 'queued',
+    });
   }
 }

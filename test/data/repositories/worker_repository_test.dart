@@ -30,6 +30,7 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       final worker = WorkerDefinition(
+        id: 0,
         name: 'parser',
         layerId: layerId,
         systemPrompt: 'Parse the input',
@@ -59,6 +60,7 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       final worker = WorkerDefinition(
+        id: 0,
         name: 'analyzer',
         layerId: layerId,
         systemPrompt: 'Analyze deeply',
@@ -113,11 +115,13 @@ void main() {
       final l1Id = layers.firstWhere((l) => l.name == 'L1').id;
       final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
       final w1 = WorkerDefinition(
+        id: 0,
         name: 'a',
         layerId: l1Id,
         systemPrompt: 'prompt a',
       );
       final w2 = WorkerDefinition(
+        id: 0,
         name: 'b',
         layerId: l2Id,
         systemPrompt: 'prompt b',
@@ -145,6 +149,7 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       final worker = WorkerDefinition(
+        id: 0,
         name: 'to_delete',
         layerId: layerId,
         systemPrompt: 'delete me',
@@ -152,12 +157,13 @@ void main() {
       await repo.workers.saveWorker(worker);
       expect(await repo.workers.getWorker('to_delete'), isNotNull);
 
-      await repo.workers.deleteWorker('to_delete');
+      final toDeleteWorker = await repo.workers.getWorker('to_delete');
+      await repo.workers.deleteWorker(toDeleteWorker!.id);
       expect(await repo.workers.getWorker('to_delete'), isNull);
     });
 
     test('is no-op for non-existent worker', () async {
-      await repo.workers.deleteWorker('nonexistent');
+      await repo.workers.deleteWorker(99999);
 
       final workers = await repo.workers.listWorkers();
       expect(workers, isEmpty);
@@ -186,6 +192,7 @@ void main() {
       final l1Id = layers.firstWhere((l) => l.name == 'L1').id;
       final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
       final original = WorkerDefinition(
+        id: 0,
         name: 'upsert_w',
         layerId: l1Id,
         systemPrompt: 'original prompt',
@@ -195,6 +202,7 @@ void main() {
       await repo.workers.saveWorker(original);
 
       final updated = WorkerDefinition(
+        id: 0,
         name: 'upsert_w',
         layerId: l2Id,
         systemPrompt: 'updated prompt',
@@ -237,6 +245,7 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       final worker = WorkerDefinition(
+        id: 0,
         name: 'watched',
         layerId: layerId,
         systemPrompt: 'watch me',

@@ -30,9 +30,14 @@ class Scheduler {
   final AppRepository _repo;
   final int maxConcurrent;
 
-  String submit(AppTask task) {
-    _queue.push(task);
-    return task.id;
+  Future<int> submit(AppTask task) async {
+    final id = await _repo.tasks.createTask(
+      task.taskType,
+      task.payload,
+      task.priority,
+    );
+    _queue.push(task.copyWith(id: id));
+    return id;
   }
 
   Future<List<WorkerResult>> runOnce() async {
@@ -56,13 +61,18 @@ class Scheduler {
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
       await _repo.tasks.saveTask(updatedTask);
+      final savedTask = await _repo.tasks.getTask(updatedTask.uuid);
+      final resolvedTask = savedTask ?? updatedTask;
 
       final layerWorkers = (await _repo.workers.listWorkers())
           .where((w) => w.layerId == layer.id)
-          .map((w) => w.name);
+          .toList();
 
-      for (final _ in layerWorkers) {
+      for (final worker in layerWorkers) {
         taken++;
+        futures.add(
+          _executeWorker(resolvedTask, worker, layerPrompt: layer.layerPrompt),
+        );
       }
     }
 
@@ -146,16 +156,18 @@ class Scheduler {
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
       await _repo.tasks.saveTask(updatedTask);
+      final savedTask = await _repo.tasks.getTask(updatedTask.uuid);
+      final resolvedThreadTask = savedTask ?? updatedTask;
 
       final layerFutures = <Future<WorkerResult>>[];
-      final layerWorkers = (await _repo.workers.listWorkers())
-          .where((w) => w.layerId == layer.id)
-          .map((w) => w.name);
-      for (final workerName in layerWorkers) {
+      final layerWorkers = (await _repo.workers.listWorkers()).where(
+        (w) => w.layerId == layer.id,
+      );
+      for (final worker in layerWorkers) {
         layerFutures.add(
           _executeWorker(
-            updatedTask,
-            workerName,
+            resolvedThreadTask,
+            worker,
             threadPrompt: thread.contextPrompt,
             layerPrompt: layer.layerPrompt,
           ),
@@ -194,25 +206,17 @@ class Scheduler {
 
   Future<WorkerResult> _executeWorker(
     AppTask task,
-    String workerName, {
+    WorkerDefinition worker, {
     String? threadPrompt,
     String? layerPrompt,
   }) async {
-    final workerDef = await _repo.workers.getWorker(workerName);
-    if (workerDef == null) {
-      return WorkerResult(
-        success: false,
-        error: "Worker '$workerName' not found",
-      );
-    }
-
     final settings = await _repo.settings.getSettings();
     final provider = _createProvider(settings);
 
     final systemParts = <String>[
       if (threadPrompt != null) threadPrompt,
       if (layerPrompt != null) layerPrompt,
-      workerDef.systemPrompt,
+      worker.systemPrompt,
     ];
     final systemMessage = systemParts.join('\n\n');
 
@@ -225,25 +229,25 @@ class Scheduler {
       );
 
       final outputTask = AppTask.create('analysis_result', {
-        'worker': workerName,
+        'worker': worker.name,
         'response': response,
       }, task.priority).copyWith(depth: task.depth + 1, parentTaskId: task.id);
 
       await _repo.logs.logExecution(
         taskId: task.id,
-        workerName: workerName,
+        workerId: worker.id,
         status: 'success',
       );
 
       return WorkerResult(
         success: true,
         outputTasks: [outputTask],
-        metadata: {'worker': workerName},
+        metadata: {'worker': worker.name},
       );
     } on Exception catch (e) {
       await _repo.logs.logExecution(
         taskId: task.id,
-        workerName: workerName,
+        workerId: worker.id,
         status: 'failed',
         message: e.toString(),
       );

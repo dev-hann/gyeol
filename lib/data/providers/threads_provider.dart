@@ -28,8 +28,8 @@ class ThreadsNotifier extends AsyncNotifier<List<ThreadDefinition>> {
     await repo.threads.saveThread(thread);
   }
 
-  Future<void> deleteThread(String name) async {
+  Future<void> deleteThread(int id) async {
     final repo = ref.read(repositoryProvider);
-    await repo.threads.deleteThread(name);
+    await repo.threads.deleteThread(id);
   }
 }

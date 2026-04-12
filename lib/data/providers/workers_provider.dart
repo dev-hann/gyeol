@@ -28,8 +28,8 @@ class WorkersNotifier extends AsyncNotifier<List<WorkerDefinition>> {
     await repo.workers.saveWorker(worker);
   }
 
-  Future<void> deleteWorker(String name) async {
+  Future<void> deleteWorker(int id) async {
     final repo = ref.read(repositoryProvider);
-    await repo.workers.deleteWorker(name);
+    await repo.workers.deleteWorker(id);
   }
 }

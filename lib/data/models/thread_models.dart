@@ -2,6 +2,7 @@ enum ThreadStatus { idle, running, completed, failed }
 
 class ThreadDefinition {
   const ThreadDefinition({
+    required this.id,
     required this.name,
     required this.path,
     required this.layerIds,
@@ -9,6 +10,8 @@ class ThreadDefinition {
     this.enabled = true,
     this.status = ThreadStatus.idle,
   });
+
+  final int id;
   final String name;
   final String path;
   final List<int> layerIds;
@@ -17,6 +20,7 @@ class ThreadDefinition {
   final ThreadStatus status;
 
   ThreadDefinition copyWith({
+    int? id,
     String? name,
     String? path,
     List<int>? layerIds,
@@ -25,6 +29,7 @@ class ThreadDefinition {
     ThreadStatus? status,
   }) {
     return ThreadDefinition(
+      id: id ?? this.id,
       name: name ?? this.name,
       path: path ?? this.path,
       layerIds: layerIds ?? this.layerIds,

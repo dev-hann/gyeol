@@ -3,13 +3,14 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/engine/queue/task_queue.dart';
 
 AppTask _makeTask({
-  required String id,
+  required String uuid,
   String taskType = 'test',
   TaskPriority priority = TaskPriority.medium,
   int createdAt = 1000,
 }) {
   return AppTask(
-    id: id,
+    id: 0,
+    uuid: uuid,
     taskType: taskType,
     payload: <String, dynamic>{},
     priority: priority,
@@ -41,51 +42,51 @@ void main() {
     });
 
     test('push then pop returns the task', () {
-      final task = _makeTask(id: 'a');
+      final task = _makeTask(uuid: 'a');
       queue.push(task);
       final result = queue.pop();
       expect(result, isNotNull);
-      expect(result!.id, equals('a'));
+      expect(result!.uuid, equals('a'));
       expect(queue.isEmpty, isTrue);
     });
 
     test('higher priority tasks are popped first', () {
       queue
-        ..push(_makeTask(id: 'low', priority: TaskPriority.low))
-        ..push(_makeTask(id: 'high', priority: TaskPriority.high))
-        ..push(_makeTask(id: 'med'));
+        ..push(_makeTask(uuid: 'low', priority: TaskPriority.low))
+        ..push(_makeTask(uuid: 'high', priority: TaskPriority.high))
+        ..push(_makeTask(uuid: 'med'));
 
-      expect(queue.pop()!.id, equals('high'));
-      expect(queue.pop()!.id, equals('med'));
-      expect(queue.pop()!.id, equals('low'));
+      expect(queue.pop()!.uuid, equals('high'));
+      expect(queue.pop()!.uuid, equals('med'));
+      expect(queue.pop()!.uuid, equals('low'));
     });
 
     test('same priority — earlier createdAt popped first (FIFO)', () {
       queue
-        ..push(_makeTask(id: 'first', createdAt: 100))
-        ..push(_makeTask(id: 'second', createdAt: 200))
-        ..push(_makeTask(id: 'third', createdAt: 300));
+        ..push(_makeTask(uuid: 'first', createdAt: 100))
+        ..push(_makeTask(uuid: 'second', createdAt: 200))
+        ..push(_makeTask(uuid: 'third', createdAt: 300));
 
-      expect(queue.pop()!.id, equals('first'));
-      expect(queue.pop()!.id, equals('second'));
-      expect(queue.pop()!.id, equals('third'));
+      expect(queue.pop()!.uuid, equals('first'));
+      expect(queue.pop()!.uuid, equals('second'));
+      expect(queue.pop()!.uuid, equals('third'));
     });
 
     test('peek returns highest priority without removing', () {
       queue
-        ..push(_makeTask(id: 'low', priority: TaskPriority.low))
-        ..push(_makeTask(id: 'high', priority: TaskPriority.high));
+        ..push(_makeTask(uuid: 'low', priority: TaskPriority.low))
+        ..push(_makeTask(uuid: 'high', priority: TaskPriority.high));
 
-      expect(queue.peek()!.id, equals('high'));
+      expect(queue.peek()!.uuid, equals('high'));
       expect(queue.length, equals(2));
-      expect(queue.peek()!.id, equals('high'));
+      expect(queue.peek()!.uuid, equals('high'));
     });
 
     test('length tracks queue size', () {
       expect(queue.length, equals(0));
-      queue.push(_makeTask(id: 'a'));
+      queue.push(_makeTask(uuid: 'a'));
       expect(queue.length, equals(1));
-      queue.push(_makeTask(id: 'b'));
+      queue.push(_makeTask(uuid: 'b'));
       expect(queue.length, equals(2));
       queue.pop();
       expect(queue.length, equals(1));
@@ -93,20 +94,20 @@ void main() {
 
     test('drainAll returns all tasks and clears queue', () {
       queue
-        ..push(_makeTask(id: 'a', priority: TaskPriority.high))
-        ..push(_makeTask(id: 'b', priority: TaskPriority.low));
+        ..push(_makeTask(uuid: 'a', priority: TaskPriority.high))
+        ..push(_makeTask(uuid: 'b', priority: TaskPriority.low));
 
       final drained = queue.drainAll();
       expect(drained.length, equals(2));
-      expect(drained.any((t) => t.id == 'a'), isTrue);
-      expect(drained.any((t) => t.id == 'b'), isTrue);
+      expect(drained.any((t) => t.uuid == 'a'), isTrue);
+      expect(drained.any((t) => t.uuid == 'b'), isTrue);
       expect(queue.isEmpty, isTrue);
       expect(queue.drainAll(), isEmpty);
     });
 
     test('pop on drained queue returns null', () {
       queue
-        ..push(_makeTask(id: 'a'))
+        ..push(_makeTask(uuid: 'a'))
         ..drainAll();
       expect(queue.pop(), isNull);
     });
@@ -114,31 +115,39 @@ void main() {
     test('mixed priorities and timestamps order correctly', () {
       queue
         ..push(
-          _makeTask(id: 'low_old', priority: TaskPriority.low, createdAt: 100),
+          _makeTask(
+            uuid: 'low_old',
+            priority: TaskPriority.low,
+            createdAt: 100,
+          ),
         )
         ..push(
           _makeTask(
-            id: 'high_new',
+            uuid: 'high_new',
             priority: TaskPriority.high,
             createdAt: 300,
           ),
         )
-        ..push(_makeTask(id: 'med_mid', createdAt: 200))
+        ..push(_makeTask(uuid: 'med_mid', createdAt: 200))
         ..push(
-          _makeTask(id: 'high_old', priority: TaskPriority.high, createdAt: 50),
+          _makeTask(
+            uuid: 'high_old',
+            priority: TaskPriority.high,
+            createdAt: 50,
+          ),
         );
 
-      expect(queue.pop()!.id, equals('high_old'));
-      expect(queue.pop()!.id, equals('high_new'));
-      expect(queue.pop()!.id, equals('med_mid'));
-      expect(queue.pop()!.id, equals('low_old'));
+      expect(queue.pop()!.uuid, equals('high_old'));
+      expect(queue.pop()!.uuid, equals('high_new'));
+      expect(queue.pop()!.uuid, equals('med_mid'));
+      expect(queue.pop()!.uuid, equals('low_old'));
     });
 
     test('maintains sorted order after many interleaved pushes', () {
       for (var i = 0; i < 50; i++) {
         queue.push(
           _makeTask(
-            id: 'task-$i',
+            uuid: 'task-$i',
             priority: TaskPriority.values[i % 3],
             createdAt: i * 100,
           ),

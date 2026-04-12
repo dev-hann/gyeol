@@ -29,7 +29,7 @@ void main() {
       await logs.logExecution(
         taskId: taskId,
         status: 'running',
-        workerName: 'worker-a',
+        workerId: 1,
         message: 'Started processing',
       );
 
@@ -37,7 +37,7 @@ void main() {
       expect(result, hasLength(1));
       expect(result.first.taskId, taskId);
       expect(result.first.status, 'running');
-      expect(result.first.workerName, 'worker-a');
+      expect(result.first.workerId, 1);
       expect(result.first.message, 'Started processing');
     });
 
@@ -53,7 +53,7 @@ void main() {
       expect(result, hasLength(1));
       expect(result.first.taskId, taskId);
       expect(result.first.status, 'done');
-      expect(result.first.workerName, isNull);
+      expect(result.first.workerId, isNull);
       expect(result.first.message, isNull);
     });
   });

@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -65,6 +65,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 7) {
         await _migrateToV7();
       }
+      if (from < 8) {
+        await _migrateToV8();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -73,12 +76,20 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _createIndexes() async {
     await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_tasks_status '
-      'ON tasks(status)',
+      'CREATE INDEX IF NOT EXISTS idx_tasks_status_layer '
+      'ON tasks(status, layer_id)',
     );
     await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_tasks_layer '
-      'ON tasks(layer_id)',
+      'CREATE INDEX IF NOT EXISTS idx_tasks_worker '
+      'ON tasks(worker_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_tasks_created '
+      'ON tasks(created_at)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_tasks_uuid '
+      'ON tasks(uuid)',
     );
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_workers_layer '
@@ -89,24 +100,28 @@ class AppDatabase extends _$AppDatabase {
       'ON execution_logs(task_id)',
     );
     await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_logs_created '
+      'ON execution_logs(created_at)',
+    );
+    await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_msgs_conv '
       'ON chat_messages(conversation_id)',
     );
     await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_msgs_created '
+      'ON chat_messages(created_at)',
+    );
+    await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_tl_thread '
-      'ON thread_layers(thread_name)',
+      'ON thread_layers(thread_id)',
     );
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_tl_layer '
       'ON thread_layers(layer_id)',
     );
     await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_conn_src '
-      'ON layer_connections(source_layer_id)',
-    );
-    await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_conn_dst '
-      'ON layer_connections(target_layer_id)',
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_conn_unique '
+      'ON layer_connections(source_layer_id, target_layer_id)',
     );
   }
 
@@ -342,11 +357,274 @@ class AppDatabase extends _$AppDatabase {
     await _createIndexes();
   }
 
+  Future<void> _migrateToV8() async {
+    await customStatement('BEGIN TRANSACTION');
+    try {
+      final layerNameToId = <String, int>{};
+      final layerRows = await customSelect(
+        'SELECT id, name FROM layers ORDER BY id',
+      ).get();
+      for (final row in layerRows) {
+        layerNameToId[row.read<String>('name')] = row.read<int>('id');
+      }
+
+      final workerNameToId = <String, int>{};
+
+      await customStatement('''
+        CREATE TABLE workers_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
+          system_prompt TEXT NOT NULL,
+          model TEXT,
+          temperature REAL,
+          max_tokens INTEGER,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await customStatement('''
+        INSERT INTO workers_new (name, layer_id, system_prompt, model,
+          temperature, max_tokens, enabled, created_at, updated_at)
+        SELECT name, layer_id, system_prompt, model,
+          temperature, max_tokens, enabled, created_at, updated_at
+        FROM workers
+      ''');
+      final wRows = await customSelect(
+        'SELECT rowid, name FROM workers_new ORDER BY rowid',
+      ).get();
+      for (final row in wRows) {
+        workerNameToId[row.read<String>('name')] = row.read<int>('rowid');
+      }
+      await customStatement('DROP TABLE workers');
+      await customStatement('ALTER TABLE workers_new RENAME TO workers');
+
+      await customStatement('''
+        CREATE TABLE tasks_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          uuid TEXT UNIQUE NOT NULL,
+          task_type TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          priority TEXT NOT NULL,
+          status TEXT NOT NULL,
+          retry_count INTEGER NOT NULL DEFAULT 0,
+          max_retries INTEGER NOT NULL DEFAULT 3,
+          depth INTEGER NOT NULL DEFAULT 0,
+          parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
+          layer_id INTEGER REFERENCES layers(id) ON DELETE SET NULL,
+          worker_id INTEGER REFERENCES workers(id) ON DELETE SET NULL,
+          created_at INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await customStatement('''
+        INSERT INTO tasks_new (uuid, task_type, payload, priority, status,
+          retry_count, max_retries, depth, layer_id, created_at, updated_at)
+        SELECT id, task_type, payload, priority, status,
+          retry_count, max_retries, depth, layer_id, created_at, updated_at
+        FROM tasks
+      ''');
+
+      final oldTaskRows = await customSelect(
+        'SELECT rowid AS old_id, id AS old_uuid FROM tasks ORDER BY rowid',
+      ).get();
+      final oldToNewTaskId = <String, int>{};
+      for (final row in oldTaskRows) {
+        oldToNewTaskId[row.read<String>('old_uuid')] = row.read<int>('old_id');
+      }
+
+      final parentRows = await customSelect(
+        'SELECT t.rowid AS new_id, t.parent_task_id AS old_parent_uuid '
+        'FROM tasks t WHERE t.parent_task_id IS NOT NULL',
+      ).get();
+      for (final row in parentRows) {
+        final newId = row.read<int>('new_id');
+        final oldParentUuid = row.read<String>('old_parent_uuid');
+        final newParentId = oldToNewTaskId[oldParentUuid];
+        if (newParentId != null) {
+          await customStatement(
+            'UPDATE tasks_new SET parent_task_id = ? WHERE rowid = ?',
+            [Variable(newParentId), Variable(newId)],
+          );
+        }
+      }
+
+      final taskWorkerRows = await customSelect(
+        'SELECT t.rowid AS new_id, t.worker_name '
+        'FROM tasks t WHERE t.worker_name IS NOT NULL',
+      ).get();
+      for (final row in taskWorkerRows) {
+        final newId = row.read<int>('new_id');
+        final wName = row.read<String>('worker_name');
+        final wId = workerNameToId[wName];
+        if (wId != null) {
+          await customStatement(
+            'UPDATE tasks_new SET worker_id = ? WHERE rowid = ?',
+            [Variable(wId), Variable(newId)],
+          );
+        }
+      }
+
+      await customStatement('DROP TABLE tasks');
+      await customStatement('ALTER TABLE tasks_new RENAME TO tasks');
+
+      final threadNameToId = <String, int>{};
+
+      await customStatement('''
+        CREATE TABLE threads_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          path TEXT NOT NULL,
+          context_prompt TEXT,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          status TEXT NOT NULL DEFAULT 'idle',
+          created_at INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await customStatement('''
+        INSERT INTO threads_new (name, path, context_prompt, enabled, status,
+          created_at, updated_at)
+        SELECT name, path, context_prompt, enabled, status,
+          created_at, updated_at
+        FROM threads
+      ''');
+      final thRows = await customSelect(
+        'SELECT rowid, name FROM threads_new ORDER BY rowid',
+      ).get();
+      for (final row in thRows) {
+        threadNameToId[row.read<String>('name')] = row.read<int>('rowid');
+      }
+      await customStatement('DROP TABLE threads');
+      await customStatement('ALTER TABLE threads_new RENAME TO threads');
+
+      await customStatement('''
+        CREATE TABLE thread_layers_new (
+          thread_id INTEGER NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+          layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (thread_id, layer_id)
+        )
+      ''');
+      final tlRows = await customSelect(
+        'SELECT thread_name, layer_id, sort_order FROM thread_layers',
+      ).get();
+      for (final row in tlRows) {
+        final tName = row.read<String>('thread_name');
+        final lId = row.read<int>('layer_id');
+        final sort = row.read<int>('sort_order');
+        final tId = threadNameToId[tName];
+        if (tId != null) {
+          await customStatement(
+            'INSERT INTO thread_layers_new '
+            '(thread_id, layer_id, sort_order) VALUES (?, ?, ?)',
+            [Variable(tId), Variable(lId), Variable(sort)],
+          );
+        }
+      }
+      await customStatement('DROP TABLE thread_layers');
+      await customStatement(
+        'ALTER TABLE thread_layers_new RENAME TO thread_layers',
+      );
+
+      final taskUuidToNewId = <String, int>{};
+      final taskNewRows = await customSelect(
+        'SELECT id, uuid FROM tasks ORDER BY id',
+      ).get();
+      for (final row in taskNewRows) {
+        taskUuidToNewId[row.read<String>('uuid')] = row.read<int>('id');
+      }
+
+      await customStatement('''
+        CREATE TABLE execution_logs_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          worker_id INTEGER,
+          status TEXT NOT NULL,
+          message TEXT,
+          created_at INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      final logRows = await customSelect(
+        'SELECT task_id AS old_task_uuid, worker_name, status, message, '
+        'created_at FROM execution_logs ORDER BY rowid',
+      ).get();
+      for (final row in logRows) {
+        final oldTaskUuid = row.read<String>('old_task_uuid');
+        final newTaskId = taskUuidToNewId[oldTaskUuid];
+        if (newTaskId == null) continue;
+        final wName = row.read<String?>('worker_name');
+        final wId = wName != null ? workerNameToId[wName] : null;
+        await customStatement(
+          'INSERT INTO execution_logs_new '
+          '(task_id, worker_id, status, message, created_at) '
+          'VALUES (?, ?, ?, ?, ?)',
+          [
+            Variable(newTaskId),
+            Variable(wId),
+            Variable(row.read<String>('status')),
+            Variable(row.read<String?>('message')),
+            Variable(row.read<int>('created_at')),
+          ],
+        );
+      }
+      await customStatement('DROP TABLE execution_logs');
+      await customStatement(
+        'ALTER TABLE execution_logs_new RENAME TO execution_logs',
+      );
+
+      await customStatement('''
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_conn_unique
+        ON layer_connections(source_layer_id, target_layer_id)
+      ''');
+
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tasks_status_layer
+        ON tasks(status, layer_id)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tasks_worker
+        ON tasks(worker_id)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tasks_created
+        ON tasks(created_at)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tasks_uuid
+        ON tasks(uuid)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_logs_created
+        ON execution_logs(created_at)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_msgs_created
+        ON chat_messages(created_at)
+      ''');
+
+      await customStatement('DROP INDEX IF EXISTS idx_tasks_status');
+      await customStatement('DROP INDEX IF EXISTS idx_tasks_layer');
+      await customStatement('DROP INDEX IF EXISTS idx_conn_src');
+      await customStatement('DROP INDEX IF EXISTS idx_conn_dst');
+
+      await customStatement('COMMIT');
+    } catch (e) {
+      await customStatement('ROLLBACK');
+      rethrow;
+    }
+  }
+
   Future<void> saveTask(TasksCompanion task) {
     return into(tasks).insertOnConflictUpdate(task);
   }
 
-  Future<Task?> getTask(String id) {
+  Future<Task?> getTask(String uuid) {
+    return (select(tasks)..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
+  }
+
+  Future<Task?> getTaskById(int id) {
     return (select(tasks)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
@@ -390,12 +668,6 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteLayer(int id) async {
-    await (delete(layerConnections)..where(
-          (c) => c.sourceLayerId.equals(id) | c.targetLayerId.equals(id),
-        ))
-        .go();
-    await (delete(threadLayers)..where((tl) => tl.layerId.equals(id))).go();
-    await (delete(workers)..where((w) => w.layerId.equals(id))).go();
     await (delete(layers)..where((l) => l.id.equals(id))).go();
   }
 
@@ -409,6 +681,10 @@ class AppDatabase extends _$AppDatabase {
     )..where((w) => w.name.equals(name))).getSingleOrNull();
   }
 
+  Future<Worker?> getWorkerById(int id) {
+    return (select(workers)..where((w) => w.id.equals(id))).getSingleOrNull();
+  }
+
   Future<List<Worker>> listWorkers() {
     return select(workers).get();
   }
@@ -417,8 +693,8 @@ class AppDatabase extends _$AppDatabase {
     return select(workers).watch();
   }
 
-  Future<void> deleteWorker(String name) {
-    return (delete(workers)..where((w) => w.name.equals(name))).go();
+  Future<void> deleteWorker(int id) {
+    return (delete(workers)..where((w) => w.id.equals(id))).go();
   }
 
   Future<void> saveConnection(LayerConnectionsCompanion conn) {
@@ -475,18 +751,18 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> logExecution({
-    required String taskId,
+    required int taskId,
     required String status,
-    String? workerName,
+    int? workerId,
     String? message,
   }) {
     return into(executionLogs).insert(
       ExecutionLogsCompanion.insert(
         taskId: taskId,
-        workerName: Value(workerName),
+        workerId: Value(workerId),
         status: status,
         message: Value(message),
-        createdAt: DateTime.now().millisecondsSinceEpoch,
+        createdAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
   }
@@ -516,21 +792,23 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.name.equals(name))).getSingleOrNull();
   }
 
-  Future<void> deleteThread(String name) async {
-    await (delete(
-      threadLayers,
-    )..where((tl) => tl.threadName.equals(name))).go();
-    await (delete(threads)..where((t) => t.name.equals(name))).go();
+  Future<Thread?> getThreadById(int id) {
+    return (select(threads)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
-  Future<void> saveThreadLayerIds(String threadName, List<int> ids) async {
+  Future<void> deleteThread(int id) async {
+    await (delete(threadLayers)..where((tl) => tl.threadId.equals(id))).go();
+    await (delete(threads)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> saveThreadLayerIds(int threadId, List<int> ids) async {
     await (delete(
       threadLayers,
-    )..where((tl) => tl.threadName.equals(threadName))).go();
+    )..where((tl) => tl.threadId.equals(threadId))).go();
     for (var i = 0; i < ids.length; i++) {
       await into(threadLayers).insert(
         ThreadLayersCompanion.insert(
-          threadName: threadName,
+          threadId: threadId,
           layerId: ids[i],
           sortOrder: Value(i),
         ),
@@ -538,9 +816,9 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  Future<List<ThreadLayer>> listThreadLayers(String threadName) {
+  Future<List<ThreadLayer>> listThreadLayers(int threadId) {
     return (select(threadLayers)
-          ..where((tl) => tl.threadName.equals(threadName))
+          ..where((tl) => tl.threadId.equals(threadId))
           ..orderBy([(tl) => OrderingTerm.asc(tl.sortOrder)]))
         .get();
   }
@@ -551,17 +829,14 @@ class AppDatabase extends _$AppDatabase {
     )..orderBy([(tl) => OrderingTerm.asc(tl.sortOrder)])).get();
   }
 
-  Stream<List<ThreadLayer>> watchThreadLayers(String threadName) {
+  Stream<List<ThreadLayer>> watchThreadLayers(int threadId) {
     return (select(threadLayers)
-          ..where((tl) => tl.threadName.equals(threadName))
+          ..where((tl) => tl.threadId.equals(threadId))
           ..orderBy([(tl) => OrderingTerm.asc(tl.sortOrder)]))
         .watch();
   }
 
-  Future<List<ExecutionLog>> listExecutionLogs({
-    String? taskId,
-    int limit = 200,
-  }) {
+  Future<List<ExecutionLog>> listExecutionLogs({int? taskId, int limit = 200}) {
     final query = select(executionLogs)
       ..orderBy([(l) => OrderingTerm.desc(l.createdAt)])
       ..limit(limit);
@@ -572,7 +847,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Stream<List<ExecutionLog>> watchExecutionLogs({
-    String? taskId,
+    int? taskId,
     int limit = 200,
   }) {
     final query = select(executionLogs)

@@ -5,10 +5,12 @@ void main() {
   group('WorkerDefinition', () {
     test('required-only constructor sets defaults', () {
       const worker = WorkerDefinition(
+        id: 1,
         name: 'w1',
         layerId: 1,
         systemPrompt: 'You are a reviewer.',
       );
+      expect(worker.id, 1);
       expect(worker.name, 'w1');
       expect(worker.layerId, 1);
       expect(worker.systemPrompt, 'You are a reviewer.');
@@ -20,6 +22,7 @@ void main() {
 
     test('all-fields constructor holds every value', () {
       const worker = WorkerDefinition(
+        id: 2,
         name: 'w2',
         layerId: 2,
         systemPrompt: 'Analyze deeply.',
@@ -28,6 +31,7 @@ void main() {
         maxTokens: 2048,
         enabled: false,
       );
+      expect(worker.id, 2);
       expect(worker.name, 'w2');
       expect(worker.layerId, 2);
       expect(worker.systemPrompt, 'Analyze deeply.');
@@ -39,6 +43,7 @@ void main() {
 
     test('copyWith overrides specified fields', () {
       const worker = WorkerDefinition(
+        id: 3,
         name: 'w3',
         layerId: 3,
         systemPrompt: 'Draft content.',
@@ -51,6 +56,7 @@ void main() {
         maxTokens: 1024,
         enabled: false,
       );
+      expect(copied.id, 3);
       expect(copied.name, 'w3');
       expect(copied.layerId, 4);
       expect(copied.systemPrompt, 'Refine content.');
@@ -62,6 +68,7 @@ void main() {
 
     test('copyWith preserves unspecified fields', () {
       const worker = WorkerDefinition(
+        id: 4,
         name: 'w4',
         layerId: 5,
         systemPrompt: 'Parse input.',
@@ -70,6 +77,7 @@ void main() {
         maxTokens: 512,
       );
       final copied = worker.copyWith();
+      expect(copied.id, 4);
       expect(copied.name, 'w4');
       expect(copied.layerId, 5);
       expect(copied.systemPrompt, 'Parse input.');
@@ -81,6 +89,7 @@ void main() {
 
     test('copyWith does not expose name parameter', () {
       const worker = WorkerDefinition(
+        id: 5,
         name: 'immutable',
         layerId: 6,
         systemPrompt: 'prompt',
@@ -90,13 +99,19 @@ void main() {
     });
 
     test('equality uses identity (no manual operator override)', () {
-      const a = WorkerDefinition(name: 'w5', layerId: 8, systemPrompt: 'p');
+      const a = WorkerDefinition(
+        id: 6,
+        name: 'w5',
+        layerId: 8,
+        systemPrompt: 'p',
+      );
       final b = a.copyWith();
       expect(a == b, isFalse);
     });
 
     test('is constructable as const', () {
       const worker = WorkerDefinition(
+        id: 7,
         name: 'const-w',
         layerId: 9,
         systemPrompt: 'const prompt',

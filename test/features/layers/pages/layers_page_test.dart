@@ -26,13 +26,14 @@ List<LayerDefinition> fakeLayers() => [
 
 List<AppTask> fakeTasks() => [
   const AppTask(
-    id: 't1',
+    id: 0,
+    uuid: 't1',
     taskType: 'generate',
     payload: null,
     priority: TaskPriority.high,
     status: TaskStatus.running,
     layerId: 1,
-    workerName: 'writer-1',
+    workerId: 1,
     createdAt: 1000,
     updatedAt: 1000,
   ),

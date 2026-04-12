@@ -3,10 +3,11 @@ import 'package:gyeol/data/models/app_models.dart';
 
 void main() {
   group('AppTask', () {
-    test('create factory sets id, timestamps, and pending status', () {
+    test('create factory sets timestamps and pending status', () {
       final task = AppTask.create('parse', {'text': 'hi'}, TaskPriority.high);
 
-      expect(task.id, isNotEmpty);
+      expect(task.id, 0);
+      expect(task.uuid, isNotEmpty);
       expect(task.taskType, 'parse');
       expect(task.payload, {'text': 'hi'});
       expect(task.priority, TaskPriority.high);
@@ -20,22 +21,21 @@ void main() {
 
     test('copyWith overrides only specified fields', () {
       final original = AppTask.create('parse', null, TaskPriority.medium);
-      final copied = original.copyWith(
-        status: TaskStatus.running,
-        workerName: 'w1',
-      );
+      final copied = original.copyWith(status: TaskStatus.running, workerId: 1);
 
       expect(copied.id, original.id);
+      expect(copied.uuid, original.uuid);
       expect(copied.taskType, original.taskType);
       expect(copied.status, TaskStatus.running);
-      expect(copied.workerName, 'w1');
+      expect(copied.workerId, 1);
       expect(copied.priority, TaskPriority.medium);
     });
 
     test('priorityLabel returns correct labels', () {
       expect(
         const AppTask(
-          id: 'a',
+          id: 0,
+          uuid: 'a',
           taskType: 't',
           payload: null,
           priority: TaskPriority.high,
@@ -47,7 +47,8 @@ void main() {
       );
       expect(
         const AppTask(
-          id: 'a',
+          id: 0,
+          uuid: 'a',
           taskType: 't',
           payload: null,
           priority: TaskPriority.medium,
@@ -59,7 +60,8 @@ void main() {
       );
       expect(
         const AppTask(
-          id: 'a',
+          id: 0,
+          uuid: 'a',
           taskType: 't',
           payload: null,
           priority: TaskPriority.low,
@@ -80,7 +82,8 @@ void main() {
       }.entries) {
         expect(
           AppTask(
-            id: 'a',
+            id: 0,
+            uuid: 'a',
             taskType: 't',
             payload: null,
             priority: TaskPriority.low,
@@ -134,7 +137,7 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
 
-    test('tasks with different id are not equal', () {
+    test('tasks with different uuid are not equal', () {
       final a = AppTask.create('parse', null, TaskPriority.low);
       final b = AppTask.create('parse', null, TaskPriority.low);
       expect(a, isNot(equals(b)));
@@ -240,6 +243,7 @@ void main() {
   group('WorkerDefinition', () {
     test('defaults enabled=true and optional fields null', () {
       const worker = WorkerDefinition(
+        id: 1,
         name: 'w',
         layerId: 1,
         systemPrompt: 'prompt',
@@ -252,6 +256,7 @@ void main() {
 
     test('copyWith overrides specified fields only', () {
       const worker = WorkerDefinition(
+        id: 2,
         name: 'w',
         layerId: 1,
         systemPrompt: 'prompt',

@@ -7,6 +7,7 @@ import 'package:gyeol/features/workers/pages/workers_page.dart';
 
 List<WorkerDefinition> fakeWorkers() => [
   const WorkerDefinition(
+    id: 1,
     name: 'writer-1',
     layerId: 1,
     systemPrompt: 'You are a creative writer.',
@@ -15,11 +16,13 @@ List<WorkerDefinition> fakeWorkers() => [
     maxTokens: 4096,
   ),
   const WorkerDefinition(
+    id: 2,
     name: 'critic-1',
     layerId: 1,
     systemPrompt: 'You are a critical reviewer.',
   ),
   const WorkerDefinition(
+    id: 3,
     name: 'orphan-1',
     layerId: 99,
     systemPrompt: 'I have no layer.',
@@ -161,6 +164,7 @@ void main() {
         tester,
         workers: [
           const WorkerDefinition(
+            id: 4,
             name: 'writer-1',
             layerId: 1,
             systemPrompt: 'You are a writer.',

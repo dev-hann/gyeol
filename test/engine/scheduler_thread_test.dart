@@ -39,6 +39,7 @@ void main() {
   group('runThread', () {
     test('returns empty when thread has no layers', () async {
       const thread = ThreadDefinition(
+        id: 0,
         name: 'empty',
         path: '/tmp',
         layerIds: [],
@@ -77,6 +78,7 @@ void main() {
 
       await repo.workers.saveWorker(
         WorkerDefinition(
+          id: 1,
           name: 'w1',
           layerId: l1.id,
           systemPrompt: 'parse the input',
@@ -84,6 +86,7 @@ void main() {
       );
       await repo.workers.saveWorker(
         WorkerDefinition(
+          id: 2,
           name: 'w2',
           layerId: l2.id,
           systemPrompt: 'analyze the parsed data',
@@ -104,6 +107,7 @@ void main() {
       );
 
       final thread = ThreadDefinition(
+        id: 0,
         name: 'test_thread',
         path: '/tmp/nonexistent_test_path',
         layerIds: [l1.id, l2.id],
@@ -144,7 +148,12 @@ void main() {
         ..register(l2);
 
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'w2', layerId: l2.id, systemPrompt: 'run me'),
+        WorkerDefinition(
+          id: 0,
+          name: 'w2',
+          layerId: l2.id,
+          systemPrompt: 'run me',
+        ),
       );
       await repo.settings.saveSettings(
         const ProviderSettings(
@@ -161,6 +170,7 @@ void main() {
       );
 
       final thread = ThreadDefinition(
+        id: 0,
         name: 'skip_test',
         path: '/tmp',
         layerIds: [l1.id, l2.id],
@@ -188,6 +198,7 @@ void main() {
 
       await repo.workers.saveWorker(
         WorkerDefinition(
+          id: 4,
           name: 'w1',
           layerId: l1.id,
           systemPrompt: 'process files',
@@ -208,6 +219,7 @@ void main() {
       );
 
       final thread = ThreadDefinition(
+        id: 0,
         name: 'path_test',
         path: '/custom/workspace',
         layerIds: [l1.id],
@@ -243,7 +255,12 @@ void main() {
       registry.register(l1);
 
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'w1', layerId: l1.id, systemPrompt: 'do work'),
+        WorkerDefinition(
+          id: 0,
+          name: 'w1',
+          layerId: l1.id,
+          systemPrompt: 'do work',
+        ),
       );
       await repo.settings.saveSettings(
         const ProviderSettings(
@@ -260,8 +277,18 @@ void main() {
       );
 
       final threads = [
-        ThreadDefinition(name: 'thread1', path: '/path/a', layerIds: [l1.id]),
-        ThreadDefinition(name: 'thread2', path: '/path/b', layerIds: [l1.id]),
+        ThreadDefinition(
+          id: 0,
+          name: 'thread1',
+          path: '/path/a',
+          layerIds: [l1.id],
+        ),
+        ThreadDefinition(
+          id: 0,
+          name: 'thread2',
+          path: '/path/b',
+          layerIds: [l1.id],
+        ),
       ];
 
       final results = await scheduler.runAllThreads(threads);

@@ -5,28 +5,25 @@ class LogRepository {
   final AppDatabase _db;
 
   Future<void> logExecution({
-    required String taskId,
+    required int taskId,
     required String status,
-    String? workerName,
+    int? workerId,
     String? message,
   }) {
     return _db.logExecution(
       taskId: taskId,
-      workerName: workerName,
+      workerId: workerId,
       status: status,
       message: message,
     );
   }
 
-  Future<List<ExecutionLog>> listExecutionLogs({
-    String? taskId,
-    int limit = 200,
-  }) {
+  Future<List<ExecutionLog>> listExecutionLogs({int? taskId, int limit = 200}) {
     return _db.listExecutionLogs(taskId: taskId, limit: limit);
   }
 
   Stream<List<ExecutionLog>> watchExecutionLogs({
-    String? taskId,
+    int? taskId,
     int limit = 200,
   }) {
     return _db.watchExecutionLogs(taskId: taskId, limit: limit);

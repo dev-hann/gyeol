@@ -39,6 +39,7 @@ void main() {
       final parseId = layers.firstWhere((l) => l.name == 'parse').id;
       final analyzeId = layers.firstWhere((l) => l.name == 'analyze').id;
       final thread = ThreadDefinition(
+        id: 0,
         name: 'pipeline-1',
         path: '/root/child',
         layerIds: [parseId, analyzeId],
@@ -85,6 +86,7 @@ void main() {
       final transformId = layers.firstWhere((l) => l.name == 'transform').id;
       final loadId = layers.firstWhere((l) => l.name == 'load').id;
       final thread = ThreadDefinition(
+        id: 0,
         name: 'pipeline-2',
         path: '/a/b/c',
         layerIds: [extractId, transformId, loadId],
@@ -136,8 +138,18 @@ void main() {
       final layers = await repo.layers.listLayers();
       final l1Id = layers.firstWhere((l) => l.name == 'L1').id;
       final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
-      final t1 = ThreadDefinition(name: 'alpha', path: '/a', layerIds: [l1Id]);
-      final t2 = ThreadDefinition(name: 'beta', path: '/b', layerIds: [l2Id]);
+      final t1 = ThreadDefinition(
+        id: 0,
+        name: 'alpha',
+        path: '/a',
+        layerIds: [l1Id],
+      );
+      final t2 = ThreadDefinition(
+        id: 0,
+        name: 'beta',
+        path: '/b',
+        layerIds: [l2Id],
+      );
       await repo.threads.saveThread(t1);
       await repo.threads.saveThread(t2);
 
@@ -161,6 +173,7 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       final thread = ThreadDefinition(
+        id: 0,
         name: 'to_delete',
         path: '/x',
         layerIds: [layerId],
@@ -168,12 +181,13 @@ void main() {
       await repo.threads.saveThread(thread);
       expect(await repo.threads.getThread('to_delete'), isNotNull);
 
-      await repo.threads.deleteThread('to_delete');
+      final toDeleteThread = await repo.threads.getThread('to_delete');
+      await repo.threads.deleteThread(toDeleteThread!.id);
       expect(await repo.threads.getThread('to_delete'), isNull);
     });
 
     test('is no-op for non-existent thread', () async {
-      await repo.threads.deleteThread('nonexistent');
+      await repo.threads.deleteThread(99999);
 
       final threads = await repo.threads.listThreads();
       expect(threads, isEmpty);
@@ -198,6 +212,7 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       final thread = ThreadDefinition(
+        id: 0,
         name: 'watched',
         path: '/w',
         layerIds: [layerId],

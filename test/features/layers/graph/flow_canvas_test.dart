@@ -17,7 +17,14 @@ NodeFlowController<LayerGraphData, void> createTestController() {
       ),
     ],
     [],
-    [const WorkerDefinition(name: 'w1', layerId: 1, systemPrompt: 'test')],
+    [
+      const WorkerDefinition(
+        id: 1,
+        name: 'w1',
+        layerId: 1,
+        systemPrompt: 'test',
+      ),
+    ],
     [],
   );
   return NodeFlowController<LayerGraphData, void>(nodes: nodes);

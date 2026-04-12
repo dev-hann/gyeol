@@ -85,7 +85,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
           thread: thread,
           layers: layers,
           onRun: () => _runThread(thread),
-          onDelete: () => _deleteThread(thread.name),
+          onDelete: () => _deleteThread(thread),
           onEdit: () => _showEditThreadDialog(context, thread, layers),
         );
       },
@@ -114,7 +114,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     }
   }
 
-  Future<void> _deleteThread(String name) async {
+  Future<void> _deleteThread(ThreadDefinition thread) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -123,7 +123,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
           'Delete Thread',
           style: TextStyle(color: AppColors.foreground),
         ),
-        content: Text('Delete thread "$name"?'),
+        content: Text('Delete thread "${thread.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -138,7 +138,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
       ),
     );
     if (confirmed ?? false) {
-      await ref.read(threadsProvider.notifier).deleteThread(name);
+      await ref.read(threadsProvider.notifier).deleteThread(thread.id);
     }
   }
 
@@ -164,6 +164,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
             .whereType<int>()
             .toList();
         final thread = ThreadDefinition(
+          id: 0,
           name: nameCtl.text,
           path: pathCtl.text,
           layerIds: layerIds,

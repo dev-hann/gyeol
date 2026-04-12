@@ -7,24 +7,38 @@ class ThreadRepository {
   final AppDatabase _db;
 
   Future<void> saveThread(ThreadDefinition thread) async {
-    await _db.saveThread(
-      ThreadsCompanion.insert(
+    final existing = await _db.getThread(thread.name);
+    final ThreadsCompanion companion;
+    if (existing != null) {
+      companion = ThreadsCompanion(
+        id: Value(existing.id),
+        name: Value(thread.name),
+        path: Value(thread.path),
+        contextPrompt: Value(thread.contextPrompt),
+        enabled: Value(thread.enabled),
+        status: Value(thread.status.name),
+      );
+    } else {
+      companion = ThreadsCompanion.insert(
         name: thread.name,
         path: thread.path,
         contextPrompt: Value(thread.contextPrompt),
         enabled: Value(thread.enabled),
         status: Value(thread.status.name),
-      ),
-    );
-    await _db.saveThreadLayerIds(thread.name, thread.layerIds);
+      );
+    }
+    await _db.saveThread(companion);
+    final row = await _db.getThread(thread.name);
+    final threadId = row?.id ?? thread.id;
+    await _db.saveThreadLayerIds(threadId, thread.layerIds);
   }
 
   Future<List<ThreadDefinition>> listThreads() async {
     final rows = await _db.listThreads();
     final allLayers = await _db.listAllThreadLayers();
-    final layersByThread = <String, List<int>>{};
+    final layersByThread = <int, List<int>>{};
     for (final row in allLayers) {
-      layersByThread.putIfAbsent(row.threadName, () => []).add(row.layerId);
+      layersByThread.putIfAbsent(row.threadId, () => []).add(row.layerId);
     }
     return rows.map((r) => _fromRow(r, layersByThread)).toList();
   }
@@ -32,9 +46,9 @@ class ThreadRepository {
   Stream<List<ThreadDefinition>> watchThreads() {
     return _db.watchThreads().asyncMap((rows) async {
       final allLayers = await _db.listAllThreadLayers();
-      final layersByThread = <String, List<int>>{};
+      final layersByThread = <int, List<int>>{};
       for (final row in allLayers) {
-        layersByThread.putIfAbsent(row.threadName, () => []).add(row.layerId);
+        layersByThread.putIfAbsent(row.threadId, () => []).add(row.layerId);
       }
       return rows.map((r) => _fromRow(r, layersByThread)).toList();
     });
@@ -43,17 +57,18 @@ class ThreadRepository {
   Future<ThreadDefinition?> getThread(String name) async {
     final row = await _db.getThread(name);
     if (row == null) return null;
-    final layers = await _db.listThreadLayers(name);
-    return _fromRow(row, {name: layers.map((l) => l.layerId).toList()});
+    final layers = await _db.listThreadLayers(row.id);
+    return _fromRow(row, {row.id: layers.map((l) => l.layerId).toList()});
   }
 
-  Future<void> deleteThread(String name) => _db.deleteThread(name);
+  Future<void> deleteThread(int id) => _db.deleteThread(id);
 
-  ThreadDefinition _fromRow(Thread r, Map<String, List<int>> layersByThread) {
+  ThreadDefinition _fromRow(Thread r, Map<int, List<int>> layersByThread) {
     return ThreadDefinition(
+      id: r.id,
       name: r.name,
       path: r.path,
-      layerIds: layersByThread[r.name] ?? [],
+      layerIds: layersByThread[r.id] ?? [],
       contextPrompt: r.contextPrompt,
       enabled: r.enabled,
       status: ThreadStatus.values.firstWhere(

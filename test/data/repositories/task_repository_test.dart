@@ -23,11 +23,12 @@ void main() {
         'text': 'hello',
       }, TaskPriority.high);
 
-      expect(id, isNotEmpty);
+      expect(id, isA<int>());
 
-      final task = await repo.tasks.getTask(id);
+      final tasks = await repo.tasks.listTasks();
+      final task = tasks.firstWhere((t) => t.taskType == 'summarize');
       expect(task, isNotNull);
-      expect(task!.taskType, 'summarize');
+      expect(task.taskType, 'summarize');
       expect(task.payload, {'text': 'hello'});
       expect(task.priority, TaskPriority.high);
       expect(task.status, TaskStatus.pending);
@@ -36,32 +37,34 @@ void main() {
       expect(task.depth, 0);
       expect(task.parentTaskId, isNull);
       expect(task.layerId, isNull);
-      expect(task.workerName, isNull);
+      expect(task.workerId, isNull);
     });
 
     test('stores task with null payload', () async {
-      final id = await repo.tasks.createTask('ping', null, TaskPriority.low);
+      await repo.tasks.createTask('ping', null, TaskPriority.low);
 
-      final task = await repo.tasks.getTask(id);
+      final tasks = await repo.tasks.listTasks();
+      final task = tasks.firstWhere((t) => t.taskType == 'ping');
       expect(task, isNotNull);
-      expect(task!.payload, isNull);
+      expect(task.payload, isNull);
     });
 
     test('stores task with list payload', () async {
-      final id = await repo.tasks.createTask('batch', [
+      await repo.tasks.createTask('batch', [
         'a',
         'b',
         'c',
       ], TaskPriority.medium);
 
-      final task = await repo.tasks.getTask(id);
-      expect(task!.payload, ['a', 'b', 'c']);
+      final tasks = await repo.tasks.listTasks();
+      final task = tasks.firstWhere((t) => t.taskType == 'batch');
+      expect(task.payload, ['a', 'b', 'c']);
     });
   });
 
   group('TaskRepository getTask', () {
-    test('returns null for non-existent id', () async {
-      final task = await repo.tasks.getTask('nonexistent');
+    test('returns null for non-existent uuid', () async {
+      final task = await repo.tasks.getTask('nonexistent-uuid');
       expect(task, isNull);
     });
   });
@@ -104,73 +107,78 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'w1', layerId: layerId, systemPrompt: 'test'),
+        WorkerDefinition(
+          id: 0,
+          name: 'w1',
+          layerId: layerId,
+          systemPrompt: 'test',
+        ),
       );
-      final id = await repo.tasks.createTask('parse', {
-        'data': 'x',
-      }, TaskPriority.high);
-      var task = await repo.tasks.getTask(id);
-      expect(task!.status, TaskStatus.pending);
+      await repo.tasks.createTask('parse', {'data': 'x'}, TaskPriority.high);
+      var tasks = await repo.tasks.listTasks();
+      var task = tasks.firstWhere((t) => t.taskType == 'parse');
+      expect(task.status, TaskStatus.pending);
 
+      final worker = await repo.workers.getWorker('w1');
       final updated = task.copyWith(
         status: TaskStatus.running,
         layerId: layerId,
-        workerName: 'w1',
+        workerId: worker!.id,
       );
       await repo.tasks.saveTask(updated);
 
-      task = await repo.tasks.getTask(id);
-      expect(task!.status, TaskStatus.running);
+      tasks = await repo.tasks.listTasks();
+      task = tasks.firstWhere((t) => t.taskType == 'parse');
+      expect(task.status, TaskStatus.running);
       expect(task.layerId, layerId);
-      expect(task.workerName, 'w1');
+      expect(task.workerId, worker.id);
       expect(task.taskType, 'parse');
       expect(task.priority, TaskPriority.high);
     });
 
     test('updates task to done status with retry count', () async {
-      final id = await repo.tasks.createTask(
-        'analyze',
-        null,
-        TaskPriority.medium,
-      );
+      await repo.tasks.createTask('analyze', null, TaskPriority.medium);
 
-      var task = await repo.tasks.getTask(id);
-      final updated = task!.copyWith(status: TaskStatus.done, retryCount: 2);
+      var tasks = await repo.tasks.listTasks();
+      var task = tasks.firstWhere((t) => t.taskType == 'analyze');
+      final updated = task.copyWith(status: TaskStatus.done, retryCount: 2);
       await repo.tasks.saveTask(updated);
 
-      task = await repo.tasks.getTask(id);
-      expect(task!.status, TaskStatus.done);
+      tasks = await repo.tasks.listTasks();
+      task = tasks.firstWhere((t) => t.taskType == 'analyze');
+      expect(task.status, TaskStatus.done);
       expect(task.retryCount, 2);
     });
 
     test('updates task with depth and parentTaskId', () async {
-      final parentId = await repo.tasks.createTask(
-        'parent',
-        null,
-        TaskPriority.low,
-      );
-      final id = await repo.tasks.createTask('child', null, TaskPriority.low);
+      await repo.tasks.createTask('parent', null, TaskPriority.low);
+      await repo.tasks.createTask('child', null, TaskPriority.low);
 
-      var task = await repo.tasks.getTask(id);
-      final updated = task!.copyWith(depth: 3, parentTaskId: parentId);
+      var tasks = await repo.tasks.listTasks();
+      final parentTask = tasks.firstWhere((t) => t.taskType == 'parent');
+      var childTask = tasks.firstWhere((t) => t.taskType == 'child');
+      final updated = childTask.copyWith(depth: 3, parentTaskId: parentTask.id);
       await repo.tasks.saveTask(updated);
 
-      task = await repo.tasks.getTask(id);
-      expect(task!.depth, 3);
-      expect(task.parentTaskId, parentId);
+      tasks = await repo.tasks.listTasks();
+      childTask = tasks.firstWhere((t) => t.taskType == 'child');
+      expect(childTask.depth, 3);
+      expect(childTask.parentTaskId, parentTask.id);
     });
 
     test('preserves payload through update', () async {
-      final id = await repo.tasks.createTask('x', {
+      await repo.tasks.createTask('x', {
         'key': 'value',
         'count': 42,
       }, TaskPriority.high);
 
-      var task = await repo.tasks.getTask(id);
-      await repo.tasks.saveTask(task!.copyWith(status: TaskStatus.running));
+      var tasks = await repo.tasks.listTasks();
+      var task = tasks.firstWhere((t) => t.taskType == 'x');
+      await repo.tasks.saveTask(task.copyWith(status: TaskStatus.running));
 
-      task = await repo.tasks.getTask(id);
-      expect(task!.payload, {'key': 'value', 'count': 42});
+      tasks = await repo.tasks.listTasks();
+      task = tasks.firstWhere((t) => t.taskType == 'x');
+      expect(task.payload, {'key': 'value', 'count': 42});
     });
   });
 
@@ -191,20 +199,23 @@ void main() {
 
   group('TaskRepository full lifecycle', () {
     test('create -> run -> complete flow', () async {
-      final id = await repo.tasks.createTask('lifecycle', {
+      await repo.tasks.createTask('lifecycle', {
         'input': 'data',
       }, TaskPriority.high);
 
-      var task = await repo.tasks.getTask(id);
-      expect(task!.status, TaskStatus.pending);
+      var tasks = await repo.tasks.listTasks();
+      var task = tasks.firstWhere((t) => t.taskType == 'lifecycle');
+      expect(task.status, TaskStatus.pending);
 
       await repo.tasks.saveTask(task.copyWith(status: TaskStatus.running));
-      task = await repo.tasks.getTask(id);
-      expect(task!.status, TaskStatus.running);
+      tasks = await repo.tasks.listTasks();
+      task = tasks.firstWhere((t) => t.taskType == 'lifecycle');
+      expect(task.status, TaskStatus.running);
 
       await repo.tasks.saveTask(task.copyWith(status: TaskStatus.done));
-      task = await repo.tasks.getTask(id);
-      expect(task!.status, TaskStatus.done);
+      tasks = await repo.tasks.listTasks();
+      task = tasks.firstWhere((t) => t.taskType == 'lifecycle');
+      expect(task.status, TaskStatus.done);
     });
 
     test('create -> run -> fail with retry', () async {
@@ -219,28 +230,33 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'w1', layerId: layerId, systemPrompt: 'test'),
+        WorkerDefinition(
+          id: 0,
+          name: 'w1',
+          layerId: layerId,
+          systemPrompt: 'test',
+        ),
       );
-      final id = await repo.tasks.createTask(
-        'retry_test',
-        null,
-        TaskPriority.medium,
-      );
+      await repo.tasks.createTask('retry_test', null, TaskPriority.medium);
 
-      var task = await repo.tasks.getTask(id);
+      var tasks = await repo.tasks.listTasks();
+      var task = tasks.firstWhere((t) => t.taskType == 'retry_test');
+      final worker = await repo.workers.getWorker('w1');
       await repo.tasks.saveTask(
-        task!.copyWith(status: TaskStatus.running, workerName: 'w1'),
+        task.copyWith(status: TaskStatus.running, workerId: worker!.id),
       );
 
-      task = await repo.tasks.getTask(id);
+      tasks = await repo.tasks.listTasks();
+      task = tasks.firstWhere((t) => t.taskType == 'retry_test');
       await repo.tasks.saveTask(
-        task!.copyWith(status: TaskStatus.failed, retryCount: 1),
+        task.copyWith(status: TaskStatus.failed, retryCount: 1),
       );
 
-      task = await repo.tasks.getTask(id);
-      expect(task!.status, TaskStatus.failed);
+      tasks = await repo.tasks.listTasks();
+      task = tasks.firstWhere((t) => t.taskType == 'retry_test');
+      expect(task.status, TaskStatus.failed);
       expect(task.retryCount, 1);
-      expect(task.workerName, 'w1');
+      expect(task.workerId, worker.id);
     });
   });
 }

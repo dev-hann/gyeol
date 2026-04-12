@@ -1,5 +1,6 @@
 class WorkerDefinition {
   const WorkerDefinition({
+    required this.id,
     required this.name,
     required this.layerId,
     required this.systemPrompt,
@@ -8,6 +9,8 @@ class WorkerDefinition {
     this.maxTokens,
     this.enabled = true,
   });
+
+  final int id;
   final String name;
   final int layerId;
   final String systemPrompt;
@@ -17,6 +20,8 @@ class WorkerDefinition {
   final bool enabled;
 
   WorkerDefinition copyWith({
+    int? id,
+    String? name,
     int? layerId,
     String? systemPrompt,
     String? model,
@@ -25,7 +30,8 @@ class WorkerDefinition {
     bool? enabled,
   }) {
     return WorkerDefinition(
-      name: name,
+      id: id ?? this.id,
+      name: name ?? this.name,
       layerId: layerId ?? this.layerId,
       systemPrompt: systemPrompt ?? this.systemPrompt,
       model: model ?? this.model,

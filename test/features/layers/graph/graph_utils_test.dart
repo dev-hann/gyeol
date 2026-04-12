@@ -141,7 +141,8 @@ void main() {
       ];
       final tasks = [
         const AppTask(
-          id: 't1',
+          id: 0,
+          uuid: 't1',
           taskType: 'test',
           payload: null,
           priority: TaskPriority.high,
@@ -151,7 +152,8 @@ void main() {
           updatedAt: 0,
         ),
         const AppTask(
-          id: 't2',
+          id: 0,
+          uuid: 't2',
           taskType: 'test',
           payload: null,
           priority: TaskPriority.low,
@@ -176,8 +178,18 @@ void main() {
         ),
       ];
       final workers = [
-        const WorkerDefinition(name: 'w1', layerId: 1, systemPrompt: 'p1'),
-        const WorkerDefinition(name: 'w2', layerId: 1, systemPrompt: 'p2'),
+        const WorkerDefinition(
+          id: 1,
+          name: 'w1',
+          layerId: 1,
+          systemPrompt: 'p1',
+        ),
+        const WorkerDefinition(
+          id: 2,
+          name: 'w2',
+          layerId: 1,
+          systemPrompt: 'p2',
+        ),
       ];
       final nodes = buildNodes(layers, [], workers, []);
       final data = nodes.first.data;

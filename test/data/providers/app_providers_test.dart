@@ -32,7 +32,7 @@ void main() {
       final id = await notifier.createTask('summarize', {
         'text': 'hello',
       }, TaskPriority.medium);
-      expect(id, isNotEmpty);
+      expect(id, isA<int>());
 
       final tasks = await container.read(tasksProvider.future);
       expect(tasks, hasLength(1));
@@ -109,12 +109,14 @@ void main() {
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
         WorkerDefinition(
+          id: 0,
           name: 'parser',
           layerId: layerId,
           systemPrompt: 'Parse the text',
         ),
       );
 
+      await Future<void>.delayed(const Duration(milliseconds: 50));
       final workers = await container.read(workersProvider.future);
       expect(workers, hasLength(1));
       expect(workers.first.name, 'parser');
@@ -136,16 +138,21 @@ void main() {
       final layerId = layers.first.id;
       final notifier = container.read(workersProvider.notifier);
       await notifier.saveWorker(
-        WorkerDefinition(name: 'temp', layerId: layerId, systemPrompt: 'tmp'),
+        WorkerDefinition(
+          id: 0,
+          name: 'temp',
+          layerId: layerId,
+          systemPrompt: 'tmp',
+        ),
       );
-
-      await container.read(workersProvider.future);
-
-      await notifier.deleteWorker('temp');
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
       final workers = await container.read(workersProvider.future);
-      expect(workers, isEmpty);
+      await notifier.deleteWorker(workers.first.id);
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final updatedWorkers = await container.read(workersProvider.future);
+      expect(updatedWorkers, isEmpty);
     });
   });
 
@@ -189,31 +196,11 @@ void main() {
 
     test('refresh with taskId filters logs', () async {
       final repo = container.read(repositoryProvider);
-      final now = DateTime.now().millisecondsSinceEpoch;
-      await repo.tasks.saveTask(
-        AppTask(
-          id: 't1',
-          taskType: 'test',
-          payload: null,
-          priority: TaskPriority.low,
-          status: TaskStatus.pending,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      await repo.tasks.saveTask(
-        AppTask(
-          id: 't2',
-          taskType: 'test',
-          payload: null,
-          priority: TaskPriority.low,
-          status: TaskStatus.pending,
-          createdAt: now,
-          updatedAt: now,
-        ),
-      );
-      await repo.logs.logExecution(taskId: 't1', status: 'done');
-      await repo.logs.logExecution(taskId: 't2', status: 'running');
+      await repo.tasks.createTask('test', null, TaskPriority.low);
+      await repo.tasks.createTask('test', null, TaskPriority.low);
+      final tasks = await repo.tasks.listTasks();
+      await repo.logs.logExecution(taskId: tasks.first.id, status: 'done');
+      await repo.logs.logExecution(taskId: tasks.last.id, status: 'running');
 
       await container.read(logsProvider.future);
 
@@ -301,13 +288,13 @@ void main() {
         'plain string',
         TaskPriority.low,
       );
-      expect(id, isNotEmpty);
+      expect(id, isA<int>());
     });
 
     test('createTask accepts null payload', () async {
       final notifier = container.read(tasksProvider.notifier);
       final id = await notifier.createTask('summarize', null, TaskPriority.low);
-      expect(id, isNotEmpty);
+      expect(id, isA<int>());
     });
   });
 

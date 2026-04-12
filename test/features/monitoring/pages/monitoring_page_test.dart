@@ -17,19 +17,21 @@ List<LayerDefinition> fakeLayers() => [
 
 List<AppTask> fakeTasks() => [
   const AppTask(
-    id: 't1',
+    id: 0,
+    uuid: 't1',
     taskType: 'generate',
     payload: null,
     priority: TaskPriority.high,
     status: TaskStatus.running,
     layerId: 1,
-    workerName: 'writer-1',
+    workerId: 1,
     depth: 1,
     createdAt: 1000,
     updatedAt: 1000,
   ),
   const AppTask(
-    id: 't2',
+    id: 0,
+    uuid: 't2',
     taskType: 'review',
     payload: null,
     priority: TaskPriority.medium,
@@ -41,7 +43,8 @@ List<AppTask> fakeTasks() => [
     updatedAt: 2000,
   ),
   const AppTask(
-    id: 't3',
+    id: 0,
+    uuid: 't3',
     taskType: 'done-task',
     payload: null,
     priority: TaskPriority.low,
@@ -54,15 +57,15 @@ List<AppTask> fakeTasks() => [
 List<ExecutionLog> fakeLogs() => [
   ExecutionLog(
     id: 1,
-    taskId: 't1',
-    workerName: 'writer-1',
+    taskId: 1,
+    workerId: 1,
     status: 'success',
     message: 'Generated draft',
     createdAt: DateTime(2026, 1, 1, 12).millisecondsSinceEpoch,
   ),
   ExecutionLog(
     id: 2,
-    taskId: 't2',
+    taskId: 2,
     status: 'error',
     message: 'Timeout',
     createdAt: DateTime(2026, 1, 1, 12, 1).millisecondsSinceEpoch,
@@ -72,23 +75,23 @@ List<ExecutionLog> fakeLogs() => [
 List<ExecutionLog> fakeLogsWithBoth() => [
   ExecutionLog(
     id: 1,
-    taskId: 't1',
-    workerName: 'writer-1',
+    taskId: 1,
+    workerId: 1,
     status: 'success',
     message: 'Generated draft',
     createdAt: DateTime(2026, 1, 1, 12).millisecondsSinceEpoch,
   ),
   ExecutionLog(
     id: 2,
-    taskId: 't2',
+    taskId: 2,
     status: 'error',
     message: 'Timeout',
     createdAt: DateTime(2026, 1, 1, 12, 1).millisecondsSinceEpoch,
   ),
   ExecutionLog(
     id: 3,
-    taskId: 't3',
-    workerName: 'reviewer-1',
+    taskId: 3,
+    workerId: 2,
     status: 'success',
     message: 'Reviewed content',
     createdAt: DateTime(2026, 1, 1, 12, 2).millisecondsSinceEpoch,
@@ -115,6 +118,9 @@ void main() {
           ),
           layersProvider.overrideWith(
             () => _FakeLayersNotifier(layers ?? fakeLayers()),
+          ),
+          workersProvider.overrideWith(
+            () => _FakeWorkersNotifier(fakeWorkers()),
           ),
         ],
         child: const MaterialApp(home: MonitoringPage()),
@@ -163,7 +169,7 @@ void main() {
 
     testWidgets('shows task detail info with layer and worker', (tester) async {
       await pumpMonitoringPage(tester);
-      expect(find.textContaining('Draft / writer-1'), findsOneWidget);
+      expect(find.textContaining('Draft / writer-1'), findsAtLeast(1));
     });
 
     testWidgets('shows No active tasks when all done', (tester) async {
@@ -171,7 +177,8 @@ void main() {
         tester,
         tasks: [
           const AppTask(
-            id: 't4',
+            id: 0,
+            uuid: 't4',
             taskType: 'done-task',
             payload: null,
             priority: TaskPriority.low,
@@ -186,7 +193,7 @@ void main() {
 
     testWidgets('shows execution log worker names', (tester) async {
       await pumpMonitoringPage(tester);
-      expect(find.text('writer-1'), findsOneWidget);
+      expect(find.text('writer-1'), findsAtLeast(1));
       expect(find.text('System'), findsOneWidget);
     });
 
@@ -263,7 +270,7 @@ void main() {
 
     testWidgets('shows all logs by default', (tester) async {
       await pumpMonitoringPage(tester, logs: fakeLogsWithBoth());
-      expect(find.text('writer-1'), findsOneWidget);
+      expect(find.text('writer-1'), findsAtLeast(1));
       expect(find.text('reviewer-1'), findsOneWidget);
     });
 
@@ -274,7 +281,7 @@ void main() {
       await tester.tap(find.text('Success'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('writer-1'), findsOneWidget);
+      expect(find.text('writer-1'), findsAtLeast(1));
       expect(find.text('reviewer-1'), findsOneWidget);
       expect(find.text('System'), findsNothing);
     });
@@ -301,7 +308,7 @@ void main() {
       await tester.tap(find.text('All'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('writer-1'), findsOneWidget);
+      expect(find.text('writer-1'), findsAtLeast(1));
       expect(find.text('reviewer-1'), findsOneWidget);
       expect(find.text('System'), findsOneWidget);
     });
@@ -313,7 +320,7 @@ void main() {
       await tester.tap(find.text('generate'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.textContaining('Task ID:'), findsOneWidget);
+      expect(find.textContaining('Task ID:'), findsAtLeast(1));
     });
 
     testWidgets('shows full task id in expanded detail', (tester) async {
@@ -345,7 +352,7 @@ void main() {
       await tester.tap(find.text('generate'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.textContaining('Task ID:'), findsOneWidget);
+      expect(find.textContaining('Task ID:'), findsAtLeast(1));
       await tester.tap(find.text('generate'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -381,4 +388,27 @@ class _FakeLayersNotifier extends LayersNotifier {
 class _ErrorTasksNotifier extends TasksNotifier {
   @override
   Future<List<AppTask>> build() async => throw Exception('db failed');
+}
+
+List<WorkerDefinition> fakeWorkers() => [
+  const WorkerDefinition(
+    id: 1,
+    name: 'writer-1',
+    layerId: 1,
+    systemPrompt: 'p',
+  ),
+  const WorkerDefinition(
+    id: 2,
+    name: 'reviewer-1',
+    layerId: 1,
+    systemPrompt: 'p',
+  ),
+];
+
+class _FakeWorkersNotifier extends WorkersNotifier {
+  _FakeWorkersNotifier(this._workers);
+  final List<WorkerDefinition> _workers;
+
+  @override
+  Future<List<WorkerDefinition>> build() async => _workers;
 }

@@ -23,7 +23,8 @@ List<LayerDefinition> fakeLayers() => [
 
 List<AppTask> fakeTasks() => [
   AppTask(
-    id: 'aaaaaaaa-0000-0000-0000-000000000001',
+    id: 0,
+    uuid: 'aaaaaaaa-0000-0000-0000-000000000001',
     taskType: 'Generate',
     payload: null,
     priority: TaskPriority.high,
@@ -32,18 +33,20 @@ List<AppTask> fakeTasks() => [
     updatedAt: DateTime(2025, 1, 1, 12).millisecondsSinceEpoch,
   ),
   AppTask(
-    id: 'bbbbbbbb-0000-0000-0000-000000000002',
+    id: 0,
+    uuid: 'bbbbbbbb-0000-0000-0000-000000000002',
     taskType: 'Evaluate',
     payload: null,
     priority: TaskPriority.medium,
     status: TaskStatus.running,
     layerId: 1,
-    workerName: 'writer-1',
+    workerId: 1,
     createdAt: DateTime(2025, 1, 1, 12, 1).millisecondsSinceEpoch,
     updatedAt: DateTime(2025, 1, 1, 12, 1).millisecondsSinceEpoch,
   ),
   AppTask(
-    id: 'cccccccc-0000-0000-0000-000000000003',
+    id: 0,
+    uuid: 'cccccccc-0000-0000-0000-000000000003',
     taskType: 'Research',
     payload: null,
     priority: TaskPriority.low,
@@ -52,7 +55,8 @@ List<AppTask> fakeTasks() => [
     updatedAt: DateTime(2025, 1, 1, 12, 2).millisecondsSinceEpoch,
   ),
   AppTask(
-    id: 'dddddddd-0000-0000-0000-000000000004',
+    id: 0,
+    uuid: 'dddddddd-0000-0000-0000-000000000004',
     taskType: 'Translate',
     payload: null,
     priority: TaskPriority.high,
@@ -64,18 +68,21 @@ List<AppTask> fakeTasks() => [
 
 List<WorkerDefinition> fakeWorkers() => [
   const WorkerDefinition(
+    id: 1,
     name: 'writer-1',
     layerId: 1,
     systemPrompt: 'You are a writer',
     model: 'gpt-4o',
   ),
   const WorkerDefinition(
+    id: 2,
     name: 'reviewer-1',
     layerId: 2,
     systemPrompt: 'You are a reviewer',
     model: 'claude-sonnet-4-20250514',
   ),
   const WorkerDefinition(
+    id: 3,
     name: 'disabled-worker',
     layerId: 2,
     systemPrompt: 'You are disabled',

@@ -8,11 +8,13 @@ import 'package:gyeol/features/threads/pages/threads_page.dart';
 void main() {
   final fakeThreads = [
     const ThreadDefinition(
+      id: 1,
       name: 'review',
       path: '/home/user/project',
       layerIds: [1, 2],
     ),
     const ThreadDefinition(
+      id: 2,
       name: 'analysis',
       path: '/data/src',
       layerIds: [],
@@ -163,8 +165,8 @@ class _FakeThreadsNotifier extends ThreadsNotifier {
   }
 
   @override
-  Future<void> deleteThread(String name) async {
-    state = AsyncData(threads.where((t) => t.name != name).toList());
+  Future<void> deleteThread(int id) async {
+    state = AsyncData(threads.where((t) => t.id != id).toList());
   }
 }
 

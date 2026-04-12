@@ -6,18 +6,29 @@ class WorkerRepository {
   WorkerRepository(this._db);
   final AppDatabase _db;
 
-  Future<void> saveWorker(WorkerDefinition worker) {
-    return _db.saveWorker(
-      WorkersCompanion.insert(
-        name: worker.name,
-        layerId: worker.layerId,
-        systemPrompt: worker.systemPrompt,
-        model: Value(worker.model),
-        temperature: Value(worker.temperature),
-        maxTokens: Value(worker.maxTokens),
-        enabled: Value(worker.enabled),
-      ),
-    );
+  Future<void> saveWorker(WorkerDefinition worker) async {
+    final existing = await _db.getWorker(worker.name);
+    final companion = existing != null
+        ? WorkersCompanion(
+            id: Value(existing.id),
+            name: Value(worker.name),
+            layerId: Value(worker.layerId),
+            systemPrompt: Value(worker.systemPrompt),
+            model: Value(worker.model),
+            temperature: Value(worker.temperature),
+            maxTokens: Value(worker.maxTokens),
+            enabled: Value(worker.enabled),
+          )
+        : WorkersCompanion.insert(
+            name: worker.name,
+            layerId: worker.layerId,
+            systemPrompt: worker.systemPrompt,
+            model: Value(worker.model),
+            temperature: Value(worker.temperature),
+            maxTokens: Value(worker.maxTokens),
+            enabled: Value(worker.enabled),
+          );
+    await _db.saveWorker(companion);
   }
 
   Future<WorkerDefinition?> getWorker(String name) async {
@@ -34,10 +45,11 @@ class WorkerRepository {
     return _db.watchWorkers().map((rows) => rows.map(_workerFromRow).toList());
   }
 
-  Future<void> deleteWorker(String name) => _db.deleteWorker(name);
+  Future<void> deleteWorker(int id) => _db.deleteWorker(id);
 
   WorkerDefinition _workerFromRow(Worker r) {
     return WorkerDefinition(
+      id: r.id,
       name: r.name,
       layerId: r.layerId,
       systemPrompt: r.systemPrompt,

@@ -7,6 +7,7 @@ enum TaskStatus { pending, running, done, failed }
 class AppTask {
   const AppTask({
     required this.id,
+    required this.uuid,
     required this.taskType,
     required this.payload,
     required this.priority,
@@ -18,7 +19,7 @@ class AppTask {
     this.depth = 0,
     this.parentTaskId,
     this.layerId,
-    this.workerName,
+    this.workerId,
   });
 
   factory AppTask.create(
@@ -28,7 +29,8 @@ class AppTask {
   ) {
     final now = DateTime.now().millisecondsSinceEpoch;
     return AppTask(
-      id: const Uuid().v4(),
+      id: 0,
+      uuid: const Uuid().v4(),
       taskType: taskType,
       payload: payload,
       priority: priority,
@@ -37,7 +39,9 @@ class AppTask {
       updatedAt: now,
     );
   }
-  final String id;
+
+  final int id;
+  final String uuid;
   final String taskType;
   final Object? payload;
   final TaskPriority priority;
@@ -45,30 +49,33 @@ class AppTask {
   final int retryCount;
   final int maxRetries;
   final int depth;
-  final String? parentTaskId;
+  final int? parentTaskId;
   final int? layerId;
-  final String? workerName;
+  final int? workerId;
   final int createdAt;
   final int updatedAt;
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is AppTask && id == other.id;
+      identical(this, other) || other is AppTask && uuid == other.uuid;
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => uuid.hashCode;
 
   AppTask copyWith({
+    int? id,
+    String? uuid,
     TaskStatus? status,
     int? layerId,
-    String? workerName,
+    int? workerId,
     int? retryCount,
     int? depth,
-    String? parentTaskId,
+    int? parentTaskId,
     int? updatedAt,
   }) {
     return AppTask(
-      id: id,
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       taskType: taskType,
       payload: payload,
       priority: priority,
@@ -78,7 +85,7 @@ class AppTask {
       depth: depth ?? this.depth,
       parentTaskId: parentTaskId ?? this.parentTaskId,
       layerId: layerId ?? this.layerId,
-      workerName: workerName ?? this.workerName,
+      workerId: workerId ?? this.workerId,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

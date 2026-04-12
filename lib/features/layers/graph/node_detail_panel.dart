@@ -650,7 +650,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 14),
               onPressed: () =>
-                  ref.read(workersProvider.notifier).deleteWorker(worker.name),
+                  ref.read(workersProvider.notifier).deleteWorker(worker.id),
               color: AppColors.error,
               constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
               padding: EdgeInsets.zero,
@@ -845,6 +845,7 @@ class _NodeDetailPanelState extends ConsumerState<NodeDetailPanel> {
   void _saveWorker() {
     if (_wNameCtl.text.isEmpty || widget.layerId == null) return;
     final worker = WorkerDefinition(
+      id: 0,
       name: _wNameCtl.text,
       layerId: widget.layerId!,
       systemPrompt: _wPromptCtl.text,

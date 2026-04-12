@@ -11,8 +11,8 @@ class ChatRepository {
       ChatConversationsCompanion.insert(
         id: conv.id,
         title: conv.title,
-        createdAt: conv.createdAt,
-        updatedAt: conv.updatedAt,
+        createdAt: Value(conv.createdAt),
+        updatedAt: Value(conv.updatedAt),
       ),
     );
   }
@@ -60,7 +60,7 @@ class ChatRepository {
         content: msg.content,
         toolName: Value(msg.toolName),
         toolCallId: Value(msg.toolCallId),
-        createdAt: msg.createdAt,
+        createdAt: Value(msg.createdAt),
       ),
     );
   }

@@ -5,10 +5,12 @@ void main() {
   group('ThreadDefinition', () {
     test('defaults enabled=true and status=idle', () {
       const thread = ThreadDefinition(
+        id: 1,
         name: 'review',
         path: '/home/user/project',
         layerIds: [1, 2],
       );
+      expect(thread.id, 1);
       expect(thread.enabled, true);
       expect(thread.status, ThreadStatus.idle);
       expect(thread.contextPrompt, isNull);
@@ -16,6 +18,7 @@ void main() {
 
     test('holds all fields', () {
       const thread = ThreadDefinition(
+        id: 2,
         name: 'analysis',
         path: '/data/src',
         layerIds: [1, 2],
@@ -23,6 +26,7 @@ void main() {
         enabled: false,
         status: ThreadStatus.completed,
       );
+      expect(thread.id, 2);
       expect(thread.name, 'analysis');
       expect(thread.path, '/data/src');
       expect(thread.layerIds, [1, 2]);
@@ -33,6 +37,7 @@ void main() {
 
     test('copyWith overrides specified fields only', () {
       const thread = ThreadDefinition(
+        id: 3,
         name: 't1',
         path: '/old',
         layerIds: [1],
@@ -44,6 +49,7 @@ void main() {
         status: ThreadStatus.running,
       );
 
+      expect(copied.id, 3);
       expect(copied.name, 't1');
       expect(copied.path, '/new');
       expect(copied.layerIds, [1, 2]);
@@ -54,6 +60,7 @@ void main() {
 
     test('copyWith can update contextPrompt', () {
       const thread = ThreadDefinition(
+        id: 4,
         name: 't1',
         path: '/old',
         layerIds: [1],
@@ -72,6 +79,7 @@ void main() {
       }.entries) {
         expect(
           ThreadDefinition(
+            id: 5,
             name: 't',
             path: '/x',
             layerIds: [],

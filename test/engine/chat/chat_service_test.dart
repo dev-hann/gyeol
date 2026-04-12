@@ -380,7 +380,12 @@ void main() {
         ),
       );
       await repo.threads.saveThread(
-        const ThreadDefinition(name: 'T1', path: '/tmp/test', layerIds: [1]),
+        const ThreadDefinition(
+          id: 1,
+          name: 'T1',
+          path: '/tmp/test',
+          layerIds: [1],
+        ),
       );
 
       String? triggeredThread;
@@ -436,6 +441,7 @@ void main() {
       );
       await repo.threads.saveThread(
         const ThreadDefinition(
+          id: 2,
           name: 'T1',
           path: '/old/path',
           layerIds: [1],
@@ -477,7 +483,12 @@ void main() {
         ),
       );
       await repo.threads.saveThread(
-        const ThreadDefinition(name: 'ToDelete', path: '/tmp', layerIds: [1]),
+        const ThreadDefinition(
+          id: 3,
+          name: 'ToDelete',
+          path: '/tmp',
+          layerIds: [1],
+        ),
       );
 
       final result = await ToolRegistry.executeTool('delete_thread', {
@@ -522,6 +533,7 @@ void main() {
       );
       await repo.workers.saveWorker(
         const WorkerDefinition(
+          id: 1,
           name: 'W1',
           layerId: 1,
           systemPrompt: 'Hello',
@@ -565,7 +577,12 @@ void main() {
       final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
       final l2 = savedLayers.firstWhere((l) => l.name == 'L2');
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'W1', layerId: l1.id, systemPrompt: 'Hello'),
+        WorkerDefinition(
+          id: 0,
+          name: 'W1',
+          layerId: l1.id,
+          systemPrompt: 'Hello',
+        ),
       );
 
       final result = await ToolRegistry.executeTool('update_worker', {
@@ -601,7 +618,12 @@ void main() {
       final l0 = savedLayers.firstWhere((l) => l.name == 'L0');
       final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'W1', layerId: l0.id, systemPrompt: 'do work'),
+        WorkerDefinition(
+          id: 0,
+          name: 'W1',
+          layerId: l0.id,
+          systemPrompt: 'do work',
+        ),
       );
 
       final result = await ToolRegistry.executeTool('assign_worker', {
@@ -626,7 +648,12 @@ void main() {
         ),
       );
       await repo.workers.saveWorker(
-        const WorkerDefinition(name: 'W1', layerId: 1, systemPrompt: 'do work'),
+        const WorkerDefinition(
+          id: 0,
+          name: 'W1',
+          layerId: 1,
+          systemPrompt: 'do work',
+        ),
       );
 
       final result = await ToolRegistry.executeTool('assign_worker', {
@@ -650,10 +677,20 @@ void main() {
       final savedLayers = await repo.layers.listLayers();
       final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'W1', layerId: l1.id, systemPrompt: 'do work'),
+        WorkerDefinition(
+          id: 0,
+          name: 'W1',
+          layerId: l1.id,
+          systemPrompt: 'do work',
+        ),
       );
       await repo.workers.saveWorker(
-        WorkerDefinition(name: 'W2', layerId: l1.id, systemPrompt: 'do work'),
+        WorkerDefinition(
+          id: 0,
+          name: 'W2',
+          layerId: l1.id,
+          systemPrompt: 'do work',
+        ),
       );
 
       final result = await ToolRegistry.executeTool('unassign_worker', {
@@ -976,6 +1013,7 @@ void main() {
       );
       await repo.workers.saveWorker(
         const WorkerDefinition(
+          id: 7,
           name: 'W1',
           layerId: 1,
           systemPrompt: 'You are a helper',
@@ -986,7 +1024,8 @@ void main() {
       );
       await repo.tasks.saveTask(
         AppTask(
-          id: 'task1',
+          id: 0,
+          uuid: 'task1',
           taskType: 'test',
           payload: null,
           priority: TaskPriority.low,
@@ -997,7 +1036,8 @@ void main() {
       );
       await repo.tasks.saveTask(
         AppTask(
-          id: 'task2',
+          id: 0,
+          uuid: 'task2',
           taskType: 'test',
           payload: null,
           priority: TaskPriority.low,
@@ -1006,15 +1046,18 @@ void main() {
           updatedAt: DateTime.now().millisecondsSinceEpoch,
         ),
       );
+      final savedTasks = await repo.tasks.listTasks();
+      final task1 = savedTasks.firstWhere((t) => t.uuid == 'task1');
+      final task2 = savedTasks.firstWhere((t) => t.uuid == 'task2');
       await repo.logs.logExecution(
-        taskId: 'task1',
-        workerName: 'W1',
+        taskId: task1.id,
+        workerId: 1,
         status: 'completed',
         message: 'Task done',
       );
       await repo.logs.logExecution(
-        taskId: 'task2',
-        workerName: 'W1',
+        taskId: task2.id,
+        workerId: 1,
         status: 'completed',
         message: 'Another task done',
       );

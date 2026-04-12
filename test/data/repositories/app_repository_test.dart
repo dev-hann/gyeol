@@ -157,6 +157,7 @@ void main() {
       final parseId = layers.firstWhere((l) => l.name == 'parse').id;
       final analyzeId = layers.firstWhere((l) => l.name == 'analyze').id;
       final thread = ThreadDefinition(
+        id: 0,
         name: 'review',
         path: '/home/user/project',
         layerIds: [parseId, analyzeId],
@@ -189,6 +190,7 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       final thread = ThreadDefinition(
+        id: 0,
         name: 'build',
         path: '/src',
         layerIds: [layerId],
@@ -204,11 +206,12 @@ void main() {
 
     test('deleteThread removes thread', () async {
       await repo.threads.saveThread(
-        const ThreadDefinition(name: 'tmp', path: '/tmp', layerIds: []),
+        const ThreadDefinition(id: 1, name: 'tmp', path: '/tmp', layerIds: []),
       );
       expect(await repo.threads.listThreads(), hasLength(1));
 
-      await repo.threads.deleteThread('tmp');
+      final tmpThread = await repo.threads.getThread('tmp');
+      await repo.threads.deleteThread(tmpThread!.id);
       expect(await repo.threads.listThreads(), isEmpty);
     });
 
@@ -233,10 +236,11 @@ void main() {
       final aId = layers.firstWhere((l) => l.name == 'A').id;
       final bId = layers.firstWhere((l) => l.name == 'B').id;
       await repo.threads.saveThread(
-        ThreadDefinition(name: 't1', path: '/old', layerIds: [aId]),
+        ThreadDefinition(id: 0, name: 't1', path: '/old', layerIds: [aId]),
       );
       await repo.threads.saveThread(
         ThreadDefinition(
+          id: 3,
           name: 't1',
           path: '/new',
           layerIds: [aId, bId],
@@ -264,6 +268,7 @@ void main() {
       final layerId = layers.first.id;
       await repo.threads.saveThread(
         ThreadDefinition(
+          id: 4,
           name: 'ctx_test',
           path: '/project',
           layerIds: [layerId],
@@ -288,7 +293,12 @@ void main() {
       final layers = await repo.layers.listLayers();
       final layerId = layers.first.id;
       await repo.threads.saveThread(
-        ThreadDefinition(name: 'no_ctx', path: '/project', layerIds: [layerId]),
+        ThreadDefinition(
+          id: 0,
+          name: 'no_ctx',
+          path: '/project',
+          layerIds: [layerId],
+        ),
       );
 
       final threads = await repo.threads.listThreads();
@@ -302,7 +312,8 @@ void main() {
         'text': 'hello',
       }, TaskPriority.high);
 
-      final task = await repo.tasks.getTask(id);
+      final taskList = await repo.tasks.listTasks();
+      final task = taskList.first;
       expect(task, isNotNull);
       expect(task!.taskType, 'summarize');
       expect(task.payload, {'text': 'hello'});
@@ -358,6 +369,7 @@ void main() {
       final bId = layers.firstWhere((l) => l.name == 'b').id;
       await repo.threads.saveThread(
         ThreadDefinition(
+          id: 6,
           name: 'join-test',
           path: '/join',
           layerIds: [aId, bId],
@@ -409,7 +421,12 @@ void main() {
   group('thread layers via join table', () {
     test('empty layerIds for thread with no layers', () async {
       await repo.threads.saveThread(
-        const ThreadDefinition(name: 'empty', path: '/empty', layerIds: []),
+        const ThreadDefinition(
+          id: 7,
+          name: 'empty',
+          path: '/empty',
+          layerIds: [],
+        ),
       );
 
       final threads = await repo.threads.listThreads();
@@ -440,6 +457,7 @@ void main() {
       final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
       await repo.threads.saveThread(
         ThreadDefinition(
+          id: 8,
           name: 'with-layers',
           path: '/p',
           layerIds: [l1Id, l2Id],

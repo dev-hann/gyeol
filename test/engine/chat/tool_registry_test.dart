@@ -66,7 +66,12 @@ void main() {
           ),
         );
         await repo.workers.saveWorker(
-          const WorkerDefinition(name: 'W1', layerId: 1, systemPrompt: 'parse'),
+          const WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: 1,
+            systemPrompt: 'parse',
+          ),
         );
 
         final result = await ToolRegistry.executeTool('list_layers', {}, repo);
@@ -188,10 +193,20 @@ void main() {
         final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
         final l2 = savedLayers.firstWhere((l) => l.name == 'L2');
         await repo.workers.saveWorker(
-          WorkerDefinition(name: 'W1', layerId: l1.id, systemPrompt: 'p1'),
+          WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: l1.id,
+            systemPrompt: 'p1',
+          ),
         );
         await repo.workers.saveWorker(
-          WorkerDefinition(name: 'W2', layerId: l2.id, systemPrompt: 'p2'),
+          WorkerDefinition(
+            id: 0,
+            name: 'W2',
+            layerId: l2.id,
+            systemPrompt: 'p2',
+          ),
         );
 
         final result = await ToolRegistry.executeTool('list_workers', {
@@ -224,7 +239,12 @@ void main() {
           ),
         );
         await repo.workers.saveWorker(
-          const WorkerDefinition(name: 'W1', layerId: 1, systemPrompt: 'old'),
+          const WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: 1,
+            systemPrompt: 'old',
+          ),
         );
 
         await ToolRegistry.executeTool('update_worker', {
@@ -250,7 +270,12 @@ void main() {
           ),
         );
         await repo.workers.saveWorker(
-          const WorkerDefinition(name: 'W1', layerId: 1, systemPrompt: 'p'),
+          const WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: 1,
+            systemPrompt: 'p',
+          ),
         );
 
         final result = await ToolRegistry.executeTool('delete_worker', {
@@ -311,7 +336,7 @@ void main() {
           ),
         );
         await repo.threads.saveThread(
-          const ThreadDefinition(name: 'T1', path: '/a', layerIds: [1]),
+          const ThreadDefinition(id: 0, name: 'T1', path: '/a', layerIds: [1]),
         );
 
         final result = await ToolRegistry.executeTool('list_threads', {}, repo);
@@ -351,7 +376,12 @@ void main() {
           ),
         );
         await repo.threads.saveThread(
-          const ThreadDefinition(name: 'T1', path: '/a', layerIds: [1, 2]),
+          const ThreadDefinition(
+            id: 0,
+            name: 'T1',
+            path: '/a',
+            layerIds: [1, 2],
+          ),
         );
 
         final result = await ToolRegistry.executeTool('run_thread', {
@@ -375,7 +405,12 @@ void main() {
           ),
         );
         await repo.workers.saveWorker(
-          const WorkerDefinition(name: 'W1', layerId: 1, systemPrompt: 'p'),
+          const WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: 1,
+            systemPrompt: 'p',
+          ),
         );
 
         final result = await ToolRegistry.executeTool(
@@ -402,7 +437,12 @@ void main() {
           ),
         );
         await repo.workers.saveWorker(
-          const WorkerDefinition(name: 'W1', layerId: 1, systemPrompt: 'p'),
+          const WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: 1,
+            systemPrompt: 'p',
+          ),
         );
 
         final result = await ToolRegistry.executeTool('assign_worker', {
@@ -434,7 +474,12 @@ void main() {
         final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
         final l2 = savedLayers.firstWhere((l) => l.name == 'L2');
         await repo.workers.saveWorker(
-          WorkerDefinition(name: 'W1', layerId: l2.id, systemPrompt: 'p'),
+          WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: l2.id,
+            systemPrompt: 'p',
+          ),
         );
 
         final result = await ToolRegistry.executeTool('assign_worker', {
@@ -460,7 +505,12 @@ void main() {
         final savedLayers = await repo.layers.listLayers();
         final l1 = savedLayers.firstWhere((l) => l.name == 'L1');
         await repo.workers.saveWorker(
-          WorkerDefinition(name: 'W1', layerId: l1.id, systemPrompt: 'p'),
+          WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: l1.id,
+            systemPrompt: 'p',
+          ),
         );
 
         final result = await ToolRegistry.executeTool('unassign_worker', {
@@ -486,7 +536,12 @@ void main() {
         final savedLayers = await repo.layers.listLayers();
         final l2 = savedLayers.firstWhere((l) => l.name == 'L2');
         await repo.workers.saveWorker(
-          WorkerDefinition(name: 'W1', layerId: l2.id, systemPrompt: 'p'),
+          WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: l2.id,
+            systemPrompt: 'p',
+          ),
         );
 
         final result = await ToolRegistry.executeTool('unassign_worker', {
@@ -517,7 +572,12 @@ void main() {
           ),
         );
         await repo.threads.saveThread(
-          const ThreadDefinition(name: 'T1', path: '/old', layerIds: [1]),
+          const ThreadDefinition(
+            id: 0,
+            name: 'T1',
+            path: '/old',
+            layerIds: [1],
+          ),
         );
 
         await ToolRegistry.executeTool('update_thread', {
@@ -537,7 +597,7 @@ void main() {
     group('delete_thread', () {
       test('deletes a thread by name', () async {
         await repo.threads.saveThread(
-          const ThreadDefinition(name: 'T1', path: '/a', layerIds: []),
+          const ThreadDefinition(id: 0, name: 'T1', path: '/a', layerIds: []),
         );
 
         final result = await ToolRegistry.executeTool('delete_thread', {
@@ -563,6 +623,7 @@ void main() {
         );
         await repo.threads.saveThread(
           const ThreadDefinition(
+            id: 0,
             name: 'T1',
             path: '/a',
             layerIds: [1],
@@ -597,10 +658,15 @@ void main() {
           ),
         );
         await repo.workers.saveWorker(
-          const WorkerDefinition(name: 'W1', layerId: 1, systemPrompt: 'p'),
+          const WorkerDefinition(
+            id: 0,
+            name: 'W1',
+            layerId: 1,
+            systemPrompt: 'p',
+          ),
         );
         await repo.threads.saveThread(
-          const ThreadDefinition(name: 'T1', path: '/a', layerIds: []),
+          const ThreadDefinition(id: 0, name: 'T1', path: '/a', layerIds: []),
         );
 
         final result = await ToolRegistry.executeTool('get_status', {}, repo);
@@ -644,6 +710,7 @@ void main() {
         );
         await repo.workers.saveWorker(
           const WorkerDefinition(
+            id: 0,
             name: 'W1',
             layerId: 1,
             systemPrompt: 'You parse text',

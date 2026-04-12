@@ -19,19 +19,19 @@ void main() {
       final now = DateTime.now().millisecondsSinceEpoch;
       await db.saveTask(
         TasksCompanion.insert(
-          id: 't1',
+          uuid: 't1',
           taskType: 'parse',
           payload: '{}',
           priority: 'high',
           status: 'pending',
-          createdAt: now,
-          updatedAt: now,
+          createdAt: Value(now),
+          updatedAt: Value(now),
         ),
       );
 
       final task = await db.getTask('t1');
       expect(task, isNotNull);
-      expect(task!.id, 't1');
+      expect(task!.uuid, 't1');
       expect(task.taskType, 'parse');
       expect(task.status, 'pending');
     });
@@ -45,25 +45,27 @@ void main() {
       final now = DateTime.now().millisecondsSinceEpoch;
       await db.saveTask(
         TasksCompanion.insert(
-          id: 't1',
+          uuid: 't1',
           taskType: 'parse',
           payload: '{}',
           priority: 'high',
           status: 'pending',
-          createdAt: now,
-          updatedAt: now,
+          createdAt: Value(now),
+          updatedAt: Value(now),
         ),
       );
 
+      final existing = await db.getTask('t1');
       await db.saveTask(
-        TasksCompanion.insert(
-          id: 't1',
-          taskType: 'parse',
-          payload: '{"v":2}',
-          priority: 'high',
-          status: 'running',
-          createdAt: now,
-          updatedAt: now + 1,
+        TasksCompanion(
+          id: Value(existing!.id),
+          uuid: const Value('t1'),
+          taskType: const Value('parse'),
+          payload: const Value('{"v":2}'),
+          priority: const Value('high'),
+          status: const Value('running'),
+          createdAt: Value(now),
+          updatedAt: Value(now + 1),
         ),
       );
 
@@ -77,21 +79,21 @@ void main() {
         final ts = (i + 1) * 1000;
         await db.saveTask(
           TasksCompanion.insert(
-            id: 't$i',
+            uuid: 't$i',
             taskType: 'parse',
             payload: '{}',
             priority: 'low',
             status: 'pending',
-            createdAt: ts,
-            updatedAt: ts,
+            createdAt: Value(ts),
+            updatedAt: Value(ts),
           ),
         );
       }
 
       final tasks = await db.listTasks();
       expect(tasks, hasLength(5));
-      expect(tasks.first.id, 't4');
-      expect(tasks.last.id, 't0');
+      expect(tasks.first.uuid, 't4');
+      expect(tasks.last.uuid, 't0');
     });
 
     test('listTasks respects limit and offset', () async {
@@ -99,13 +101,13 @@ void main() {
         final ts = (i + 1) * 1000;
         await db.saveTask(
           TasksCompanion.insert(
-            id: 't$i',
+            uuid: 't$i',
             taskType: 'parse',
             payload: '{}',
             priority: 'low',
             status: 'pending',
-            createdAt: ts,
-            updatedAt: ts,
+            createdAt: Value(ts),
+            updatedAt: Value(ts),
           ),
         );
       }
@@ -125,25 +127,25 @@ void main() {
       for (var i = 0; i < 3; i++) {
         await db.saveTask(
           TasksCompanion.insert(
-            id: 'p$i',
+            uuid: 'p$i',
             taskType: 'parse',
             payload: '{}',
             priority: 'low',
             status: 'pending',
-            createdAt: now,
-            updatedAt: now,
+            createdAt: Value(now),
+            updatedAt: Value(now),
           ),
         );
       }
       await db.saveTask(
         TasksCompanion.insert(
-          id: 'd1',
+          uuid: 'd1',
           taskType: 'parse',
           payload: '{}',
           priority: 'low',
           status: 'done',
-          createdAt: now,
-          updatedAt: now,
+          createdAt: Value(now),
+          updatedAt: Value(now),
         ),
       );
 
@@ -236,88 +238,63 @@ void main() {
           systemPrompt: 'p',
         ),
       );
-      expect(await db.getWorker('doomed'), isNotNull);
+      final worker = await db.getWorker('doomed');
+      expect(worker, isNotNull);
 
-      await db.deleteWorker('doomed');
+      await db.deleteWorker(worker!.id);
       expect(await db.getWorker('doomed'), isNull);
     });
   });
 
   group('execution log operations', () {
-    test('logExecution inserts and listExecutionLogs retrieves', () async {
+    Future<int> insertTask(String uuid) async {
+      final now = DateTime.now().millisecondsSinceEpoch;
       await db.saveTask(
         TasksCompanion.insert(
-          id: 't1',
+          uuid: uuid,
           taskType: 'text',
           payload: '{}',
           priority: 'low',
           status: 'pending',
-          createdAt: 0,
-          updatedAt: 0,
+          createdAt: Value(now),
+          updatedAt: Value(now),
         ),
       );
+      return (await db.getTask(uuid))!.id;
+    }
+
+    test('logExecution inserts and listExecutionLogs retrieves', () async {
+      final taskId = await insertTask('t1');
       await db.logExecution(
-        taskId: 't1',
-        workerName: 'w1',
+        taskId: taskId,
+        workerId: 1,
         status: 'running',
         message: 'started',
       );
 
       final logs = await db.listExecutionLogs();
       expect(logs, hasLength(1));
-      expect(logs.first.taskId, 't1');
-      expect(logs.first.workerName, 'w1');
+      expect(logs.first.taskId, taskId);
+      expect(logs.first.workerId, 1);
       expect(logs.first.status, 'running');
       expect(logs.first.message, 'started');
     });
 
     test('listExecutionLogs filters by taskId', () async {
-      await db.saveTask(
-        TasksCompanion.insert(
-          id: 't1',
-          taskType: 'text',
-          payload: '{}',
-          priority: 'low',
-          status: 'pending',
-          createdAt: 0,
-          updatedAt: 0,
-        ),
-      );
-      await db.saveTask(
-        TasksCompanion.insert(
-          id: 't2',
-          taskType: 'text',
-          payload: '{}',
-          priority: 'low',
-          status: 'pending',
-          createdAt: 0,
-          updatedAt: 0,
-        ),
-      );
-      await db.logExecution(taskId: 't1', status: 'done');
-      await db.logExecution(taskId: 't2', status: 'done');
+      final t1 = await insertTask('t1');
+      final t2 = await insertTask('t2');
+      await db.logExecution(taskId: t1, status: 'done');
+      await db.logExecution(taskId: t2, status: 'done');
 
-      final filtered = await db.listExecutionLogs(taskId: 't1');
+      final filtered = await db.listExecutionLogs(taskId: t1);
       expect(filtered, hasLength(1));
-      expect(filtered.first.taskId, 't1');
+      expect(filtered.first.taskId, t1);
     });
 
     test('listExecutionLogs respects limit', () async {
       for (var i = 0; i < 5; i++) {
-        await db.saveTask(
-          TasksCompanion.insert(
-            id: 't$i',
-            taskType: 'text',
-            payload: '{}',
-            priority: 'low',
-            status: 'pending',
-            createdAt: 0,
-            updatedAt: 0,
-          ),
-        );
-      }
-      for (var i = 0; i < 5; i++) {
-        await db.logExecution(taskId: 't$i', status: 'ok');
+        final tId = await insertTask('t$i');
+        await db.logExecution(taskId: tId, status: 'ok');
       }
 
       final limited = await db.listExecutionLogs(limit: 3);
@@ -325,27 +302,18 @@ void main() {
     });
 
     test('listExecutionLogs ordered by createdAt desc', () async {
+      final ids = <int>[];
       for (var i = 0; i < 3; i++) {
-        await db.saveTask(
-          TasksCompanion.insert(
-            id: 't$i',
-            taskType: 'text',
-            payload: '{}',
-            priority: 'low',
-            status: 'pending',
-            createdAt: 0,
-            updatedAt: 0,
-          ),
-        );
+        ids.add(await insertTask('t$i'));
       }
       for (var i = 0; i < 3; i++) {
-        await db.logExecution(taskId: 't$i', status: 'ok');
+        await db.logExecution(taskId: ids[i], status: 'ok');
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
 
       final logs = await db.listExecutionLogs();
-      expect(logs.first.taskId, 't2');
-      expect(logs.last.taskId, 't0');
+      expect(logs.first.taskId, ids[2]);
+      expect(logs.last.taskId, ids[0]);
     });
   });
 
@@ -401,16 +369,16 @@ void main() {
       await db.saveThread(
         ThreadsCompanion.insert(name: 'thread1', path: '/path/to/file.dart'),
       );
-      await db.saveThreadLayerIds('thread1', [parseId, analyzeId]);
-
       final thread = await db.getThread('thread1');
+      await db.saveThreadLayerIds(thread!.id, [parseId, analyzeId]);
+
       expect(thread, isNotNull);
-      expect(thread!.name, 'thread1');
+      expect(thread.name, 'thread1');
       expect(thread.path, '/path/to/file.dart');
       expect(thread.enabled, isTrue);
       expect(thread.status, 'idle');
 
-      final threadLayers = await db.listThreadLayers('thread1');
+      final threadLayers = await db.listThreadLayers(thread.id);
       expect(threadLayers, hasLength(2));
       expect(threadLayers[0].layerId, parseId);
       expect(threadLayers[1].layerId, analyzeId);
@@ -433,16 +401,21 @@ void main() {
       await db.saveThread(
         ThreadsCompanion.insert(name: 'thread1', path: '/old/path'),
       );
-      await db.saveThreadLayerIds('thread1', [aId]);
+      var thread = await db.getThread('thread1');
+      await db.saveThreadLayerIds(thread!.id, [aId]);
       await db.saveThread(
-        ThreadsCompanion.insert(name: 'thread1', path: '/new/path'),
+        ThreadsCompanion(
+          id: Value(thread.id),
+          name: const Value('thread1'),
+          path: const Value('/new/path'),
+        ),
       );
-      await db.saveThreadLayerIds('thread1', [bId]);
+      thread = await db.getThread('thread1');
+      await db.saveThreadLayerIds(thread!.id, [bId]);
 
-      final thread = await db.getThread('thread1');
       expect(thread!.path, '/new/path');
 
-      final threadLayers = await db.listThreadLayers('thread1');
+      final threadLayers = await db.listThreadLayers(thread.id);
       expect(threadLayers, hasLength(1));
       expect(threadLayers[0].layerId, bId);
     });
@@ -462,12 +435,13 @@ void main() {
       final layers = await db.listLayers();
       final layerId = layers.first.id;
       await db.saveThread(ThreadsCompanion.insert(name: 'doomed', path: '/x'));
-      await db.saveThreadLayerIds('doomed', [layerId]);
+      final thread = await db.getThread('doomed');
+      await db.saveThreadLayerIds(thread!.id, [layerId]);
       expect(await db.getThread('doomed'), isNotNull);
 
-      await db.deleteThread('doomed');
+      await db.deleteThread(thread.id);
       expect(await db.getThread('doomed'), isNull);
-      expect(await db.listThreadLayers('doomed'), isEmpty);
+      expect(await db.listThreadLayers(thread.id), isEmpty);
     });
   });
 }

@@ -8,7 +8,8 @@ AppTask _makeTask({
   TaskStatus status = TaskStatus.pending,
 }) {
   return AppTask(
-    id: 'test-id',
+    id: 0,
+    uuid: 'test-id',
     taskType: taskType,
     payload: <String, dynamic>{},
     priority: TaskPriority.medium,
@@ -74,10 +75,11 @@ void main() {
 
     test('publish multiple tasks — each delivered once', () {
       final received = <String>[];
-      bus.subscribe('analysis', (t) => received.add(t.id));
+      bus.subscribe('analysis', (t) => received.add(t.uuid));
       bus.publish(_makeTask(taskType: 'analysis'));
       const secondTask = AppTask(
-        id: 'other-id',
+        id: 0,
+        uuid: 'other-id',
         taskType: 'analysis',
         payload: null,
         priority: TaskPriority.high,

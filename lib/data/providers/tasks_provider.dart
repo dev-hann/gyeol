@@ -20,7 +20,7 @@ class TasksNotifier extends AsyncNotifier<List<AppTask>> {
     return repo.tasks.listTasks();
   }
 
-  Future<String> createTask(
+  Future<int> createTask(
     String type,
     Object? payload,
     TaskPriority priority,

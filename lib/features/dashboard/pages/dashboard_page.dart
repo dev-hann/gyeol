@@ -160,6 +160,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                             task: tasks[index],
                                             layers:
                                                 layersAsync.valueOrNull ?? [],
+                                            workers:
+                                                workersAsync.valueOrNull ?? [],
                                           ),
                                     ),
                             ),
@@ -458,14 +460,22 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 }
 
 class _TaskTile extends StatelessWidget {
-  const _TaskTile({required this.task, required this.layers});
+  const _TaskTile({
+    required this.task,
+    required this.layers,
+    required this.workers,
+  });
   final AppTask task;
   final List<LayerDefinition> layers;
+  final List<WorkerDefinition> workers;
 
   @override
   Widget build(BuildContext context) {
     final layerName = task.layerId != null
         ? layers.where((l) => l.id == task.layerId).firstOrNull?.name
+        : null;
+    final workerName = task.workerId != null
+        ? workers.where((w) => w.id == task.workerId).firstOrNull?.name
         : null;
     return InkWell(
       onTap: () {},
@@ -504,7 +514,7 @@ class _TaskTile extends StatelessWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
-                      if (task.workerName != null) ...[
+                      if (workerName != null) ...[
                         const SizedBox(width: 8),
                         const Icon(
                           Icons.north_east,
@@ -512,7 +522,7 @@ class _TaskTile extends StatelessWidget {
                           color: AppColors.textMuted,
                         ),
                         Text(
-                          task.workerName!,
+                          workerName,
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.textSecondary,
@@ -535,7 +545,7 @@ class _TaskTile extends StatelessWidget {
               ),
             ),
             Text(
-              task.id.substring(0, 8),
+              task.uuid.substring(0, 8),
               style: const TextStyle(
                 fontSize: 10,
                 fontFamily: 'monospace',

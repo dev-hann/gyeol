@@ -21,7 +21,7 @@ class MonitoringPage extends ConsumerStatefulWidget {
 
 class _MonitoringPageState extends ConsumerState<MonitoringPage> {
   LogFilter _logFilter = LogFilter.all;
-  String? _expandedTaskId;
+  int? _expandedTaskId;
   Timer? _refreshTimer;
 
   @override
@@ -94,9 +94,14 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
     AsyncValue<List<LayerDefinition>> layersAsync,
   ) {
     final layers = layersAsync.valueOrNull ?? [];
+    final workersAsync = ref.watch(workersProvider);
+    final workers = workersAsync.valueOrNull ?? [];
     String layerName(int? id) => id != null
         ? (layers.where((l) => l.id == id).firstOrNull?.name ?? 'N/A')
         : 'N/A';
+    String workerName(int? id) => id != null
+        ? (workers.where((w) => w.id == id).firstOrNull?.name ?? 'unknown')
+        : 'unassigned';
     return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +218,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${layerName(task.layerId)} / ${task.workerName ?? "unassigned"} | Depth: ${task.depth} | Retry: ${task.retryCount}/${task.maxRetries}',
+                              '${layerName(task.layerId)} / ${workerName(task.workerId)} | Depth: ${task.depth} | Retry: ${task.retryCount}/${task.maxRetries}',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: AppColors.textSecondary,
@@ -233,7 +238,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Task ID: ${task.id}',
+                                      'Task ID: ${task.uuid}',
                                       style: const TextStyle(
                                         fontSize: 10,
                                         color: AppColors.textSecondary,
@@ -307,6 +312,11 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
   }
 
   Widget _buildExecutionLogs(AsyncValue<List<ExecutionLog>> async) {
+    final workersAsync = ref.watch(workersProvider);
+    final workers = workersAsync.valueOrNull ?? [];
+    String workerName(int? id) => id != null
+        ? (workers.where((w) => w.id == id).firstOrNull?.name ?? 'System')
+        : 'System';
     return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,7 +418,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                log.workerName ?? 'System',
+                                workerName(log.workerId),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,

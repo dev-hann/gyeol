@@ -28,6 +28,7 @@ List<LayerDefinition> fakeLayers() => [
 
 List<WorkerDefinition> fakeWorkers() => [
   const WorkerDefinition(
+    id: 1,
     name: 'writer-1',
     layerId: 1,
     systemPrompt: 'You are a creative writer producing excellent prose.',
@@ -36,6 +37,7 @@ List<WorkerDefinition> fakeWorkers() => [
     maxTokens: 4096,
   ),
   const WorkerDefinition(
+    id: 2,
     name: 'critic-1',
     layerId: 2,
     systemPrompt: 'Short prompt.',

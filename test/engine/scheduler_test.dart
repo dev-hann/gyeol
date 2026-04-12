@@ -292,18 +292,17 @@ void main() {
       await db.close();
     });
 
-    test('returns task id and increments queueLength', () {
+    test('returns task id and increments queueLength', () async {
       final task = AppTask.create('text', {'k': 'v'}, TaskPriority.high);
-      final id = scheduler.submit(task);
-      expect(id, task.id);
+      final id = await scheduler.submit(task);
+      expect(id, greaterThan(0));
       expect(scheduler.queueLength, 1);
     });
 
-    test('accepts multiple tasks', () {
-      scheduler
-        ..submit(AppTask.create('a', null, TaskPriority.low))
-        ..submit(AppTask.create('b', null, TaskPriority.high))
-        ..submit(AppTask.create('c', null, TaskPriority.medium));
+    test('accepts multiple tasks', () async {
+      await scheduler.submit(AppTask.create('a', null, TaskPriority.low));
+      await scheduler.submit(AppTask.create('b', null, TaskPriority.high));
+      await scheduler.submit(AppTask.create('c', null, TaskPriority.medium));
       expect(scheduler.queueLength, 3);
     });
   });
@@ -340,7 +339,9 @@ void main() {
     });
 
     test('skips task with no matching layer and drains it', () async {
-      scheduler.submit(AppTask.create('unknown_type', null, TaskPriority.high));
+      await scheduler.submit(
+        AppTask.create('unknown_type', null, TaskPriority.high),
+      );
       final results = await scheduler.runOnce();
       expect(results, isEmpty);
       expect(scheduler.queueLength, 0);
@@ -360,7 +361,7 @@ void main() {
         null,
         TaskPriority.high,
       ).copyWith(depth: 11);
-      scheduler.submit(task);
+      await scheduler.submit(task);
       final results = await scheduler.runOnce();
       expect(results, isEmpty);
       expect(scheduler.queueLength, 0);
@@ -376,7 +377,7 @@ void main() {
           enabled: false,
         ),
       );
-      scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+      await scheduler.submit(AppTask.create('text', null, TaskPriority.high));
       final results = await scheduler.runOnce();
       expect(results, isEmpty);
     });
@@ -395,7 +396,7 @@ void main() {
 
       registry.register(savedLayer);
 
-      scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+      await scheduler.submit(AppTask.create('text', null, TaskPriority.high));
 
       expect(scheduler.queueLength, 1);
       await scheduler.runOnce();
@@ -418,18 +419,19 @@ void main() {
 
       await repo.workers.saveWorker(
         WorkerDefinition(
+          id: 1,
           name: 'w1',
           layerId: savedLayer.id,
           systemPrompt: 'test',
         ),
       );
 
-      scheduler.submit(AppTask.create('text', null, TaskPriority.high));
+      await scheduler.submit(AppTask.create('text', null, TaskPriority.high));
       expect(scheduler.queueLength, 1);
 
       final results = await scheduler.runOnce();
       expect(scheduler.queueLength, 0);
-      expect(results, isEmpty);
+      expect(results, isNotEmpty);
     });
   });
 }

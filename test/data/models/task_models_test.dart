@@ -36,7 +36,8 @@ void main() {
   group('AppTask', () {
     test('constructor sets all fields', () {
       const task = AppTask(
-        id: 'abc',
+        id: 1,
+        uuid: 'abc',
         taskType: 'summarize',
         payload: {'key': 'value'},
         priority: TaskPriority.high,
@@ -46,12 +47,13 @@ void main() {
         retryCount: 1,
         maxRetries: 5,
         depth: 2,
-        parentTaskId: 'parent',
+        parentTaskId: 10,
         layerId: 1,
-        workerName: 'worker1',
+        workerId: 5,
       );
 
-      expect(task.id, 'abc');
+      expect(task.id, 1);
+      expect(task.uuid, 'abc');
       expect(task.taskType, 'summarize');
       expect(task.payload, {'key': 'value'});
       expect(task.priority, TaskPriority.high);
@@ -61,14 +63,15 @@ void main() {
       expect(task.retryCount, 1);
       expect(task.maxRetries, 5);
       expect(task.depth, 2);
-      expect(task.parentTaskId, 'parent');
+      expect(task.parentTaskId, 10);
       expect(task.layerId, 1);
-      expect(task.workerName, 'worker1');
+      expect(task.workerId, 5);
     });
 
     test('constructor defaults optional fields', () {
       const task = AppTask(
-        id: 'x',
+        id: 2,
+        uuid: 'x',
         taskType: 't',
         payload: null,
         priority: TaskPriority.low,
@@ -82,16 +85,16 @@ void main() {
       expect(task.depth, 0);
       expect(task.parentTaskId, isNull);
       expect(task.layerId, isNull);
-      expect(task.workerName, isNull);
+      expect(task.workerId, isNull);
     });
 
-    test('create factory generates unique IDs', () {
+    test('create factory generates unique uuids', () {
       final a = AppTask.create('type', null, TaskPriority.medium);
       final b = AppTask.create('type', null, TaskPriority.medium);
 
-      expect(a.id, isNotEmpty);
-      expect(b.id, isNotEmpty);
-      expect(a.id, isNot(equals(b.id)));
+      expect(a.uuid, isNotEmpty);
+      expect(b.uuid, isNotEmpty);
+      expect(a.uuid, isNot(equals(b.uuid)));
     });
 
     test('create factory sets status to pending', () {
@@ -112,7 +115,8 @@ void main() {
 
     test('equality is based on id only', () {
       const a = AppTask(
-        id: 'same',
+        id: 1,
+        uuid: 'same',
         taskType: 'a',
         payload: null,
         priority: TaskPriority.low,
@@ -121,7 +125,8 @@ void main() {
         updatedAt: 100,
       );
       const b = AppTask(
-        id: 'same',
+        id: 1,
+        uuid: 'same',
         taskType: 'b',
         payload: {'x': 1},
         priority: TaskPriority.high,
@@ -136,7 +141,8 @@ void main() {
 
     test('different ids are not equal', () {
       const a = AppTask(
-        id: 'a',
+        id: 1,
+        uuid: 'a',
         taskType: 't',
         payload: null,
         priority: TaskPriority.low,
@@ -145,7 +151,8 @@ void main() {
         updatedAt: 0,
       );
       const b = AppTask(
-        id: 'b',
+        id: 2,
+        uuid: 'b',
         taskType: 't',
         payload: null,
         priority: TaskPriority.low,
@@ -159,7 +166,8 @@ void main() {
 
     test('is not equal to non-AppTask objects', () {
       const task = AppTask(
-        id: 'x',
+        id: 1,
+        uuid: 'x',
         taskType: 't',
         payload: null,
         priority: TaskPriority.low,
@@ -174,7 +182,8 @@ void main() {
 
     test('copyWith overrides specified fields', () {
       const original = AppTask(
-        id: 'id1',
+        id: 10,
+        uuid: 'id1',
         taskType: 'type1',
         payload: null,
         priority: TaskPriority.low,
@@ -186,14 +195,15 @@ void main() {
       final copied = original.copyWith(
         status: TaskStatus.running,
         layerId: 1,
-        workerName: 'workerA',
+        workerId: 5,
         retryCount: 2,
         depth: 3,
-        parentTaskId: 'parent1',
+        parentTaskId: 10,
         updatedAt: 200,
       );
 
-      expect(copied.id, 'id1');
+      expect(copied.id, 10);
+      expect(copied.uuid, 'id1');
       expect(copied.taskType, 'type1');
       expect(copied.payload, isNull);
       expect(copied.priority, TaskPriority.low);
@@ -201,16 +211,17 @@ void main() {
       expect(copied.maxRetries, 3);
       expect(copied.status, TaskStatus.running);
       expect(copied.layerId, 1);
-      expect(copied.workerName, 'workerA');
+      expect(copied.workerId, 5);
       expect(copied.retryCount, 2);
       expect(copied.depth, 3);
-      expect(copied.parentTaskId, 'parent1');
+      expect(copied.parentTaskId, 10);
       expect(copied.updatedAt, 200);
     });
 
     test('copyWith preserves fields when not specified', () {
       const original = AppTask(
-        id: 'id1',
+        id: 10,
+        uuid: 'id1',
         taskType: 'type1',
         payload: {'k': 'v'},
         priority: TaskPriority.high,
@@ -220,14 +231,15 @@ void main() {
         retryCount: 2,
         maxRetries: 5,
         depth: 1,
-        parentTaskId: 'p',
+        parentTaskId: 3,
         layerId: 1,
-        workerName: 'W',
+        workerId: 7,
       );
 
       final copied = original.copyWith();
 
       expect(copied.id, original.id);
+      expect(copied.uuid, original.uuid);
       expect(copied.taskType, original.taskType);
       expect(copied.payload, original.payload);
       expect(copied.priority, original.priority);
@@ -239,13 +251,14 @@ void main() {
       expect(copied.depth, original.depth);
       expect(copied.parentTaskId, original.parentTaskId);
       expect(copied.layerId, original.layerId);
-      expect(copied.workerName, original.workerName);
+      expect(copied.workerId, original.workerId);
     });
 
     test('priorityLabel returns correct labels', () {
       expect(
         const AppTask(
-          id: '',
+          id: 0,
+          uuid: '',
           taskType: '',
           payload: null,
           priority: TaskPriority.high,
@@ -257,7 +270,8 @@ void main() {
       );
       expect(
         const AppTask(
-          id: '',
+          id: 0,
+          uuid: '',
           taskType: '',
           payload: null,
           priority: TaskPriority.medium,
@@ -269,7 +283,8 @@ void main() {
       );
       expect(
         const AppTask(
-          id: '',
+          id: 0,
+          uuid: '',
           taskType: '',
           payload: null,
           priority: TaskPriority.low,
@@ -284,7 +299,8 @@ void main() {
     test('statusLabel returns correct labels', () {
       expect(
         const AppTask(
-          id: '',
+          id: 0,
+          uuid: '',
           taskType: '',
           payload: null,
           priority: TaskPriority.low,
@@ -296,7 +312,8 @@ void main() {
       );
       expect(
         const AppTask(
-          id: '',
+          id: 0,
+          uuid: '',
           taskType: '',
           payload: null,
           priority: TaskPriority.low,
@@ -308,7 +325,8 @@ void main() {
       );
       expect(
         const AppTask(
-          id: '',
+          id: 0,
+          uuid: '',
           taskType: '',
           payload: null,
           priority: TaskPriority.low,
@@ -320,7 +338,8 @@ void main() {
       );
       expect(
         const AppTask(
-          id: '',
+          id: 0,
+          uuid: '',
           taskType: '',
           payload: null,
           priority: TaskPriority.low,
