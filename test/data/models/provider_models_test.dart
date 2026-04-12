@@ -386,6 +386,20 @@ void main() {
       expect(settings.configs[ProviderType.openAI], isA<OpenAIConfig>());
     });
 
+    test('fromJson filters non-String elements from stop_sequences', () {
+      final settings = ProviderSettings.fromJson({
+        'default_stop_sequences': ['ok', 42, true, 'fine'],
+      });
+      expect(settings.defaultStopSequences, ['ok', 'fine']);
+    });
+
+    test('fromJson handles non-List stop_sequences', () {
+      final settings = ProviderSettings.fromJson({
+        'default_stop_sequences': 'not-a-list',
+      });
+      expect(settings.defaultStopSequences, isEmpty);
+    });
+
     test('fromJson parses configs from json', () {
       final settings = ProviderSettings.fromJson({
         'activeProvider': 'openAI',

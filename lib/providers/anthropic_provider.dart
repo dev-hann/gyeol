@@ -314,39 +314,48 @@ class AnthropicProvider implements LlmProvider {
         if (!line.startsWith('data: ')) continue;
         final data = line.substring(6).trim();
         try {
-          final json = jsonDecode(data) as Map<String, dynamic>;
-          final type = json['type'] as String?;
+          final raw = jsonDecode(data);
+          if (raw is! Map<String, dynamic>) continue;
+          final type = raw['type'] is String ? raw['type'] as String : null;
           if (type == 'message_stop') {
             yield const ChatStreamDelta(done: true);
             return;
           }
           if (type == 'content_block_start') {
-            final contentBlock = json['content_block'] as Map<String, dynamic>?;
-            if (contentBlock?['type'] == 'tool_use') {
+            final contentBlock = raw['content_block'];
+            if (contentBlock is Map<String, dynamic> &&
+                contentBlock['type'] == 'tool_use') {
               yield ChatStreamDelta(
                 toolCalls: [
                   ToolCallDelta(
-                    index: json['index'] as int?,
-                    id: contentBlock?['id'] as String?,
-                    name: contentBlock?['name'] as String?,
+                    index: raw['index'] is int ? raw['index'] as int : null,
+                    id: contentBlock['id'] is String
+                        ? contentBlock['id'] as String
+                        : null,
+                    name: contentBlock['name'] is String
+                        ? contentBlock['name'] as String
+                        : null,
                   ),
                 ],
               );
             }
           }
           if (type == 'content_block_delta') {
-            final delta = json['delta'] as Map<String, dynamic>?;
-            final deltaType = delta?['type'] as String?;
+            final delta = raw['delta'];
+            if (delta is! Map<String, dynamic>) continue;
+            final deltaType = delta['type'] is String
+                ? delta['type'] as String
+                : null;
             if (deltaType == 'text_delta') {
-              final text = delta?['text'] as String?;
-              if (text != null) yield ChatStreamDelta(content: text);
+              final text = delta['text'];
+              if (text is String) yield ChatStreamDelta(content: text);
             } else if (deltaType == 'input_json_delta') {
-              final partialJson = delta?['partial_json'] as String?;
-              if (partialJson != null) {
+              final partialJson = delta['partial_json'];
+              if (partialJson is String) {
                 yield ChatStreamDelta(
                   toolCalls: [
                     ToolCallDelta(
-                      index: json['index'] as int?,
+                      index: raw['index'] is int ? raw['index'] as int : null,
                       arguments: partialJson,
                     ),
                   ],

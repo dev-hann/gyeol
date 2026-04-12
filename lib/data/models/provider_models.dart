@@ -229,11 +229,14 @@ class ProviderSettings {
           (json['default_frequency_penalty'] as num?)?.toDouble() ?? 0.0,
       defaultPresencePenalty:
           (json['default_presence_penalty'] as num?)?.toDouble() ?? 0.0,
-      defaultStopSequences:
-          (json['default_stop_sequences'] as List<dynamic>?)?.cast<String>() ??
-          [],
+      defaultStopSequences: _safeStringList(json['default_stop_sequences']),
       defaultTimeout: (json['default_timeout'] as num?)?.toInt() ?? 60000,
     );
+  }
+
+  static List<String> _safeStringList(dynamic value) {
+    if (value is! List) return [];
+    return value.whereType<String>().toList();
   }
 
   final ProviderType activeProvider;

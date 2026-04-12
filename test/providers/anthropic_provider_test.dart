@@ -857,6 +857,44 @@ void main() {
       expect(deltas[1].done, true);
     });
 
+    test('skips SSE with type-mismatched delta without crashing', () async {
+      final malformedEvent = jsonEncode({
+        'type': 'content_block_delta',
+        'index': 0,
+        'delta': 'not-a-map',
+      });
+      final sseData = [
+        'data: $malformedEvent',
+        'data: ${jsonEncode({
+          'type': 'content_block_delta',
+          'index': 0,
+          'delta': {'type': 'text_delta', 'text': 'ok'},
+        })}',
+        'data: ${jsonEncode({'type': 'message_stop'})}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = AnthropicProvider(
+        apiKey: 'test-key',
+        model: 'claude-3-sonnet',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'ok');
+      expect(deltas[1].done, true);
+    });
+
     test('extracts system prompt and sends as top-level field', () async {
       String? capturedBody;
 

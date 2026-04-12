@@ -238,30 +238,40 @@ class OpenAIProvider implements LlmProvider {
           return;
         }
         try {
-          final json = jsonDecode(data) as Map<String, dynamic>;
-          final choices = json['choices'] as List<dynamic>?;
-          if (choices == null || choices.isEmpty) continue;
-          final delta =
-              (choices[0] as Map<String, dynamic>)['delta']
-                  as Map<String, dynamic>?;
-          final content = delta?['content'] as String?;
-          if (content != null) {
-            yield ChatStreamDelta(content: content);
-          }
-          final rawToolCalls = delta?['tool_calls'] as List<dynamic>?;
-          if (rawToolCalls != null) {
-            yield ChatStreamDelta(
-              toolCalls: rawToolCalls.map((tc) {
-                final map = tc as Map<String, dynamic>;
-                final fn = map['function'] as Map<String, dynamic>?;
-                return ToolCallDelta(
-                  index: map['index'] as int?,
-                  id: map['id'] as String?,
-                  name: fn?['name'] as String?,
-                  arguments: fn?['arguments'] as String?,
-                );
-              }).toList(),
-            );
+          final raw = jsonDecode(data);
+          if (raw is! Map<String, dynamic>) continue;
+          final rawChoices = raw['choices'];
+          if (rawChoices is! List<dynamic> || rawChoices.isEmpty) continue;
+          final rawFirst = rawChoices[0];
+          if (rawFirst is! Map<String, dynamic>) continue;
+          final rawDelta = rawFirst['delta'];
+          if (rawDelta is Map<String, dynamic>) {
+            final content = rawDelta['content'];
+            if (content is String) {
+              yield ChatStreamDelta(content: content);
+            }
+            final rawToolCalls = rawDelta['tool_calls'];
+            if (rawToolCalls is List<dynamic>) {
+              yield ChatStreamDelta(
+                toolCalls: rawToolCalls.map((tc) {
+                  final map = tc is Map<String, dynamic>
+                      ? tc
+                      : <String, dynamic>{};
+                  final fn = map['function'];
+                  final fnMap = fn is Map<String, dynamic> ? fn : null;
+                  return ToolCallDelta(
+                    index: map['index'] is int ? map['index'] as int : null,
+                    id: map['id'] is String ? map['id'] as String : null,
+                    name: fnMap?['name'] is String
+                        ? fnMap!['name'] as String
+                        : null,
+                    arguments: fnMap?['arguments'] is String
+                        ? fnMap!['arguments'] as String
+                        : null,
+                  );
+                }).toList(),
+              );
+            }
           }
         } on FormatException {
           continue;

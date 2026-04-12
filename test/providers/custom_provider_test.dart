@@ -682,6 +682,43 @@ void main() {
       expect(deltas[1].done, true);
     });
 
+    test('skips SSE with type-mismatched choices without crashing', () async {
+      final sseData = [
+        'data: ${jsonEncode({'choices': 'not-a-list'})}',
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': 'ok'},
+            },
+          ],
+        })}',
+        'data: [DONE]',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.openAICompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'ok');
+      expect(deltas[1].done, true);
+    });
+
     test('sends Authorization and stream:true in request', () async {
       final client = _StreamClientWithRequest((request) async {
         expect(request.headers['Authorization'], 'Bearer my-key');
@@ -823,6 +860,49 @@ void main() {
         provider.generateChatStream(messages: _hiMsg).toList(),
         throwsA(isA<LlmError>()),
       );
+    });
+
+    test('skips SSE with type-mismatched delta without crashing', () async {
+      final malformedEvent = jsonEncode({
+        'type': 'content_block_delta',
+        'index': 0,
+        'delta': 'not-a-map',
+      });
+      final sseData = [
+        'event: content_block_delta',
+        'data: $malformedEvent',
+        'event: content_block_delta',
+        'data: ${jsonEncode({
+          'type': 'content_block_delta',
+          'index': 0,
+          'delta': {'type': 'text_delta', 'text': 'ok'},
+        })}',
+        'event: message_stop',
+        'data: ${jsonEncode({'type': 'message_stop'})}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'ok');
+      expect(deltas[1].done, true);
     });
 
     test('yields done when stream ends without message_stop', () async {

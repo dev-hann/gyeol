@@ -490,6 +490,41 @@ void main() {
       expect(deltas[2].done, true);
     });
 
+    test('skips SSE with type-mismatched choices without crashing', () async {
+      final sseData = [
+        'data: ${jsonEncode({'choices': 'not-a-list'})}',
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': 'ok'},
+            },
+          ],
+        })}',
+        'data: [DONE]',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = OpenAIProvider(
+        apiKey: 'test-key',
+        model: 'gpt-4o',
+        temperature: 0.7,
+        maxTokens: 100,
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'ok');
+      expect(deltas[1].done, true);
+    });
+
     test('sends stream:true in request body', () async {
       late String capturedBody;
 

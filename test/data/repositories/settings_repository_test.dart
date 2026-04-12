@@ -81,6 +81,26 @@ void main() {
       expect(settings.activeProvider, ProviderType.openAI);
     });
 
+    test(
+      'getSettings returns defaults on corrupted stop_sequences type',
+      () async {
+        await db.saveSettings(
+          '{"activeProvider":"openAI","default_stop_sequences":[1,2,3]}',
+        );
+        final settings = await repo.getSettings();
+        expect(settings.activeProvider, ProviderType.openAI);
+        expect(settings.defaultStopSequences, isEmpty);
+      },
+    );
+
+    test('getSettings returns defaults on corrupted configs type', () async {
+      await db.saveSettings(
+        '{"activeProvider":"openAI","configs":"not-a-map"}',
+      );
+      final settings = await repo.getSettings();
+      expect(settings.activeProvider, ProviderType.openAI);
+    });
+
     test('saveSettings upserts existing settings', () async {
       await repo.saveSettings(const ProviderSettings());
       await repo.saveSettings(

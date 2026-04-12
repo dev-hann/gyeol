@@ -16,7 +16,7 @@ class SettingsRepository {
         return const ProviderSettings();
       }
       return ProviderSettings.fromJson(decoded);
-    } on FormatException {
+    } on Object {
       return const ProviderSettings();
     }
   }
