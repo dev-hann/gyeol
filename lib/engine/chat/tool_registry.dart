@@ -1439,10 +1439,17 @@ class ToolRegistry {
     Map<String, dynamic> args,
     AppRepository repo,
   ) async {
+    if (args['taskType'] is! String) {
+      return jsonEncode({
+        'error': 'submit_task: "taskType" must be a non-null String',
+      });
+    }
     final taskType = args['taskType'] as String;
     final rawPayload = args['payload'];
     if (rawPayload is! Map<String, dynamic>) {
-      throw ArgumentError('payload must be a Map<String, dynamic>');
+      return jsonEncode({
+        'error': 'submit_task: "payload" must be a Map<String, dynamic>',
+      });
     }
     final payload = rawPayload;
     final priorityStr = args['priority'] as String? ?? 'medium';

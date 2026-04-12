@@ -1247,13 +1247,21 @@ void main() {
         expect(decoded['error'], contains('payload'));
       });
 
-      test('returns error when taskType is not a String', () async {
+      test('returns descriptive error when taskType is not a String', () async {
         final result = await ToolRegistry.executeTool('submit_task', {
           'taskType': 42,
           'payload': <String, dynamic>{},
         }, repo);
         final decoded = jsonDecode(result) as Map<String, dynamic>;
-        expect(decoded['error'], isNotNull);
+        expect(decoded['error'], contains('taskType'));
+      });
+
+      test('returns descriptive error when taskType is missing', () async {
+        final result = await ToolRegistry.executeTool('submit_task', {
+          'payload': <String, dynamic>{},
+        }, repo);
+        final decoded = jsonDecode(result) as Map<String, dynamic>;
+        expect(decoded['error'], contains('taskType'));
       });
     });
 

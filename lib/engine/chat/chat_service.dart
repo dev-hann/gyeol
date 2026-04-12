@@ -258,15 +258,36 @@ class ChatService {
           trimmed[i + 1].role == 'tool') {
         continue;
       }
-      filtered.add(m);
+      if (filtered.isNotEmpty && filtered.last.role == m.role) {
+        final prev = filtered.last;
+        filtered[filtered.length - 1] = ChatMessage(
+          id: prev.id,
+          conversationId: prev.conversationId,
+          role: prev.role,
+          content: '${prev.content}\n${m.content}',
+          createdAt: prev.createdAt,
+        );
+      } else {
+        filtered.add(m);
+      }
     }
-    return [
+    final apiMessages = <ChatMessageForApi>[
       const ChatMessageForApi(role: 'system', content: _systemPrompt),
       ...filtered.map(
         (m) => ChatMessageForApi(role: m.role, content: m.content),
       ),
-      ChatMessageForApi(role: 'user', content: userMessage),
     ];
+    if (apiMessages.isNotEmpty &&
+        apiMessages.last.role == 'user' &&
+        userMessage.isNotEmpty) {
+      apiMessages[apiMessages.length - 1] = ChatMessageForApi(
+        role: 'user',
+        content: '${apiMessages.last.content}\n$userMessage',
+      );
+    } else {
+      apiMessages.add(ChatMessageForApi(role: 'user', content: userMessage));
+    }
+    return apiMessages;
   }
 }
 

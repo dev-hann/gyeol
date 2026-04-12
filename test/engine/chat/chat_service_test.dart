@@ -432,6 +432,92 @@ void main() {
       expect(messages[1].content, 'message 0');
     });
 
+    test('merges consecutive same-role messages in history', () async {
+      final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+      final history = [
+        const ChatMessage(
+          id: 'm1',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'first question',
+          createdAt: 1000,
+        ),
+        const ChatMessage(
+          id: 'm2',
+          conversationId: 'c1',
+          role: 'user',
+          content: 'second question',
+          createdAt: 1001,
+        ),
+        const ChatMessage(
+          id: 'm3',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'answer',
+          createdAt: 1002,
+        ),
+        const ChatMessage(
+          id: 'm4',
+          conversationId: 'c1',
+          role: 'assistant',
+          content: 'more answer',
+          createdAt: 1003,
+        ),
+      ];
+
+      final service = ChatService(provider: provider, repo: repo);
+      await service.handleMessage('new question', history);
+
+      final messages = provider.capturedMessages.first;
+      final nonSystemRoles = messages
+          .where((m) => m.role != 'system')
+          .map((m) => m.role)
+          .toList();
+      for (var i = 1; i < nonSystemRoles.length; i++) {
+        expect(
+          nonSystemRoles[i],
+          isNot(equals(nonSystemRoles[i - 1])),
+          reason:
+              'Consecutive messages should not have the '
+              'same role, but found "${nonSystemRoles[i - 1]}" '
+              'at positions ${i - 1} and $i',
+        );
+      }
+    });
+
+    test(
+      'merges final history message with new user message when same role',
+      () async {
+        final provider = FakeLlmProvider([const ChatResponse(content: 'ok')]);
+
+        final history = [
+          const ChatMessage(
+            id: 'm1',
+            conversationId: 'c1',
+            role: 'assistant',
+            content: 'here is the answer',
+            createdAt: 1000,
+          ),
+        ];
+
+        final service = ChatService(provider: provider, repo: repo);
+        await service.handleMessage('follow up', history);
+
+        final messages = provider.capturedMessages.first;
+        final nonSystem = messages.where((m) => m.role != 'system').toList();
+        expect(nonSystem.last.role, 'user');
+        expect(nonSystem.last.content, 'follow up');
+        for (var i = 1; i < nonSystem.length; i++) {
+          expect(
+            nonSystem[i].role,
+            isNot(equals(nonSystem[i - 1].role)),
+            reason: 'No consecutive same-role messages allowed',
+          );
+        }
+      },
+    );
+
     test('executeTool create_layer calls repo.saveLayer', () async {
       final provider = FakeLlmProvider([
         ChatResponse(
