@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,27 @@ import 'package:gyeol/providers/custom_provider.dart';
 import 'package:gyeol/providers/lllm_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+List<int> _enc(String s) => utf8.encode(s);
+
+class _StreamClient extends http.BaseClient {
+  _StreamClient(this._handler);
+  final Future<http.StreamedResponse> Function() _handler;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) => _handler();
+}
+
+class _StreamClientWithRequest extends http.BaseClient {
+  _StreamClientWithRequest(this._handler);
+  final Future<http.StreamedResponse> Function(http.BaseRequest) _handler;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      _handler(request);
+}
+
+const _hiMsg = [ChatMessageForApi(role: 'user', content: 'hi')];
 
 void main() {
   group('CustomProvider - OpenAI Compatible', () {
@@ -496,5 +518,516 @@ void main() {
         );
       },
     );
+  });
+
+  group('CustomProvider - OpenAI Compatible - generateChatStream', () {
+    test('yields content deltas from SSE stream', () async {
+      final sseData = [
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': 'Hello'},
+            },
+          ],
+        })}',
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': ' World'},
+            },
+          ],
+        })}',
+        'data: [DONE]',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.openAICompatible,
+        apiKey: 'test-key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 3);
+      expect(deltas[0].content, 'Hello');
+      expect(deltas[1].content, ' World');
+      expect(deltas[2].done, true);
+    });
+
+    test('yields tool call deltas from SSE stream', () async {
+      final tc1 = {
+        'index': 0,
+        'id': 'call_1',
+        'function': {'name': 'get_weather', 'arguments': '{"city":'},
+      };
+      final tc2 = {
+        'index': 0,
+        'function': {'arguments': '"Seoul"}'},
+      };
+      final sseData = [
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {
+                'tool_calls': [tc1],
+              },
+            },
+          ],
+        })}',
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {
+                'tool_calls': [tc2],
+              },
+            },
+          ],
+        })}',
+        'data: [DONE]',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.openAICompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 3);
+      expect(deltas[0].toolCalls, isNotNull);
+      expect(deltas[0].toolCalls!.length, 1);
+      expect(deltas[0].toolCalls![0].id, 'call_1');
+      expect(deltas[0].toolCalls![0].name, 'get_weather');
+      expect(deltas[0].toolCalls![0].arguments, '{"city":');
+      expect(deltas[1].toolCalls![0].arguments, '"Seoul"}');
+      expect(deltas[2].done, true);
+    });
+
+    test('throws LlmError on non-200 status', () async {
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc('error body')), 500);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.openAICompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      expect(
+        provider.generateChatStream(messages: _hiMsg).toList(),
+        throwsA(isA<LlmError>()),
+      );
+    });
+
+    test('yields done when stream ends without [DONE] marker', () async {
+      final sseData = [
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': 'partial'},
+            },
+          ],
+        })}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.openAICompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'partial');
+      expect(deltas[1].done, true);
+    });
+
+    test('sends Authorization and stream:true in request', () async {
+      final client = _StreamClientWithRequest((request) async {
+        expect(request.headers['Authorization'], 'Bearer my-key');
+        final body =
+            jsonDecode((request as http.Request).body) as Map<String, dynamic>;
+        expect(body['stream'], true);
+        return http.StreamedResponse(Stream.value(_enc('data: [DONE]\n')), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.openAICompatible,
+        apiKey: 'my-key',
+        client: client,
+      );
+
+      await provider.generateChatStream(messages: _hiMsg).toList();
+    });
+  });
+
+  group('CustomProvider - Anthropic Compatible - generateChatStream', () {
+    test('yields content deltas from SSE stream', () async {
+      final sseData = [
+        'event: content_block_delta',
+        'data: ${jsonEncode({
+          'type': 'content_block_delta',
+          'index': 0,
+          'delta': {'type': 'text_delta', 'text': 'Hello'},
+        })}',
+        'event: content_block_delta',
+        'data: ${jsonEncode({
+          'type': 'content_block_delta',
+          'index': 0,
+          'delta': {'type': 'text_delta', 'text': ' World'},
+        })}',
+        'event: message_stop',
+        'data: ${jsonEncode({'type': 'message_stop'})}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'test-key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 3);
+      expect(deltas[0].content, 'Hello');
+      expect(deltas[1].content, ' World');
+      expect(deltas[2].done, true);
+    });
+
+    test('yields tool call deltas from SSE stream', () async {
+      final blockStart = {
+        'type': 'content_block_start',
+        'index': 1,
+        'content_block': {
+          'type': 'tool_use',
+          'id': 'tool_1',
+          'name': 'get_weather',
+        },
+      };
+      final blockDelta = {
+        'type': 'content_block_delta',
+        'index': 1,
+        'delta': {
+          'type': 'input_json_delta',
+          'partial_json': '{"city": "Seoul"}',
+        },
+      };
+      final msgStop = {'type': 'message_stop'};
+      final sseData = [
+        'event: content_block_start',
+        'data: ${jsonEncode(blockStart)}',
+        'event: content_block_delta',
+        'data: ${jsonEncode(blockDelta)}',
+        'event: message_stop',
+        'data: ${jsonEncode(msgStop)}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 3);
+      expect(deltas[0].toolCalls, isNotNull);
+      expect(deltas[0].toolCalls![0].id, 'tool_1');
+      expect(deltas[0].toolCalls![0].name, 'get_weather');
+      expect(deltas[1].toolCalls![0].arguments, '{"city": "Seoul"}');
+      expect(deltas[2].done, true);
+    });
+
+    test('throws LlmError on non-200 status', () async {
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc('error body')), 500);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      expect(
+        provider.generateChatStream(messages: _hiMsg).toList(),
+        throwsA(isA<LlmError>()),
+      );
+    });
+
+    test('yields done when stream ends without message_stop', () async {
+      final sseData = [
+        'event: content_block_delta',
+        'data: ${jsonEncode({
+          'type': 'content_block_delta',
+          'index': 0,
+          'delta': {'type': 'text_delta', 'text': 'partial'},
+        })}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.anthropicCompatible,
+        apiKey: 'key',
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'partial');
+      expect(deltas[1].done, true);
+    });
+  });
+
+  group('CustomProvider - Ollama Compatible - generateChatStream', () {
+    test('yields content deltas from SSE stream', () async {
+      final sseData = [
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': 'Ollama'},
+            },
+          ],
+        })}',
+        'data: [DONE]',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.ollamaCompatible,
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'Ollama');
+      expect(deltas[1].done, true);
+    });
+
+    test('yields tool call deltas from SSE stream', () async {
+      final tc1 = {
+        'index': 0,
+        'id': 'call_42',
+        'function': {'name': 'search', 'arguments': '{"q":'},
+      };
+      final tc2 = {
+        'index': 0,
+        'function': {'arguments': '"test"}'},
+      };
+      final sseData = [
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {
+                'tool_calls': [tc1],
+              },
+            },
+          ],
+        })}',
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {
+                'tool_calls': [tc2],
+              },
+            },
+          ],
+        })}',
+        'data: [DONE]',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.ollamaCompatible,
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 3);
+      expect(deltas[0].toolCalls, isNotNull);
+      expect(deltas[0].toolCalls![0].id, 'call_42');
+      expect(deltas[0].toolCalls![0].name, 'search');
+      expect(deltas[0].toolCalls![0].arguments, '{"q":');
+      expect(deltas[1].toolCalls![0].arguments, '"test"}');
+      expect(deltas[2].done, true);
+    });
+
+    test('yields done when stream ends without [DONE] marker', () async {
+      final sseData = [
+        'data: ${jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': 'partial'},
+            },
+          ],
+        })}',
+        '',
+      ].join('\n');
+
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc(sseData)), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.ollamaCompatible,
+        client: client,
+      );
+
+      final deltas = await provider
+          .generateChatStream(messages: _hiMsg)
+          .toList();
+
+      expect(deltas.length, 2);
+      expect(deltas[0].content, 'partial');
+      expect(deltas[1].done, true);
+    });
+
+    test('sends stream:true and no Authorization in request', () async {
+      final client = _StreamClientWithRequest((request) async {
+        expect(request.headers.containsKey('Authorization'), false);
+        final body =
+            jsonDecode((request as http.Request).body) as Map<String, dynamic>;
+        expect(body['stream'], true);
+        return http.StreamedResponse(Stream.value(_enc('data: [DONE]\n')), 200);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.ollamaCompatible,
+        client: client,
+      );
+
+      await provider.generateChatStream(messages: _hiMsg).toList();
+    });
+
+    test('throws LlmError on non-200 status', () async {
+      final client = _StreamClient(() async {
+        return http.StreamedResponse(Stream.value(_enc('error')), 500);
+      });
+
+      final provider = CustomProvider(
+        baseUrl: 'http://localhost:8080',
+        model: 'my-model',
+        temperature: 0.7,
+        maxTokens: 100,
+        apiFormat: CustomApiFormat.ollamaCompatible,
+        client: client,
+      );
+
+      expect(
+        provider.generateChatStream(messages: _hiMsg).toList(),
+        throwsA(isA<LlmError>()),
+      );
+    });
   });
 }

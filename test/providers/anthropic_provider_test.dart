@@ -601,27 +601,31 @@ void main() {
     });
 
     test('yields tool call deltas from SSE stream', () async {
+      final blockStart = {
+        'type': 'content_block_start',
+        'index': 1,
+        'content_block': {
+          'type': 'tool_use',
+          'id': 'toolu_abc',
+          'name': 'get_weather',
+        },
+      };
+      final blockDelta1 = {
+        'type': 'content_block_delta',
+        'index': 1,
+        'delta': {'type': 'input_json_delta', 'partial_json': '{"city":'},
+      };
+      final blockDelta2 = {
+        'type': 'content_block_delta',
+        'index': 1,
+        'delta': {'type': 'input_json_delta', 'partial_json': '"Seoul"}'},
+      };
+      final msgStop = {'type': 'message_stop'};
       final sseData = [
-        'data: ${jsonEncode({
-          'type': 'content_block_start',
-          'index': 1,
-          'content_block': {
-            'type': 'tool_use',
-            'id': 'toolu_abc',
-            'name': 'get_weather',
-          },
-        })}',
-        'data: ${jsonEncode({
-          'type': 'content_block_delta',
-          'index': 1,
-          'delta': {'type': 'input_json_delta', 'partial_json': '{"city":'},
-        })}',
-        'data: ${jsonEncode({
-          'type': 'content_block_delta',
-          'index': 1,
-          'delta': {'type': 'input_json_delta', 'partial_json': '"Seoul"}'},
-        })}',
-        'data: ${jsonEncode({'type': 'message_stop'})}',
+        'data: ${jsonEncode(blockStart)}',
+        'data: ${jsonEncode(blockDelta1)}',
+        'data: ${jsonEncode(blockDelta2)}',
+        'data: ${jsonEncode(msgStop)}',
         '',
       ].join('\n');
 
