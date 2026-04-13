@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
@@ -22,6 +24,12 @@ class _LayersPageState extends ConsumerState<LayersPage> {
   late NodeFlowController<LayerGraphData, void> _controller;
   int? _selectedLayerId;
   bool _initialized = false;
+  bool _isSyncing = false;
+  bool _needsResync = false;
+  bool _viewportInitialized = false;
+  int _lastSyncHash = 0;
+  Timer? _syncDebounce;
+  Timer? _viewportDebounce;
 
   @override
   void initState() {
@@ -33,11 +41,14 @@ class _LayersPageState extends ConsumerState<LayersPage> {
 
   @override
   void dispose() {
+    _syncDebounce?.cancel();
+    _viewportDebounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   void _savePositions() {
+    if (_isSyncing) return;
     final positions = <String, Offset>{};
     for (final id in _controller.nodeIds) {
       final node = _controller.getNode(id);
@@ -48,29 +59,111 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     if (!mounted) return;
     final notifier = ref.read(graphStateProvider.notifier);
     if (positions.isNotEmpty) {
-      notifier.savePositions(positions);
+      notifier.savePositionsSilent(positions);
     }
-    final pan = _controller.currentPan;
-    notifier.saveViewport(pan.dx, pan.dy, _controller.currentZoom);
+    _scheduleViewportSave();
+  }
+
+  void _scheduleViewportSave() {
+    _viewportDebounce?.cancel();
+    _viewportDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final pan = _controller.currentPan;
+      ref
+          .read(graphStateProvider.notifier)
+          .saveViewportSilent(pan.dx, pan.dy, _controller.currentZoom);
+    });
   }
 
   Future<void> _arrangeLayout() async {
+    _viewportInitialized = false;
+    _lastSyncHash = 0;
     await ref.read(graphStateProvider.notifier).clearPositions();
     _controller.clearGraph();
     _syncController();
   }
 
+  void _scheduleSync() {
+    if (_isSyncing) {
+      _needsResync = true;
+      return;
+    }
+    _syncDebounce?.cancel();
+    _syncDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted && !_isSyncing) _syncController();
+    });
+  }
+
+  void _autoSyncConnections(
+    List<LayerDefinition> layers,
+    List<LayerConnectionData> existing,
+  ) {
+    final existingSet = <(int, int)>{};
+    for (final c in existing) {
+      existingSet.add((c.sourceLayerId, c.targetLayerId));
+    }
+
+    final layerMap = <int, LayerDefinition>{};
+    for (final l in layers) {
+      layerMap[l.id] = l;
+    }
+
+    final notifier = ref.read(connectionsProvider.notifier);
+    for (final src in layers) {
+      if (src.outputTypes.isEmpty) continue;
+      final srcOutputs = src.outputTypes.toSet();
+      for (final dst in layers) {
+        if (src.id == dst.id) continue;
+        if (dst.inputTypes.isEmpty) continue;
+        final key = (src.id, dst.id);
+        if (existingSet.contains(key)) continue;
+        if (srcOutputs.intersection(dst.inputTypes.toSet()).isNotEmpty) {
+          notifier.saveConnection(
+            LayerConnectionData(sourceLayerId: src.id, targetLayerId: dst.id),
+          );
+        }
+      }
+    }
+  }
+
+  int _computeDataHash(
+    List<LayerDefinition> layers,
+    List<LayerConnectionData> connections,
+    List<AppTask> tasks,
+  ) {
+    var hash = 0;
+    for (final l in layers) {
+      hash = hash ^ l.id.hashCode ^ l.name.hashCode ^ l.enabled.hashCode;
+    }
+    for (final c in connections) {
+      hash = hash ^ c.sourceLayerId.hashCode ^ c.targetLayerId.hashCode;
+    }
+    return hash ^
+        tasks.where((t) => t.status == TaskStatus.running).length.hashCode;
+  }
+
   void _syncController() {
-    _savePositions();
+    _isSyncing = true;
 
     final layers = ref.read(layersProvider).valueOrNull ?? [];
     final tasks = ref.read(tasksProvider).valueOrNull ?? [];
     final workers = ref.read(workersProvider).valueOrNull ?? [];
     final graphState = ref.read(graphStateProvider).valueOrNull;
     final connections = ref.read(connectionsProvider).valueOrNull ?? [];
+
+    final currentHash = _computeDataHash(layers, connections, tasks);
+    if (currentHash == _lastSyncHash && _controller.nodeIds.isNotEmpty) {
+      _isSyncing = false;
+      return;
+    }
+    _lastSyncHash = currentHash;
+
+    _autoSyncConnections(layers, connections);
+
+    final updatedConnections = ref.read(connectionsProvider).valueOrNull ?? [];
     final savedPositions = graphState?.nodePositions ?? {};
-    final newNodes = buildNodes(layers, tasks, workers, connections);
-    final autoConnections = buildConnections(connections);
+    final newNodes = buildNodes(layers, tasks, workers, updatedConnections);
+    final autoConnections = buildConnections(updatedConnections);
 
     final positionMap = <String, Offset>{};
     for (final id in _controller.nodeIds) {
@@ -82,7 +175,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
 
     _controller.clearGraph();
 
-    if (graphState != null) {
+    if (!_viewportInitialized && graphState != null) {
       _controller.setViewport(
         GraphViewport(
           x: graphState.viewportX,
@@ -90,6 +183,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
           zoom: graphState.viewportZoom,
         ),
       );
+      _viewportInitialized = true;
     }
 
     for (final node in newNodes) {
@@ -106,18 +200,26 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     for (final conn in autoConnections) {
       _controller.addConnection(conn);
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isSyncing = false;
+      if (_needsResync) {
+        _needsResync = false;
+        _scheduleSync();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final layersAsync = ref.watch(layersProvider);
     final tasksAsync = ref.watch(tasksProvider);
-    final graphAsync = ref.watch(graphStateProvider);
+    final graphStateAsync = ref.watch(graphStateProvider);
 
     if (!_initialized &&
         layersAsync.hasValue &&
         tasksAsync.hasValue &&
-        graphAsync.hasValue) {
+        graphStateAsync.hasValue) {
       _initialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _syncController();
@@ -126,13 +228,13 @@ class _LayersPageState extends ConsumerState<LayersPage> {
 
     ref
       ..listen(layersProvider, (prev, next) {
-        if (_initialized) _syncController();
+        if (_initialized) _scheduleSync();
       })
       ..listen(tasksProvider, (prev, next) {
-        if (_initialized) _syncController();
+        if (_initialized) _scheduleSync();
       })
       ..listen(connectionsProvider, (prev, next) {
-        if (_initialized) _syncController();
+        if (_initialized) _scheduleSync();
       });
 
     return Scaffold(

@@ -233,22 +233,24 @@ void main() {
       );
     });
 
-    test('respects max 5 iteration limit', () async {
+    test('requests final summary when iteration limit reached', () async {
       final responses = List.generate(
-        10,
-        (i) => ChatResponse(
-          toolCalls: [
-            ToolCall(id: 'call_$i', name: 'list_layers', arguments: '{}'),
-          ],
-        ),
+        16,
+        (i) => i < 15
+            ? ChatResponse(
+                toolCalls: [
+                  ToolCall(id: 'call_$i', name: 'list_layers', arguments: '{}'),
+                ],
+              )
+            : const ChatResponse(content: '최종 요약 응답입니다.'),
       );
 
       final provider = FakeLlmProvider(responses);
       final service = ChatService(provider: provider, repo: repo);
       final result = await service.handleMessage('Keep listing', []);
 
-      expect(result.assistantResponse, contains('최대 반복'));
-      expect(provider.capturedMessages.length, 5);
+      expect(result.assistantResponse, contains('최종 요약'));
+      expect(provider.capturedMessages.length, 16);
     });
 
     test('builds correct message history with system prompt', () async {
@@ -1555,22 +1557,27 @@ void main() {
       expect(events.whereType<ChatStreamTextEvent>().first.text, 'Recovered.');
     });
 
-    test('respects max 5 iteration limit', () async {
+    test('requests final summary when iteration limit reached', () async {
       final streamResponses = List.generate(
-        10,
-        (i) => [
-          ChatStreamDelta(
-            toolCalls: [
-              ToolCallDelta(
-                index: 0,
-                id: 'call_$i',
-                name: 'list_layers',
-                arguments: '{}',
-              ),
-            ],
-          ),
-          const ChatStreamDelta(done: true),
-        ],
+        16,
+        (i) => i < 15
+            ? [
+                ChatStreamDelta(
+                  toolCalls: [
+                    ToolCallDelta(
+                      index: 0,
+                      id: 'call_$i',
+                      name: 'list_layers',
+                      arguments: '{}',
+                    ),
+                  ],
+                ),
+                const ChatStreamDelta(done: true),
+              ]
+            : [
+                const ChatStreamDelta(content: '최종 요약 응답입니다.'),
+                const ChatStreamDelta(done: true),
+              ],
       );
 
       final provider = FakeLlmProvider([], streamResponses: streamResponses);
@@ -1585,9 +1592,9 @@ void main() {
         events.add(event);
       }
 
-      expect(provider.capturedMessages.length, 5);
+      expect(provider.capturedMessages.length, 16);
       final textEvents = events.whereType<ChatStreamTextEvent>().toList();
-      expect(textEvents.last.text, contains('최대 반복'));
+      expect(textEvents.last.text, contains('최종 요약'));
     });
 
     test('accumulates chunked tool call arguments', () async {

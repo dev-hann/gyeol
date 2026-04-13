@@ -20,10 +20,17 @@ const _systemPrompt =
     'You can create, modify, and delete layers, workers, '
     'and threads. You can also run threads and check status.\n'
     '\n'
+    'TOOL CALL GUIDELINES:\n'
+    '- Minimize redundant tool calls. Batch related operations '
+    'when possible.\n'
+    '- After receiving tool results, prefer responding with a '
+    'summary instead of making additional tool calls.\n'
+    '- Do not repeat the same tool call with identical arguments.\n'
+    '\n'
     'Respond in Korean when the user writes in Korean, '
     'and in English when they write in English.';
 
-const _maxIterations = 5;
+const _maxIterations = 15;
 
 class ChatStreamTextEvent {
   const ChatStreamTextEvent(this.text);
@@ -71,9 +78,11 @@ class ChatService {
     final apiMessages = _buildApiMessages(userMessage, conversationHistory);
 
     for (var i = 0; i < _maxIterations; i++) {
+      final isLastIteration = i == _maxIterations - 1;
+
       final response = await provider.generateChat(
         messages: apiMessages,
-        tools: ToolRegistry.getAllTools(),
+        tools: isLastIteration ? [] : ToolRegistry.getAllTools(),
       );
 
       final hasToolCalls =
@@ -136,18 +145,44 @@ class ChatService {
           ),
         );
       }
+
+      if (isLastIteration) {
+        apiMessages.add(
+          const ChatMessageForApi(
+            role: 'user',
+            content:
+                '지금까지의 도구 호출 결과를 바탕으로 최종 요약 응답을 작성해주세요. 더 이상 도구를 호출하지 마세요.',
+          ),
+        );
+        final finalResponse = await provider.generateChat(
+          messages: apiMessages,
+          tools: [],
+        );
+        final content = finalResponse.content ?? '작업이 완료되었습니다.';
+        newMessages.add(
+          ChatMessage.create(
+            conversationId: convId,
+            role: 'assistant',
+            content: content,
+          ),
+        );
+        return ChatServiceResult(
+          assistantResponse: content,
+          newMessages: newMessages,
+        );
+      }
     }
 
-    const maxMessage = '최대 반복 횟수에 도달했습니다.';
+    const fallbackMessage = '작업이 완료되었습니다.';
     newMessages.add(
       ChatMessage.create(
         conversationId: convId,
         role: 'assistant',
-        content: maxMessage,
+        content: fallbackMessage,
       ),
     );
     return ChatServiceResult(
-      assistantResponse: maxMessage,
+      assistantResponse: fallbackMessage,
       newMessages: newMessages,
     );
   }
@@ -160,12 +195,14 @@ class ChatService {
     final allTools = ToolRegistry.getAllTools();
 
     for (var i = 0; i < _maxIterations; i++) {
+      final isLastIteration = i == _maxIterations - 1;
+
       final toolCallAccumulators = <int, _ToolCallAccum>{};
       final textBuffer = StringBuffer();
 
       await for (final delta in provider.generateChatStream(
         messages: apiMessages,
-        tools: allTools,
+        tools: isLastIteration ? [] : allTools,
       )) {
         if (delta.done) break;
         if (delta.content != null) {
@@ -234,9 +271,27 @@ class ChatService {
 
         yield ChatStreamToolEvent(toolName: call.name, content: result);
       }
-    }
 
-    yield const ChatStreamTextEvent('최대 반복 횟수에 도달했습니다.');
+      if (isLastIteration) {
+        apiMessages.add(
+          const ChatMessageForApi(
+            role: 'user',
+            content:
+                '지금까지의 도구 호출 결과를 바탕으로 최종 요약 응답을 작성해주세요. 더 이상 도구를 호출하지 마세요.',
+          ),
+        );
+        await for (final delta in provider.generateChatStream(
+          messages: apiMessages,
+          tools: [],
+        )) {
+          if (delta.done) break;
+          if (delta.content != null) {
+            yield ChatStreamTextEvent(delta.content!);
+          }
+        }
+        return;
+      }
+    }
   }
 
   static const _maxHistoryMessages = 30;

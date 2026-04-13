@@ -76,6 +76,16 @@ class GraphStateNotifier extends AsyncNotifier<GraphState> {
     );
   }
 
+  Future<void> saveViewportSilent(double x, double y, double zoom) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.graph.saveViewport(x, y, zoom);
+  }
+
+  Future<void> savePositionsSilent(Map<String, Offset> positions) async {
+    final repo = ref.read(repositoryProvider);
+    await repo.graph.saveNodePositions(positions);
+  }
+
   Future<void> clearPositions() async {
     final repo = ref.read(repositoryProvider);
     await repo.graph.saveNodePositions({});

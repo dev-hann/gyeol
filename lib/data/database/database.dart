@@ -147,9 +147,22 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _migrateToV6() async {
-    final threadRows = await customSelect(
-      'SELECT name, layer_names FROM threads',
-    ).get();
+    final hasLayerNames = await _hasColumn('threads', 'layer_names');
+    final oldThreadRows = <({String name, String layerNames})>[];
+    if (hasLayerNames) {
+      final rows = await customSelect(
+        'SELECT name, layer_names FROM threads',
+      ).get();
+      for (final row in rows) {
+        oldThreadRows.add((
+          name: row.read<String>('name'),
+          layerNames: row.read<String>('layer_names'),
+        ));
+      }
+    }
+
+    await customStatement('DROP TABLE IF EXISTS thread_layers');
+    await customStatement('DROP TABLE IF EXISTS threads_new');
 
     await customStatement('''
       CREATE TABLE threads_new (
@@ -164,8 +177,10 @@ class AppDatabase extends _$AppDatabase {
       )
     ''');
     await customStatement('''
-      INSERT INTO threads_new (name, path, context_prompt, enabled, status)
-      SELECT name, path, context_prompt, enabled, status FROM threads
+      INSERT INTO threads_new (name, path, context_prompt, enabled, status,
+        created_at, updated_at)
+      SELECT name, path, context_prompt, enabled, status,
+        created_at, updated_at FROM threads
     ''');
     await customStatement('DROP TABLE threads');
     await customStatement('ALTER TABLE threads_new RENAME TO threads');
@@ -179,11 +194,9 @@ class AppDatabase extends _$AppDatabase {
       )
     ''');
 
-    for (final row in threadRows) {
-      final threadName = row.read<String>('name');
-      final layerNamesJson = row.read<String>('layer_names');
+    for (final row in oldThreadRows) {
       try {
-        final decoded = jsonDecode(layerNamesJson);
+        final decoded = jsonDecode(row.layerNames);
         if (decoded is List) {
           for (var i = 0; i < decoded.length; i++) {
             if (decoded[i] is String) {
@@ -191,7 +204,7 @@ class AppDatabase extends _$AppDatabase {
                 'INSERT INTO thread_layers '
                 '(thread_name, layer_name, sort_order) '
                 'VALUES (?, ?, ?)',
-                [threadName, decoded[i] as String, i],
+                [row.name, decoded[i] as String, i],
               );
             }
           }
@@ -201,156 +214,214 @@ class AppDatabase extends _$AppDatabase {
       }
     }
 
-    await customStatement(
-      'ALTER TABLE layers ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0',
-    );
-    await customStatement(
-      'ALTER TABLE layers ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
-    );
-    await customStatement(
-      'ALTER TABLE workers ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0',
-    );
-    await customStatement(
-      'ALTER TABLE workers ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
-    );
+    if (!await _hasColumn('layers', 'created_at')) {
+      await customStatement(
+        'ALTER TABLE layers ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (!await _hasColumn('layers', 'updated_at')) {
+      await customStatement(
+        'ALTER TABLE layers ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (!await _hasColumn('workers', 'created_at')) {
+      await customStatement(
+        'ALTER TABLE workers ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (!await _hasColumn('workers', 'updated_at')) {
+      await customStatement(
+        'ALTER TABLE workers ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
+      );
+    }
 
     await customStatement('''
-      CREATE TABLE ui_states (
+      CREATE TABLE IF NOT EXISTS ui_states (
         key TEXT NOT NULL,
         value TEXT NOT NULL,
         PRIMARY KEY (key)
       )
     ''');
     await customStatement('''
-      INSERT INTO ui_states (key, value)
+      INSERT OR IGNORE INTO ui_states (key, value)
       SELECT key, value FROM settings WHERE key LIKE 'graph_%'
     ''');
     await customStatement("DELETE FROM settings WHERE key LIKE 'graph_%'");
+  }
 
-    await _createIndexes();
+  Future<bool> _hasColumn(String table, String column) async {
+    final rows = await customSelect("PRAGMA table_info('$table')").get();
+    return rows.any((r) => r.read<String>('name') == column);
   }
 
   Future<void> _migrateToV7() async {
-    await customStatement('''
-      CREATE TABLE layers_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,
-        input_types TEXT NOT NULL,
-        output_types TEXT NOT NULL,
-        layer_prompt TEXT,
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        created_at INTEGER NOT NULL DEFAULT 0,
-        updated_at INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
-    await customStatement('''
-      INSERT INTO layers_new (id, name, input_types, output_types,
-        layer_prompt, sort_order, enabled, created_at, updated_at)
-      SELECT ROW_NUMBER() OVER (ORDER BY sort_order),
-        name, input_types, output_types,
-        layer_prompt, sort_order, enabled, created_at, updated_at
-      FROM layers
-    ''');
+    await customStatement('BEGIN TRANSACTION');
+    try {
+      final tlRows = await customSelect(
+        'SELECT thread_name, layer_name, sort_order FROM thread_layers',
+      ).get();
 
-    await customStatement('DROP TABLE IF EXISTS thread_layers');
-    await customStatement('DROP TABLE layers');
-    await customStatement('ALTER TABLE layers_new RENAME TO layers');
+      await customStatement('''
+        CREATE TABLE layers_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          input_types TEXT NOT NULL,
+          output_types TEXT NOT NULL,
+          layer_prompt TEXT,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await customStatement('''
+        INSERT INTO layers_new (id, name, input_types, output_types,
+          layer_prompt, sort_order, enabled, created_at, updated_at)
+        SELECT ROW_NUMBER() OVER (ORDER BY sort_order),
+          name, input_types, output_types,
+          layer_prompt, sort_order, enabled, created_at, updated_at
+        FROM layers
+      ''');
 
-    final nameToId = <String, int>{};
-    final layerRows = await customSelect(
-      'SELECT id, name FROM layers ORDER BY id',
-    ).get();
-    for (final row in layerRows) {
-      nameToId[row.read<String>('name')] = row.read<int>('id');
-    }
+      await customStatement('DROP TABLE thread_layers');
+      await customStatement('DROP TABLE layers');
+      await customStatement('ALTER TABLE layers_new RENAME TO layers');
 
-    await customStatement('''
-      CREATE TABLE thread_layers_new (
-        thread_name TEXT NOT NULL REFERENCES threads(name) ON DELETE CASCADE,
-        layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (thread_name, layer_id)
-      )
-    ''');
-    final tlRows = await customSelect(
-      'SELECT thread_name, layer_name, sort_order FROM thread_layers',
-    ).get();
-    for (final row in tlRows) {
-      final tName = row.read<String>('thread_name');
-      final lName = row.read<String>('layer_name');
-      final sort = row.read<int>('sort_order');
-      final lId = nameToId[lName];
-      if (lId != null) {
-        await customStatement(
-          'INSERT INTO thread_layers_new '
-          '(thread_name, layer_id, sort_order) VALUES (?, ?, ?)',
-          [tName, lId, sort],
-        );
-      }
-    }
-    await customStatement('DROP TABLE thread_layers');
-    await customStatement(
-      'ALTER TABLE thread_layers_new RENAME TO thread_layers',
-    );
-
-    await customStatement('''
-      CREATE TABLE layer_connections (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        source_layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
-        target_layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE
-      )
-    ''');
-
-    for (var si = 0; si < layerRows.length; si++) {
-      final src = layerRows[si];
-      final srcId = src.read<int>('id');
-      List<String> srcOutputs;
-      try {
-        final d = jsonDecode(src.read<String>('output_types'));
-        srcOutputs = d is List ? d.whereType<String>().toList() : <String>[];
-      } on FormatException {
-        srcOutputs = <String>[];
+      final nameToId = <String, int>{};
+      final layerRows = await customSelect(
+        'SELECT id, name, input_types, output_types FROM layers ORDER BY id',
+      ).get();
+      for (final row in layerRows) {
+        nameToId[row.read<String>('name')] = row.read<int>('id');
       }
 
-      for (var di = 0; di < layerRows.length; di++) {
-        if (si == di) continue;
-        final dst = layerRows[di];
-        final dstId = dst.read<int>('id');
-        List<String> dstInputs;
-        try {
-          final d = jsonDecode(dst.read<String>('input_types'));
-          dstInputs = d is List ? d.whereType<String>().toList() : <String>[];
-        } on FormatException {
-          dstInputs = <String>[];
-        }
-        if (srcOutputs.toSet().intersection(dstInputs.toSet()).isNotEmpty) {
+      await customStatement('''
+        CREATE TABLE thread_layers_new (
+          thread_name TEXT NOT NULL REFERENCES threads(name) ON DELETE CASCADE,
+          layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (thread_name, layer_id)
+        )
+      ''');
+      for (final row in tlRows) {
+        final tName = row.read<String>('thread_name');
+        final lName = row.read<String>('layer_name');
+        final sort = row.read<int>('sort_order');
+        final lId = nameToId[lName];
+        if (lId != null) {
           await customStatement(
-            'INSERT INTO layer_connections '
-            '(source_layer_id, target_layer_id) VALUES (?, ?)',
-            [srcId, dstId],
+            'INSERT INTO thread_layers_new '
+            '(thread_name, layer_id, sort_order) VALUES (?, ?, ?)',
+            [tName, lId, sort],
           );
         }
       }
-    }
-
-    await customStatement('ALTER TABLE workers ADD COLUMN layer_id INTEGER');
-    for (final entry in nameToId.entries) {
       await customStatement(
-        'UPDATE workers SET layer_id = ? WHERE layer_name = ?',
-        [entry.value, entry.key],
+        'ALTER TABLE thread_layers_new RENAME TO thread_layers',
       );
-    }
 
-    await customStatement('ALTER TABLE tasks ADD COLUMN layer_id INTEGER');
-    for (final entry in nameToId.entries) {
-      await customStatement(
-        'UPDATE tasks SET layer_id = ? WHERE layer_name = ?',
-        [entry.value, entry.key],
-      );
-    }
+      await customStatement('''
+        CREATE TABLE layer_connections (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          source_layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
+          target_layer_id INTEGER NOT NULL REFERENCES layers(id) ON DELETE CASCADE
+        )
+      ''');
 
-    await _createIndexes();
+      for (var si = 0; si < layerRows.length; si++) {
+        final src = layerRows[si];
+        final srcId = src.read<int>('id');
+        List<String> srcOutputs;
+        try {
+          final d = jsonDecode(src.read<String>('output_types'));
+          srcOutputs = d is List ? d.whereType<String>().toList() : <String>[];
+        } on FormatException {
+          srcOutputs = <String>[];
+        }
+
+        for (var di = 0; di < layerRows.length; di++) {
+          if (si == di) continue;
+          final dst = layerRows[di];
+          final dstId = dst.read<int>('id');
+          List<String> dstInputs;
+          try {
+            final d = jsonDecode(dst.read<String>('input_types'));
+            dstInputs = d is List ? d.whereType<String>().toList() : <String>[];
+          } on FormatException {
+            dstInputs = <String>[];
+          }
+          if (srcOutputs.toSet().intersection(dstInputs.toSet()).isNotEmpty) {
+            await customStatement(
+              'INSERT INTO layer_connections '
+              '(source_layer_id, target_layer_id) VALUES (?, ?)',
+              [srcId, dstId],
+            );
+          }
+        }
+      }
+
+      await customStatement('ALTER TABLE workers ADD COLUMN layer_id INTEGER');
+      for (final entry in nameToId.entries) {
+        await customStatement(
+          'UPDATE workers SET layer_id = ? WHERE layer_name = ?',
+          [entry.value, entry.key],
+        );
+      }
+
+      await customStatement('ALTER TABLE tasks ADD COLUMN layer_id INTEGER');
+      for (final entry in nameToId.entries) {
+        await customStatement(
+          'UPDATE tasks SET layer_id = ? WHERE layer_name = ?',
+          [entry.value, entry.key],
+        );
+      }
+
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tasks_status_layer
+        ON tasks(status, layer_id)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tasks_created
+        ON tasks(created_at)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_workers_layer
+        ON workers(layer_id)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_logs_task
+        ON execution_logs(task_id)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_logs_created
+        ON execution_logs(created_at)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_msgs_conv
+        ON chat_messages(conversation_id)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_msgs_created
+        ON chat_messages(created_at)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tl_thread
+        ON thread_layers(thread_name)
+      ''');
+      await customStatement('''
+        CREATE INDEX IF NOT EXISTS idx_tl_layer
+        ON thread_layers(layer_id)
+      ''');
+      await customStatement('''
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_conn_unique
+        ON layer_connections(source_layer_id, target_layer_id)
+      ''');
+
+      await customStatement('COMMIT');
+    } on Object catch (_) {
+      await customStatement('ROLLBACK');
+      rethrow;
+    }
   }
 
   Future<void> _migrateToV8() async {
@@ -388,10 +459,10 @@ class AppDatabase extends _$AppDatabase {
         FROM workers
       ''');
       final wRows = await customSelect(
-        'SELECT rowid, name FROM workers_new ORDER BY rowid',
+        'SELECT id, name FROM workers_new ORDER BY id',
       ).get();
       for (final row in wRows) {
-        workerNameToId[row.read<String>('name')] = row.read<int>('rowid');
+        workerNameToId[row.read<String>('name')] = row.read<int>('id');
       }
       await customStatement('DROP TABLE workers');
       await customStatement('ALTER TABLE workers_new RENAME TO workers');
@@ -487,10 +558,10 @@ class AppDatabase extends _$AppDatabase {
         FROM threads
       ''');
       final thRows = await customSelect(
-        'SELECT rowid, name FROM threads_new ORDER BY rowid',
+        'SELECT id, name FROM threads_new ORDER BY id',
       ).get();
       for (final row in thRows) {
-        threadNameToId[row.read<String>('name')] = row.read<int>('rowid');
+        threadNameToId[row.read<String>('name')] = row.read<int>('id');
       }
       await customStatement('DROP TABLE threads');
       await customStatement('ALTER TABLE threads_new RENAME TO threads');
