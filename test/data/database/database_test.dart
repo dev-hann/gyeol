@@ -14,6 +14,11 @@ void main() {
     await db.close();
   });
 
+  Future<int> _createThread(String name) async {
+    await db.saveThread(ThreadsCompanion.insert(name: name, path: '/tmp'));
+    return (await db.getThread(name))!.id;
+  }
+
   group('index creation', () {
     test('onCreate creates all expected indexes', () async {
       final indexes = await db
@@ -36,8 +41,7 @@ void main() {
           'idx_logs_created',
           'idx_msgs_conv',
           'idx_msgs_created',
-          'idx_tl_thread',
-          'idx_tl_layer',
+          'idx_layers_thread',
           'idx_conn_unique',
         ]),
       );
@@ -205,8 +209,10 @@ void main() {
 
   group('worker operations', () {
     test('saveWorker inserts and getWorker retrieves', () async {
+      final _swTid = await _createThread('sw');
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _swTid,
           name: 'parse',
           inputTypes: '[]',
           outputTypes: '[]',
@@ -235,11 +241,22 @@ void main() {
     });
 
     test('listWorkers returns all workers', () async {
+      final _lwTid = await _createThread('lw');
       await db.saveLayer(
-        LayersCompanion.insert(name: 'l1', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _lwTid,
+          name: 'l1',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       await db.saveLayer(
-        LayersCompanion.insert(name: 'l2', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _lwTid,
+          name: 'l2',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       final layers = await db.listLayers();
       final l1Id = layers.firstWhere((l) => l.name == 'l1').id;
@@ -256,8 +273,14 @@ void main() {
     });
 
     test('deleteWorker removes worker', () async {
+      final _dwTid = await _createThread('dw');
       await db.saveLayer(
-        LayersCompanion.insert(name: 'l', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _dwTid,
+          name: 'l',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       final layers = await db.listLayers();
       final layerId = layers.first.id;
@@ -349,8 +372,10 @@ void main() {
 
   group('layer operations', () {
     test('saveLayer and listLayers round-trip', () async {
+      final _loTid = await _createThread('lo');
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _loTid,
           name: 'parse',
           inputTypes: '["raw"]',
           outputTypes: '["parsed"]',
@@ -363,8 +388,10 @@ void main() {
     });
 
     test('deleteLayer removes layer', () async {
+      final _dlTid = await _createThread('dl');
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _dlTid,
           name: 'gone',
           inputTypes: '[]',
           outputTypes: '[]',
@@ -379,8 +406,13 @@ void main() {
 
   group('thread operations', () {
     test('saveThread inserts and getThread retrieves', () async {
+      await db.saveThread(
+        ThreadsCompanion.insert(name: 'thread1', path: '/path/to/file.dart'),
+      );
+      final thread = await db.getThread('thread1');
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: thread!.id,
           name: 'parse',
           inputTypes: '[]',
           outputTypes: '[]',
@@ -388,19 +420,12 @@ void main() {
       );
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: thread.id,
           name: 'analyze',
           inputTypes: '[]',
           outputTypes: '[]',
         ),
       );
-      final layers = await db.listLayers();
-      final parseId = layers.firstWhere((l) => l.name == 'parse').id;
-      final analyzeId = layers.firstWhere((l) => l.name == 'analyze').id;
-      await db.saveThread(
-        ThreadsCompanion.insert(name: 'thread1', path: '/path/to/file.dart'),
-      );
-      final thread = await db.getThread('thread1');
-      await db.saveThreadLayerIds(thread!.id, [parseId, analyzeId]);
 
       expect(thread, isNotNull);
       expect(thread.name, 'thread1');
@@ -408,10 +433,10 @@ void main() {
       expect(thread.enabled, isTrue);
       expect(thread.status, 'idle');
 
-      final threadLayers = await db.listThreadLayers(thread.id);
+      final threadLayers = await db.listLayersByThread(thread.id);
       expect(threadLayers, hasLength(2));
-      expect(threadLayers[0].layerId, parseId);
-      expect(threadLayers[1].layerId, analyzeId);
+      expect(threadLayers[0].name, 'parse');
+      expect(threadLayers[1].name, 'analyze');
     });
 
     test('getThread returns null for missing name', () async {
@@ -419,20 +444,18 @@ void main() {
     });
 
     test('saveThread upserts on conflict', () async {
-      await db.saveLayer(
-        LayersCompanion.insert(name: 'a', inputTypes: '[]', outputTypes: '[]'),
-      );
-      await db.saveLayer(
-        LayersCompanion.insert(name: 'b', inputTypes: '[]', outputTypes: '[]'),
-      );
-      final layers = await db.listLayers();
-      final aId = layers.firstWhere((l) => l.name == 'a').id;
-      final bId = layers.firstWhere((l) => l.name == 'b').id;
       await db.saveThread(
         ThreadsCompanion.insert(name: 'thread1', path: '/old/path'),
       );
       var thread = await db.getThread('thread1');
-      await db.saveThreadLayerIds(thread!.id, [aId]);
+      await db.saveLayer(
+        LayersCompanion.insert(
+          threadId: thread!.id,
+          name: 'a',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
+      );
       await db.saveThread(
         ThreadsCompanion(
           id: Value(thread.id),
@@ -441,13 +464,20 @@ void main() {
         ),
       );
       thread = await db.getThread('thread1');
-      await db.saveThreadLayerIds(thread!.id, [bId]);
+      await db.saveLayer(
+        LayersCompanion.insert(
+          threadId: thread!.id,
+          name: 'b',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
+      );
 
       expect(thread.path, '/new/path');
 
-      final threadLayers = await db.listThreadLayers(thread.id);
-      expect(threadLayers, hasLength(1));
-      expect(threadLayers[0].layerId, bId);
+      final threadLayers = await db.listLayersByThread(thread.id);
+      expect(threadLayers, hasLength(2));
+      expect(threadLayers.map((l) => l.name), containsAll(['a', 'b']));
     });
 
     test('listThreads returns all threads', () async {
@@ -459,19 +489,21 @@ void main() {
     });
 
     test('deleteThread removes thread and layers', () async {
-      await db.saveLayer(
-        LayersCompanion.insert(name: 'L1', inputTypes: '[]', outputTypes: '[]'),
-      );
-      final layers = await db.listLayers();
-      final layerId = layers.first.id;
       await db.saveThread(ThreadsCompanion.insert(name: 'doomed', path: '/x'));
       final thread = await db.getThread('doomed');
-      await db.saveThreadLayerIds(thread!.id, [layerId]);
+      await db.saveLayer(
+        LayersCompanion.insert(
+          threadId: thread!.id,
+          name: 'L1',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
+      );
       expect(await db.getThread('doomed'), isNotNull);
 
       await db.deleteThread(thread.id);
       expect(await db.getThread('doomed'), isNull);
-      expect(await db.listThreadLayers(thread.id), isEmpty);
+      expect(await db.listLayersByThread(thread.id), isEmpty);
     });
 
     test('getThreadById returns thread by integer id', () async {
@@ -516,8 +548,14 @@ void main() {
     });
 
     test('getWorkerById returns worker by integer id', () async {
+      final _gwTid = await _createThread('gw');
       await db.saveLayer(
-        LayersCompanion.insert(name: 'L1', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _gwTid,
+          name: 'L1',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       final layers = await db.listLayers();
       await db.saveWorker(
@@ -542,8 +580,10 @@ void main() {
 
   group('connection operations', () {
     test('saveConnection inserts and listConnections retrieves', () async {
+      final _scTid = await _createThread('sc');
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _scTid,
           name: 'src',
           inputTypes: '[]',
           outputTypes: '[]',
@@ -551,6 +591,7 @@ void main() {
       );
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _scTid,
           name: 'dst',
           inputTypes: '[]',
           outputTypes: '[]',
@@ -574,11 +615,22 @@ void main() {
     });
 
     test('saveConnection upserts on duplicate source+target', () async {
+      final _ucTid = await _createThread('uc');
       await db.saveLayer(
-        LayersCompanion.insert(name: 'a', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _ucTid,
+          name: 'a',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       await db.saveLayer(
-        LayersCompanion.insert(name: 'b', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _ucTid,
+          name: 'b',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       final layers = await db.listLayers();
       final aId = layers.firstWhere((l) => l.name == 'a').id;
@@ -602,11 +654,22 @@ void main() {
     });
 
     test('deleteConnection removes specific connection', () async {
+      final _dcTid = await _createThread('dc');
       await db.saveLayer(
-        LayersCompanion.insert(name: 'x', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _dcTid,
+          name: 'x',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       await db.saveLayer(
-        LayersCompanion.insert(name: 'y', inputTypes: '[]', outputTypes: '[]'),
+        LayersCompanion.insert(
+          threadId: _dcTid,
+          name: 'y',
+          inputTypes: '[]',
+          outputTypes: '[]',
+        ),
       );
       final layers = await db.listLayers();
       final xId = layers.firstWhere((l) => l.name == 'x').id;
@@ -627,8 +690,10 @@ void main() {
     test(
       'deleteConnectionsByLayerId removes all connections for layer',
       () async {
+        final _dcTid2 = await _createThread('dc2');
         await db.saveLayer(
           LayersCompanion.insert(
+            threadId: _dcTid2,
             name: 'l1',
             inputTypes: '[]',
             outputTypes: '[]',
@@ -636,6 +701,7 @@ void main() {
         );
         await db.saveLayer(
           LayersCompanion.insert(
+            threadId: _dcTid2,
             name: 'l2',
             inputTypes: '[]',
             outputTypes: '[]',
@@ -643,6 +709,7 @@ void main() {
         );
         await db.saveLayer(
           LayersCompanion.insert(
+            threadId: _dcTid2,
             name: 'l3',
             inputTypes: '[]',
             outputTypes: '[]',

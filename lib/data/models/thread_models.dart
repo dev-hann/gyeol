@@ -5,7 +5,6 @@ class ThreadDefinition {
     required this.id,
     required this.name,
     required this.path,
-    required this.layerIds,
     this.contextPrompt,
     this.enabled = true,
     this.status = ThreadStatus.idle,
@@ -14,7 +13,6 @@ class ThreadDefinition {
   final int id;
   final String name;
   final String path;
-  final List<int> layerIds;
   final String? contextPrompt;
   final bool enabled;
   final ThreadStatus status;
@@ -23,7 +21,6 @@ class ThreadDefinition {
     int? id,
     String? name,
     String? path,
-    List<int>? layerIds,
     String? contextPrompt,
     bool? enabled,
     ThreadStatus? status,
@@ -32,7 +29,6 @@ class ThreadDefinition {
       id: id ?? this.id,
       name: name ?? this.name,
       path: path ?? this.path,
-      layerIds: layerIds ?? this.layerIds,
       contextPrompt: contextPrompt ?? this.contextPrompt,
       enabled: enabled ?? this.enabled,
       status: status ?? this.status,

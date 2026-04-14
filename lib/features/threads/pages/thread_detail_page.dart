@@ -10,17 +10,23 @@ import 'package:gyeol/features/layers/graph/flow_canvas.dart';
 import 'package:gyeol/features/layers/graph/graph_utils.dart';
 import 'package:gyeol/features/layers/graph/node_detail_panel.dart';
 import 'package:gyeol/shared/widgets/empty_state.dart';
-import 'package:gyeol/shared/widgets/page_header.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 
-class LayersPage extends ConsumerStatefulWidget {
-  const LayersPage({super.key});
+class ThreadDetailPage extends ConsumerStatefulWidget {
+  const ThreadDetailPage({
+    required this.threadId,
+    required this.onBack,
+    super.key,
+  });
+
+  final int threadId;
+  final VoidCallback onBack;
 
   @override
-  ConsumerState<LayersPage> createState() => _LayersPageState();
+  ConsumerState<ThreadDetailPage> createState() => _ThreadDetailPageState();
 }
 
-class _LayersPageState extends ConsumerState<LayersPage> {
+class _ThreadDetailPageState extends ConsumerState<ThreadDetailPage> {
   late NodeFlowController<LayerGraphData, void> _controller;
   int? _selectedLayerId;
   bool _initialized = false;
@@ -145,7 +151,8 @@ class _LayersPageState extends ConsumerState<LayersPage> {
   void _syncController() {
     _isSyncing = true;
 
-    final layers = ref.read(layersProvider).valueOrNull ?? [];
+    final layers =
+        ref.read(threadLayersProvider(widget.threadId)).valueOrNull ?? [];
     final tasks = ref.read(tasksProvider).valueOrNull ?? [];
     final workers = ref.read(workersProvider).valueOrNull ?? [];
     final graphState = ref.read(graphStateProvider).valueOrNull;
@@ -212,9 +219,10 @@ class _LayersPageState extends ConsumerState<LayersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final layersAsync = ref.watch(layersProvider);
+    final layersAsync = ref.watch(threadLayersProvider(widget.threadId));
     final tasksAsync = ref.watch(tasksProvider);
     final graphStateAsync = ref.watch(graphStateProvider);
+    final threadsAsync = ref.watch(threadsProvider);
 
     if (!_initialized &&
         layersAsync.hasValue &&
@@ -227,7 +235,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     }
 
     ref
-      ..listen(layersProvider, (prev, next) {
+      ..listen(threadLayersProvider(widget.threadId), (prev, next) {
         if (_initialized) _scheduleSync();
       })
       ..listen(tasksProvider, (prev, next) {
@@ -237,41 +245,15 @@ class _LayersPageState extends ConsumerState<LayersPage> {
         if (_initialized) _scheduleSync();
       });
 
+    final thread = threadsAsync.valueOrNull
+        ?.where((t) => t.id == widget.threadId)
+        .firstOrNull;
+
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
-            child: PageHeader(
-              icon: Icons.layers_outlined,
-              title: 'Layers',
-              description:
-                  'Graph editor — click nodes to view details, '
-                  'drag to reposition',
-              action: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: _arrangeLayout,
-                    icon: const Icon(Icons.auto_fix_high, size: 18),
-                    tooltip: 'Auto Arrange',
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: () => _showAddLayerDialog(context),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Layer'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildHeader(context, thread),
           Expanded(
             child: layersAsync.when(
               data: (layers) {
@@ -281,6 +263,66 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, ThreadDefinition? thread) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: widget.onBack,
+            icon: const Icon(Icons.arrow_back, size: 20),
+            tooltip: 'Back',
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(width: 12),
+          const Icon(
+            Icons.account_tree_outlined,
+            size: 20,
+            color: AppColors.primaryBright,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  thread?.name ?? 'Thread ${widget.threadId}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                if (thread != null)
+                  Text(
+                    thread.path,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: _arrangeLayout,
+            icon: const Icon(Icons.auto_fix_high, size: 18),
+            tooltip: 'Auto Arrange',
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: () => _showAddLayerDialog(context),
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Add Layer'),
           ),
         ],
       ),
@@ -363,89 +405,68 @@ class _LayersPageState extends ConsumerState<LayersPage> {
     final nameCtl = TextEditingController();
     final inputCtl = TextEditingController();
     final outputCtl = TextEditingController();
-    final threadsAsync = ref.read(threadsProvider);
-    final threads = threadsAsync.valueOrNull ?? [];
-    var selectedThreadId = threads.isNotEmpty ? threads.first.id : 0;
 
     showDialog<void>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.card,
-          title: const Text(
-            'New Layer',
-            style: TextStyle(color: AppColors.foreground),
-          ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<int>(
-                  value: threads.isNotEmpty ? selectedThreadId : null,
-                  decoration: const InputDecoration(labelText: 'Thread'),
-                  items: threads
-                      .map(
-                        (t) =>
-                            DropdownMenuItem(value: t.id, child: Text(t.name)),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setDialogState(() => selectedThreadId = v);
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtl,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    hintText: 'Layer name',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: inputCtl,
-                  decoration: const InputDecoration(
-                    labelText: 'Input Types',
-                    hintText: 'issue, question',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: outputCtl,
-                  decoration: const InputDecoration(
-                    labelText: 'Output Types',
-                    hintText: 'plan, analysis',
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameCtl.text.isEmpty) return;
-                final layer = LayerDefinition(
-                  id: 0,
-                  threadId: selectedThreadId,
-                  name: nameCtl.text,
-                  inputTypes: _splitCSV(inputCtl.text),
-                  outputTypes: _splitCSV(outputCtl.text),
-                );
-                await ref.read(layersProvider.notifier).saveLayer(layer);
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-              child: const Text('Create'),
-            ),
-          ],
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text(
+          'New Layer',
+          style: TextStyle(color: AppColors.foreground),
         ),
+        content: SizedBox(
+          width: 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtl,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'Layer name',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: inputCtl,
+                decoration: const InputDecoration(
+                  labelText: 'Input Types',
+                  hintText: 'issue, question',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: outputCtl,
+                decoration: const InputDecoration(
+                  labelText: 'Output Types',
+                  hintText: 'plan, analysis',
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameCtl.text.isEmpty) return;
+              final layer = LayerDefinition(
+                id: 0,
+                threadId: widget.threadId,
+                name: nameCtl.text,
+                inputTypes: _splitCSV(inputCtl.text),
+                outputTypes: _splitCSV(outputCtl.text),
+              );
+              await ref.read(layersProvider.notifier).saveLayer(layer);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Create'),
+          ),
+        ],
       ),
     );
   }

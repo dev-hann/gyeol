@@ -4,12 +4,19 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
-void main() {
+void main() {  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    return (await database.getThread('default'))!.id;
+  }
+
   late AppDatabase db;
   late AppRepository repo;
 
-  setUp(() {
+  late int _tid;
+
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    _tid = await _createThread(db);
     repo = AppRepository(db);
   });
 
@@ -97,9 +104,10 @@ void main() {
   group('TaskRepository saveTask', () {
     test('updates existing task status and fields', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L1',
+threadId: _tid,
+        name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -220,9 +228,10 @@ void main() {
 
     test('create -> run -> fail with retry', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L1',
+threadId: _tid,
+        name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),

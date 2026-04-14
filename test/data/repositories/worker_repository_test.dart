@@ -4,12 +4,19 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
-void main() {
+void main() {  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    return (await database.getThread('default'))!.id;
+  }
+
   late AppDatabase db;
   late AppRepository repo;
 
-  setUp(() {
+  late int _tid;
+
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    _tid = await _createThread(db);
     repo = AppRepository(db);
   });
 
@@ -20,9 +27,10 @@ void main() {
   group('WorkerRepository saveWorker + getWorker', () {
     test('round-trips a worker with required fields only', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'parse',
+threadId: _tid,
+        name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -50,9 +58,10 @@ void main() {
 
     test('round-trips a worker with all optional fields', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'analyze',
+threadId: _tid,
+        name: 'analyze',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -96,17 +105,19 @@ void main() {
 
     test('returns all saved workers', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L1',
+threadId: _tid,
+        name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L2',
+threadId: _tid,
+        name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -139,9 +150,10 @@ void main() {
   group('WorkerRepository deleteWorker', () {
     test('removes a saved worker', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L1',
+threadId: _tid,
+        name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -173,17 +185,19 @@ void main() {
   group('WorkerRepository upsert', () {
     test('replaces existing worker with same name', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L1',
+threadId: _tid,
+        name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L2',
+threadId: _tid,
+        name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -235,9 +249,10 @@ void main() {
       expect(firstEmission, isEmpty);
 
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
-          name: 'L1',
+threadId: _tid,
+        name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),

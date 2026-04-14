@@ -4,12 +4,19 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/layer_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
-void main() {
+void main() {  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    return (await database.getThread('default'))!.id;
+  }
+
   late AppDatabase db;
   late AppRepository repo;
 
-  setUp(() {
+  late int _tid;
+
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    _tid = await _createThread(db);
     repo = AppRepository(db);
   });
 
@@ -18,9 +25,10 @@ void main() {
   });
 
   Future<int> insertLayer(String name) async {
-    const layer = LayerDefinition(
+    final layer = LayerDefinition(
       id: 0,
-      name: '',
+threadId: _tid,
+        name: '',
       inputTypes: [],
       outputTypes: [],
     );

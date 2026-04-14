@@ -19,88 +19,94 @@ void main() {
 
   group('ThreadRepository saveThread + getThread', () {
     test('round-trips a thread with required fields only', () async {
+      final thread = ThreadDefinition(
+        id: 0,
+        name: 'pipeline-1',
+        path: '/root/child',
+      );
+      await repo.threads.saveThread(thread);
+      final saved = await repo.threads.getThread('pipeline-1');
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: saved!.id,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: saved.id,
           name: 'analyze',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      final layers = await repo.layers.listLayers();
-      final parseId = layers.firstWhere((l) => l.name == 'parse').id;
-      final analyzeId = layers.firstWhere((l) => l.name == 'analyze').id;
-      final thread = ThreadDefinition(
-        id: 0,
-        name: 'pipeline-1',
-        path: '/root/child',
-        layerIds: [parseId, analyzeId],
-      );
-      await repo.threads.saveThread(thread);
 
       final found = await repo.threads.getThread('pipeline-1');
       expect(found, isNotNull);
       expect(found!.name, 'pipeline-1');
       expect(found.path, '/root/child');
-      expect(found.layerIds, [parseId, analyzeId]);
+      final threadLayers = await repo.layers.listLayersByThread(found.id);
+      expect(
+        threadLayers.map((l) => l.name),
+        containsAll(['parse', 'analyze']),
+      );
       expect(found.contextPrompt, isNull);
       expect(found.enabled, true);
       expect(found.status, ThreadStatus.idle);
     });
 
     test('round-trips a thread with all optional fields', () async {
+      final thread = ThreadDefinition(
+        id: 0,
+        name: 'pipeline-2',
+        path: '/a/b/c',
+        contextPrompt: 'Summarize the result',
+        enabled: false,
+        status: ThreadStatus.completed,
+      );
+      await repo.threads.saveThread(thread);
+      final saved = await repo.threads.getThread('pipeline-2');
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: saved!.id,
           name: 'extract',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: saved.id,
           name: 'transform',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: saved.id,
           name: 'load',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
-      final layers = await repo.layers.listLayers();
-      final extractId = layers.firstWhere((l) => l.name == 'extract').id;
-      final transformId = layers.firstWhere((l) => l.name == 'transform').id;
-      final loadId = layers.firstWhere((l) => l.name == 'load').id;
-      final thread = ThreadDefinition(
-        id: 0,
-        name: 'pipeline-2',
-        path: '/a/b/c',
-        layerIds: [extractId, transformId, loadId],
-        contextPrompt: 'Summarize the result',
-        enabled: false,
-        status: ThreadStatus.completed,
-      );
-      await repo.threads.saveThread(thread);
 
       final found = await repo.threads.getThread('pipeline-2');
       expect(found, isNotNull);
       expect(found!.name, 'pipeline-2');
       expect(found.path, '/a/b/c');
-      expect(found.layerIds, [extractId, transformId, loadId]);
+      final threadLayers = await repo.layers.listLayersByThread(found.id);
+      expect(
+        threadLayers.map((l) => l.name),
+        containsAll(['extract', 'transform', 'load']),
+      );
       expect(found.contextPrompt, 'Summarize the result');
       expect(found.enabled, false);
       expect(found.status, ThreadStatus.completed);
@@ -119,37 +125,8 @@ void main() {
     });
 
     test('returns all saved threads', () async {
-      await repo.layers.saveLayer(
-        const LayerDefinition(
-          id: 0,
-          name: 'L1',
-          inputTypes: ['text'],
-          outputTypes: [],
-        ),
-      );
-      await repo.layers.saveLayer(
-        const LayerDefinition(
-          id: 0,
-          name: 'L2',
-          inputTypes: ['text'],
-          outputTypes: [],
-        ),
-      );
-      final layers = await repo.layers.listLayers();
-      final l1Id = layers.firstWhere((l) => l.name == 'L1').id;
-      final l2Id = layers.firstWhere((l) => l.name == 'L2').id;
-      final t1 = ThreadDefinition(
-        id: 0,
-        name: 'alpha',
-        path: '/a',
-        layerIds: [l1Id],
-      );
-      final t2 = ThreadDefinition(
-        id: 0,
-        name: 'beta',
-        path: '/b',
-        layerIds: [l2Id],
-      );
+      final t1 = ThreadDefinition(id: 0, name: 'alpha', path: '/a');
+      final t2 = ThreadDefinition(id: 0, name: 'beta', path: '/b');
       await repo.threads.saveThread(t1);
       await repo.threads.saveThread(t2);
 
@@ -162,22 +139,7 @@ void main() {
 
   group('ThreadRepository deleteThread', () {
     test('removes a saved thread', () async {
-      await repo.layers.saveLayer(
-        const LayerDefinition(
-          id: 0,
-          name: 'L1',
-          inputTypes: ['text'],
-          outputTypes: [],
-        ),
-      );
-      final layers = await repo.layers.listLayers();
-      final layerId = layers.first.id;
-      final thread = ThreadDefinition(
-        id: 0,
-        name: 'to_delete',
-        path: '/x',
-        layerIds: [layerId],
-      );
+      final thread = ThreadDefinition(id: 0, name: 'to_delete', path: '/x');
       await repo.threads.saveThread(thread);
       expect(await repo.threads.getThread('to_delete'), isNotNull);
 
@@ -201,22 +163,7 @@ void main() {
       final firstEmission = await stream.first;
       expect(firstEmission, isEmpty);
 
-      await repo.layers.saveLayer(
-        const LayerDefinition(
-          id: 0,
-          name: 'L1',
-          inputTypes: ['text'],
-          outputTypes: [],
-        ),
-      );
-      final layers = await repo.layers.listLayers();
-      final layerId = layers.first.id;
-      final thread = ThreadDefinition(
-        id: 0,
-        name: 'watched',
-        path: '/w',
-        layerIds: [layerId],
-      );
+      final thread = ThreadDefinition(id: 0, name: 'watched', path: '/w');
       await repo.threads.saveThread(thread);
 
       final secondEmission = await stream.first;

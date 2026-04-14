@@ -57,6 +57,13 @@ class FakeLlmProvider implements LlmProvider {
 }
 
 void main() {
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
+    return (await database.getThread('default'))!.id;
+  }
+
   group('ToolRegistry', () {
     test('getAllTools returns 30 tools', () {
       final tools = ToolRegistry.getAllTools();
@@ -128,10 +135,12 @@ void main() {
   group('ChatService', () {
     late AppDatabase db;
     late AppRepository repo;
+    late int _tid;
 
-    setUp(() {
+    setUp(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       repo = AppRepository(db);
+      _tid = await _createThread(db);
     });
 
     tearDown(() async {
@@ -156,8 +165,9 @@ void main() {
 
     test('handles single tool call then text response', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
@@ -529,6 +539,7 @@ void main() {
               name: 'create_layer',
               arguments: jsonEncode({
                 'name': 'TestLayer',
+                'threadName': 'default',
                 'inputTypes': ['text'],
                 'outputTypes': ['json'],
               }),
@@ -550,8 +561,9 @@ void main() {
 
     test('executeTool create_worker calls repo.saveWorker', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
@@ -588,8 +600,9 @@ void main() {
 
     test('executeTool delete_layer calls repo.deleteLayer', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'ToDelete',
           inputTypes: ['text'],
           outputTypes: [],
@@ -618,8 +631,9 @@ void main() {
 
     test('executeTool list_layers returns formatted result', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -643,20 +657,16 @@ void main() {
 
     test('executeTool run_thread triggers scheduler', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
         ),
       );
       await repo.threads.saveThread(
-        const ThreadDefinition(
-          id: 1,
-          name: 'T1',
-          path: '/tmp/test',
-          layerIds: [1],
-        ),
+        const ThreadDefinition(id: 1, name: 'T1', path: '/tmp/test'),
       );
 
       String? triggeredThread;
@@ -724,10 +734,12 @@ void main() {
   group('ToolRegistry new tools', () {
     late AppDatabase db;
     late AppRepository repo;
+    late int _tid;
 
-    setUp(() {
+    setUp(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       repo = AppRepository(db);
+      _tid = await _createThread(db);
     });
 
     tearDown(() async {
@@ -736,8 +748,9 @@ void main() {
 
     test('update_thread updates path and contextPrompt', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
@@ -748,7 +761,6 @@ void main() {
           id: 2,
           name: 'T1',
           path: '/old/path',
-          layerIds: [1],
           contextPrompt: 'old prompt',
         ),
       );
@@ -762,7 +774,9 @@ void main() {
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       expect(decoded['success'], isTrue);
 
-      final thread = (await repo.threads.listThreads()).first;
+      final thread = (await repo.threads.listThreads()).firstWhere(
+        (t) => t.name == 'T1',
+      );
       expect(thread.path, '/new/path');
       expect(thread.contextPrompt, 'new prompt');
     });
@@ -779,20 +793,16 @@ void main() {
 
     test('delete_thread removes thread', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
       await repo.threads.saveThread(
-        const ThreadDefinition(
-          id: 3,
-          name: 'ToDelete',
-          path: '/tmp',
-          layerIds: [1],
-        ),
+        const ThreadDefinition(id: 3, name: 'ToDelete', path: '/tmp'),
       );
 
       final result = await ToolRegistry.executeTool('delete_thread', {
@@ -801,13 +811,15 @@ void main() {
 
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       expect(decoded['success'], isTrue);
-      expect(await repo.threads.listThreads(), isEmpty);
+      final threads = await repo.threads.listThreads();
+      expect(threads.where((t) => t.name == 'ToDelete'), isEmpty);
     });
 
     test('update_layer with layerPrompt', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -828,8 +840,9 @@ void main() {
 
     test('update_worker with temperature and maxTokens', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
@@ -862,16 +875,18 @@ void main() {
 
     test('update_worker with layerName reassigns worker', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
@@ -903,16 +918,18 @@ void main() {
 
     test('assign_worker adds worker to layer', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L0',
           inputTypes: [],
           outputTypes: [],
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -944,8 +961,9 @@ void main() {
 
     test('assign_worker prevents duplicate assignment', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -971,8 +989,9 @@ void main() {
 
     test('unassign_worker returns error since layerId is required', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -1044,7 +1063,7 @@ void main() {
       expect(decoded['queueSize'], isA<int>());
       expect(decoded['layers'], 0);
       expect(decoded['workers'], 0);
-      expect(decoded['threads'], 0);
+      expect(decoded['threads'], 1);
     });
 
     test('switch_provider switches active provider', () async {
@@ -1308,8 +1327,9 @@ void main() {
 
     test('get_worker_details returns full worker info', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -1394,10 +1414,12 @@ void main() {
   group('ChatService handleMessageStream', () {
     late AppDatabase db;
     late AppRepository repo;
+    late int _tid;
 
-    setUp(() {
+    setUp(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       repo = AppRepository(db);
+      _tid = await _createThread(db);
     });
 
     tearDown(() async {
@@ -1431,8 +1453,9 @@ void main() {
 
     test('yields tool event for tool call then returns', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
@@ -1599,8 +1622,9 @@ void main() {
 
     test('accumulates chunked tool call arguments', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
@@ -1722,10 +1746,12 @@ void main() {
   group('ChatService _buildApiMessages merge verification', () {
     late AppDatabase db;
     late AppRepository repo;
+    late int _tid;
 
-    setUp(() {
+    setUp(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       repo = AppRepository(db);
+      _tid = await _createThread(db);
     });
 
     tearDown(() async {

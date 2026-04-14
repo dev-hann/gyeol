@@ -18,11 +18,20 @@ class _ErrorInjectDb extends AppDatabase {
 }
 
 void main() {
+
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    return (await database.getThread('default'))!.id;
+  }
+
   late AppDatabase db;
   late ProviderContainer container;
 
-  setUp(() {
+  late int _tid;
+
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    _tid = await _createThread(db);
     container = ProviderContainer(
       overrides: [databaseProvider.overrideWithValue(db)],
     );
@@ -42,8 +51,9 @@ void main() {
     test('saveLayer adds layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: ['structured'],
@@ -63,8 +73,9 @@ void main() {
     test('saveLayer updates existing layer with same name', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
@@ -78,6 +89,7 @@ void main() {
       await notifier.saveLayer(
         LayerDefinition(
           id: existingId,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text', 'json'],
           outputTypes: ['structured'],
@@ -100,8 +112,9 @@ void main() {
     test('saveLayer stores multiple layers', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: ['structured'],
@@ -109,8 +122,9 @@ void main() {
         ),
       );
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'analyze',
           inputTypes: ['structured'],
           outputTypes: ['insight'],
@@ -128,8 +142,9 @@ void main() {
     test('deleteLayer removes layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'temp-layer',
           inputTypes: ['text'],
           outputTypes: [],
@@ -150,8 +165,9 @@ void main() {
     test('deleteLayer no-op when id does not exist', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'keep',
           inputTypes: ['text'],
           outputTypes: [],

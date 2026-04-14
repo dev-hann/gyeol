@@ -8,12 +8,14 @@ import 'package:gyeol/features/dashboard/pages/dashboard_page.dart';
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
     id: 1,
+    threadId: 1,
     name: 'Draft',
     inputTypes: ['text'],
     outputTypes: ['draft'],
   ),
   const LayerDefinition(
     id: 2,
+    threadId: 1,
     name: 'Review',
     inputTypes: ['draft'],
     outputTypes: ['review'],

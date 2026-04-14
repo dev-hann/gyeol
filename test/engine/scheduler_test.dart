@@ -9,11 +9,19 @@ import 'package:gyeol/engine/queue/task_queue.dart';
 import 'package:gyeol/engine/scheduler.dart';
 
 void main() {
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
+    return (await database.getThread('default'))!.id;
+  }
+
   group('LayerRegistry register', () {
     test('adds a layer', () {
       final registry = LayerRegistry();
-      const layer = LayerDefinition(
+      const layer = const LayerDefinition(
         id: 0,
+        threadId: 1,
         name: 'L1',
         inputTypes: ['text'],
         outputTypes: ['analysis'],
@@ -31,6 +39,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: ['analysis'],
@@ -40,6 +49,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'L1',
             inputTypes: ['text', 'json'],
             outputTypes: ['analysis'],
@@ -57,6 +67,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'B',
             inputTypes: ['text'],
             outputTypes: [],
@@ -66,6 +77,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'A',
             inputTypes: ['text'],
             outputTypes: [],
@@ -85,6 +97,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: [],
@@ -100,6 +113,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'L1',
             inputTypes: ['text'],
             outputTypes: [],
@@ -117,6 +131,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'old',
             inputTypes: ['text'],
             outputTypes: [],
@@ -125,6 +140,7 @@ void main() {
         ..setAll([
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'new1',
             inputTypes: ['text'],
             outputTypes: [],
@@ -132,6 +148,7 @@ void main() {
           ),
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'new2',
             inputTypes: ['text'],
             outputTypes: [],
@@ -152,6 +169,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'enabled',
             inputTypes: ['text'],
             outputTypes: [],
@@ -160,6 +178,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'disabled',
             inputTypes: ['text'],
             outputTypes: [],
@@ -177,6 +196,7 @@ void main() {
         ..register(
           const LayerDefinition(
             id: 0,
+            threadId: 1,
             name: 'L1',
             inputTypes: ['image'],
             outputTypes: [],
@@ -314,13 +334,15 @@ void main() {
     late MessageBus bus;
     late AppDatabase db;
     late AppRepository repo;
+    late int _tid;
 
-    setUp(() {
+    setUp(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       queue = TaskQueue();
       registry = LayerRegistry();
       bus = MessageBus();
       repo = AppRepository(db);
+      _tid = await _createThread(db);
       scheduler = Scheduler(
         queue: queue,
         layerRegistry: registry,
@@ -349,8 +371,9 @@ void main() {
 
     test('skips task when depth exceeds maxExecutionDepth', () async {
       registry.register(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'deep',
           inputTypes: ['deep'],
           outputTypes: [],
@@ -369,8 +392,9 @@ void main() {
 
     test('skips task when all matching layers are disabled', () async {
       registry.register(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'off',
           inputTypes: ['text'],
           outputTypes: [],
@@ -384,8 +408,9 @@ void main() {
 
     test('drains queue when layer has no workers in db', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L',
           inputTypes: ['text'],
           outputTypes: [],
@@ -405,8 +430,9 @@ void main() {
 
     test('marks task as failed when layer has no workers', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L',
           inputTypes: ['text'],
           outputTypes: [],
@@ -428,8 +454,9 @@ void main() {
 
     test('drains queue and processes task with db workers', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L',
           inputTypes: ['text'],
           outputTypes: [],
@@ -459,8 +486,9 @@ void main() {
 
     test('runOnce handles Error subtypes gracefully', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L',
           inputTypes: ['text'],
           outputTypes: [],
@@ -495,8 +523,9 @@ void main() {
       'runOnce catches LlmError from unconfigured Ollama provider',
       () async {
         await repo.layers.saveLayer(
-          const LayerDefinition(
+          LayerDefinition(
             id: 0,
+            threadId: _tid,
             name: 'L',
             inputTypes: ['text'],
             outputTypes: [],

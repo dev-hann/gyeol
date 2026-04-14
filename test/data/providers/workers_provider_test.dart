@@ -18,11 +18,20 @@ class _ErrorInjectDb extends AppDatabase {
 }
 
 void main() {
+
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    return (await database.getThread('default'))!.id;
+  }
+
   late AppDatabase db;
   late ProviderContainer container;
 
-  setUp(() {
+  late int _tid;
+
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    _tid = await _createThread(db);
     container = ProviderContainer(
       overrides: [databaseProvider.overrideWithValue(db)],
     );
@@ -42,8 +51,9 @@ void main() {
     test('saveWorker adds worker and refreshes list', () async {
       final repo = container.read(repositoryProvider);
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
@@ -73,8 +83,9 @@ void main() {
     test('saveWorker updates existing worker with same name', () async {
       final repo = container.read(repositoryProvider);
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
@@ -116,8 +127,9 @@ void main() {
     test('saveWorker stores multiple workers', () async {
       final repo = container.read(repositoryProvider);
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
@@ -154,8 +166,9 @@ void main() {
     test('deleteWorker removes worker and refreshes list', () async {
       final repo = container.read(repositoryProvider);
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
@@ -187,8 +200,9 @@ void main() {
     test('deleteWorker no-op when id does not exist', () async {
       final repo = container.read(repositoryProvider);
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],

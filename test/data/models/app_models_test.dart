@@ -191,6 +191,7 @@ void main() {
     test('defaults order=0 enabled=true', () {
       const layer = LayerDefinition(
         id: 1,
+        threadId: 1,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -203,6 +204,7 @@ void main() {
     test('holds layerPrompt', () {
       const layer = LayerDefinition(
         id: 2,
+        threadId: 1,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -214,6 +216,7 @@ void main() {
     test('copyWith overrides specified fields only', () {
       const layer = LayerDefinition(
         id: 3,
+        threadId: 1,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -232,6 +235,7 @@ void main() {
     test('copyWith can update layerPrompt', () {
       const layer = LayerDefinition(
         id: 4,
+        threadId: 1,
         name: 'test',
         inputTypes: ['a'],
         outputTypes: ['b'],

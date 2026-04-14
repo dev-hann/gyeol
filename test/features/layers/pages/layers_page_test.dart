@@ -11,12 +11,14 @@ import 'package:gyeol/features/layers/pages/layers_page.dart';
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
     id: 1,
+    threadId: 1,
     name: 'Draft',
     inputTypes: ['issue'],
     outputTypes: ['plan'],
   ),
   const LayerDefinition(
     id: 2,
+    threadId: 1,
     name: 'Review',
     inputTypes: ['plan'],
     outputTypes: ['analysis'],

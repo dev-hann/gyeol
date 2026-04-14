@@ -36,3 +36,9 @@ class LayersNotifier extends AsyncNotifier<List<LayerDefinition>> {
     await repo.layers.deleteLayer(id);
   }
 }
+
+final threadLayersProvider = StreamProvider.family
+    .autoDispose<List<LayerDefinition>, int>((ref, threadId) {
+      final repo = ref.watch(repositoryProvider);
+      return repo.layers.watchLayersByThread(threadId);
+    });

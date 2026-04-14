@@ -21,7 +21,7 @@ void main() {
   late AppDatabase db;
   late ProviderContainer container;
 
-  setUp(() {
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     container = ProviderContainer(
       overrides: [databaseProvider.overrideWithValue(db)],
@@ -40,25 +40,12 @@ void main() {
     });
 
     test('saveThread adds thread and refreshes list', () async {
-      final repo = container.read(repositoryProvider);
-      await repo.layers.saveLayer(
-        const LayerDefinition(
-          id: 0,
-          name: 'parse',
-          inputTypes: ['text'],
-          outputTypes: ['analysis'],
-          order: 1,
-        ),
-      );
-      final layers = await repo.layers.listLayers();
-
       final notifier = container.read(threadsProvider.notifier);
       await notifier.saveThread(
         ThreadDefinition(
           id: 0,
           name: 'pipeline-a',
           path: '/src',
-          layerIds: [layers.first.id],
           contextPrompt: 'Analyze',
         ),
       );
@@ -68,7 +55,6 @@ void main() {
       expect(threads, hasLength(1));
       expect(threads.first.name, 'pipeline-a');
       expect(threads.first.path, '/src');
-      expect(threads.first.layerIds, [layers.first.id]);
       expect(threads.first.contextPrompt, 'Analyze');
       expect(threads.first.enabled, isTrue);
       expect(threads.first.status, ThreadStatus.idle);
@@ -77,12 +63,7 @@ void main() {
     test('saveThread updates existing thread with same name', () async {
       final notifier = container.read(threadsProvider.notifier);
       await notifier.saveThread(
-        const ThreadDefinition(
-          id: 0,
-          name: 'pipeline-a',
-          path: '/old',
-          layerIds: [],
-        ),
+        const ThreadDefinition(id: 0, name: 'pipeline-a', path: '/old'),
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -91,7 +72,6 @@ void main() {
           id: 0,
           name: 'pipeline-a',
           path: '/new',
-          layerIds: [],
           contextPrompt: 'Updated',
         ),
       );
@@ -106,10 +86,10 @@ void main() {
     test('saveThread stores multiple threads', () async {
       final notifier = container.read(threadsProvider.notifier);
       await notifier.saveThread(
-        const ThreadDefinition(id: 0, name: 't1', path: '/a', layerIds: []),
+        const ThreadDefinition(id: 0, name: 't1', path: '/a'),
       );
       await notifier.saveThread(
-        const ThreadDefinition(id: 0, name: 't2', path: '/b', layerIds: []),
+        const ThreadDefinition(id: 0, name: 't2', path: '/b'),
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -122,12 +102,7 @@ void main() {
     test('deleteThread removes thread and refreshes list', () async {
       final notifier = container.read(threadsProvider.notifier);
       await notifier.saveThread(
-        const ThreadDefinition(
-          id: 0,
-          name: 'temp-thread',
-          path: '/tmp',
-          layerIds: [],
-        ),
+        const ThreadDefinition(id: 0, name: 'temp-thread', path: '/tmp'),
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -144,12 +119,7 @@ void main() {
     test('deleteThread no-op when id does not exist', () async {
       final notifier = container.read(threadsProvider.notifier);
       await notifier.saveThread(
-        const ThreadDefinition(
-          id: 0,
-          name: 'keep',
-          path: '/keep',
-          layerIds: [],
-        ),
+        const ThreadDefinition(id: 0, name: 'keep', path: '/keep'),
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 50));

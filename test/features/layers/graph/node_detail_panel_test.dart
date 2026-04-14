@@ -12,12 +12,14 @@ import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
     id: 1,
+    threadId: 1,
     name: 'Draft',
     inputTypes: ['text', 'prompt'],
     outputTypes: ['draft'],
   ),
   const LayerDefinition(
     id: 2,
+    threadId: 1,
     name: 'Review',
     inputTypes: ['draft'],
     outputTypes: ['review'],
@@ -267,12 +269,14 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+          threadId: 1,
           name: 'A',
           inputTypes: ['alpha'],
           outputTypes: ['a-out'],
         ),
         const LayerDefinition(
           id: 2,
+          threadId: 1,
           name: 'B',
           inputTypes: ['beta'],
           outputTypes: ['b-out'],
@@ -331,12 +335,14 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+          threadId: 1,
           name: 'On',
           inputTypes: ['x'],
           outputTypes: [],
         ),
         const LayerDefinition(
           id: 2,
+          threadId: 1,
           name: 'Off',
           inputTypes: ['x'],
           outputTypes: [],
@@ -397,6 +403,7 @@ void main() {
         layers: [
           const LayerDefinition(
             id: 1,
+            threadId: 1,
             name: 'Empty',
             inputTypes: [],
             outputTypes: ['out'],

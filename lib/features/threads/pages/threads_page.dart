@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
+import 'package:gyeol/features/threads/pages/thread_detail_page.dart';
 import 'package:gyeol/shared/widgets/empty_state.dart';
 import 'package:gyeol/shared/widgets/page_header.dart';
 import 'package:gyeol/shared/widgets/status_badge.dart';
@@ -19,7 +20,6 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
   @override
   Widget build(BuildContext context) {
     final threadsAsync = ref.watch(threadsProvider);
-    final layersAsync = ref.watch(layersProvider);
 
     return Scaffold(
       body: Padding(
@@ -55,12 +55,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
                       ),
                     );
                   }
-                  return layersAsync.when(
-                    data: (layers) => _buildThreadList(threads, layers),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Error: $e')),
-                  );
+                  return _buildThreadList(threads);
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Error: $e')),
@@ -72,10 +67,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     );
   }
 
-  Widget _buildThreadList(
-    List<ThreadDefinition> threads,
-    List<LayerDefinition> layers,
-  ) {
+  Widget _buildThreadList(List<ThreadDefinition> threads) {
     return ListView.separated(
       itemCount: threads.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -83,10 +75,20 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
         final thread = threads[index];
         return _ThreadCard(
           thread: thread,
-          layers: layers,
+          onTap: () {
+            Navigator.push<void>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ThreadDetailPage(
+                  threadId: thread.id,
+                  onBack: () => Navigator.pop(context),
+                ),
+              ),
+            );
+          },
           onRun: () => _runThread(thread),
           onDelete: () => _deleteThread(thread),
-          onEdit: () => _showEditThreadDialog(context, thread, layers),
+          onEdit: () => _showEditThreadDialog(context, thread),
         );
       },
     );
@@ -146,7 +148,6 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     final nameCtl = TextEditingController();
     final pathCtl = TextEditingController();
     final promptCtl = TextEditingController();
-    final selectedLayers = <String>[];
 
     _showThreadDialog(
       context: context,
@@ -154,20 +155,12 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
       nameCtl: nameCtl,
       pathCtl: pathCtl,
       promptCtl: promptCtl,
-      selectedLayers: selectedLayers,
       onConfirm: () async {
         if (nameCtl.text.isEmpty || pathCtl.text.isEmpty) return;
-        final allLayers = ref.read(layersProvider).valueOrNull ?? [];
-        final nameToId = <String, int>{for (final l in allLayers) l.name: l.id};
-        final layerIds = selectedLayers
-            .map((n) => nameToId[n])
-            .whereType<int>()
-            .toList();
         final thread = ThreadDefinition(
           id: 0,
           name: nameCtl.text,
           path: pathCtl.text,
-          layerIds: layerIds,
           contextPrompt: promptCtl.text.isEmpty ? null : promptCtl.text,
         );
         await ref.read(threadsProvider.notifier).saveThread(thread);
@@ -176,20 +169,10 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     );
   }
 
-  void _showEditThreadDialog(
-    BuildContext context,
-    ThreadDefinition thread,
-    List<LayerDefinition> layers,
-  ) {
+  void _showEditThreadDialog(BuildContext context, ThreadDefinition thread) {
     final nameCtl = TextEditingController(text: thread.name);
     final pathCtl = TextEditingController(text: thread.path);
     final promptCtl = TextEditingController(text: thread.contextPrompt ?? '');
-    final selectedLayers = <String>[];
-    final idToName = <int, String>{for (final l in layers) l.id: l.name};
-    for (final id in thread.layerIds) {
-      final name = idToName[id];
-      if (name != null) selectedLayers.add(name);
-    }
 
     _showThreadDialog(
       context: context,
@@ -197,17 +180,10 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
       nameCtl: nameCtl,
       pathCtl: pathCtl,
       promptCtl: promptCtl,
-      selectedLayers: selectedLayers,
       onConfirm: () async {
         if (nameCtl.text.isEmpty || pathCtl.text.isEmpty) return;
-        final nameToId = <String, int>{for (final l in layers) l.name: l.id};
-        final newLayerIds = selectedLayers
-            .map((n) => nameToId[n])
-            .whereType<int>()
-            .toList();
         final updated = thread.copyWith(
           path: pathCtl.text,
-          layerIds: newLayerIds,
           contextPrompt: promptCtl.text.isEmpty ? null : promptCtl.text,
         );
         await ref.read(threadsProvider.notifier).saveThread(updated);
@@ -222,11 +198,8 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     required TextEditingController nameCtl,
     required TextEditingController pathCtl,
     required TextEditingController promptCtl,
-    required List<String> selectedLayers,
     required VoidCallback onConfirm,
   }) {
-    final layersAsync = ref.read(layersProvider);
-
     showDialog<void>(
       context: context,
       builder: (ctx) {
@@ -292,89 +265,6 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
                         fontSize: 12,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Layers',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: layersAsync.when(
-                        data: (layers) {
-                          if (layers.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text(
-                                'No layers available. Create layers first.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            );
-                          }
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: layers.length,
-                            itemBuilder: (_, i) {
-                              final layer = layers[i];
-                              final isSelected = selectedLayers.contains(
-                                layer.name,
-                              );
-                              return CheckboxListTile(
-                                value: isSelected,
-                                title: Text(
-                                  layer.name,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                                subtitle: Text(
-                                  '${layer.inputTypes.join(", ")} → '
-                                  '${layer.outputTypes.join(", ")}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textMuted,
-                                  ),
-                                ),
-                                dense: true,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                onChanged: (checked) {
-                                  setDialogState(() {
-                                    if (checked ?? false) {
-                                      selectedLayers.add(layer.name);
-                                    } else {
-                                      selectedLayers.remove(layer.name);
-                                    }
-                                  });
-                                },
-                              );
-                            },
-                          );
-                        },
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (e, _) => Text('Error: $e'),
-                      ),
-                    ),
-                    if (selectedLayers.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Order: ${selectedLayers.join(" → ")}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -393,27 +283,24 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
   }
 }
 
-class _ThreadCard extends StatelessWidget {
+class _ThreadCard extends ConsumerWidget {
   const _ThreadCard({
     required this.thread,
-    required this.layers,
+    required this.onTap,
     required this.onRun,
     required this.onDelete,
     required this.onEdit,
   });
 
   final ThreadDefinition thread;
-  final List<LayerDefinition> layers;
+  final VoidCallback onTap;
   final VoidCallback onRun;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
 
   @override
-  Widget build(BuildContext context) {
-    final threadLayers = thread.layerIds
-        .map((id) => layers.where((l) => l.id == id).firstOrNull)
-        .whereType<LayerDefinition>()
-        .toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final layersAsync = ref.watch(threadLayersProvider(thread.id));
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -434,72 +321,94 @@ class _ThreadCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        thread.name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.foreground,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          thread.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.foreground,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      StatusBadge(status: thread.statusLabel, fontSize: 10),
-                      if (threadLayers.isNotEmpty) ...[
-                        const SizedBox(width: 4),
-                        StatusBadge(
-                          status:
-                              '${threadLayers.length} layer'
-                              '${threadLayers.length != 1 ? 's' : ''}',
-                          fontSize: 10,
+                        const SizedBox(width: 8),
+                        StatusBadge(status: thread.statusLabel, fontSize: 10),
+                        layersAsync.when(
+                          data: (layers) {
+                            if (layers.isEmpty) return const SizedBox.shrink();
+                            return Row(
+                              children: [
+                                const SizedBox(width: 4),
+                                StatusBadge(
+                                  status:
+                                      '${layers.length} layer'
+                                      '${layers.length != 1 ? 's' : ''}',
+                                  fontSize: 10,
+                                ),
+                              ],
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.folder_outlined,
-                        size: 12,
-                        color: AppColors.textSecondary.withValues(alpha: 0.7),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        thread.path,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                          fontFamily: 'monospace',
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.folder_outlined,
+                          size: 12,
+                          color: AppColors.textSecondary.withValues(alpha: 0.7),
                         ),
-                      ),
-                    ],
-                  ),
-                  if (threadLayers.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 4,
-                      children: threadLayers
-                          .map(
-                            (l) => Chip(
-                              label: Text(
-                                l.name,
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
+                        const SizedBox(width: 4),
+                        Text(
+                          thread.path,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                    layersAsync.when(
+                      data: (layers) {
+                        if (layers.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          children: [
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 4,
+                              children: layers
+                                  .map(
+                                    (l) => Chip(
+                                      label: Text(
+                                        l.name,
+                                        style: const TextStyle(fontSize: 10),
+                                      ),
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  )
+                                  .toList(),
                             ),
-                          )
-                          .toList(),
+                          ],
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
             Row(

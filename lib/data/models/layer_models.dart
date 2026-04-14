@@ -1,6 +1,7 @@
 class LayerDefinition {
   const LayerDefinition({
     required this.id,
+    required this.threadId,
     required this.name,
     required this.inputTypes,
     required this.outputTypes,
@@ -9,6 +10,7 @@ class LayerDefinition {
     this.enabled = true,
   });
   final int id;
+  final int threadId;
   final String name;
   final List<String> inputTypes;
   final List<String> outputTypes;
@@ -18,6 +20,7 @@ class LayerDefinition {
 
   LayerDefinition copyWith({
     int? id,
+    int? threadId,
     String? name,
     List<String>? inputTypes,
     List<String>? outputTypes,
@@ -27,6 +30,7 @@ class LayerDefinition {
   }) {
     return LayerDefinition(
       id: id ?? this.id,
+      threadId: threadId ?? this.threadId,
       name: name ?? this.name,
       inputTypes: inputTypes ?? this.inputTypes,
       outputTypes: outputTypes ?? this.outputTypes,

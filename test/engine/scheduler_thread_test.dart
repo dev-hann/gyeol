@@ -11,16 +11,25 @@ import 'package:gyeol/engine/queue/task_queue.dart';
 import 'package:gyeol/engine/scheduler.dart';
 
 void main() {
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
+    return (await database.getThread('default'))!.id;
+  }
+
   late Scheduler scheduler;
   late TaskQueue queue;
   late LayerRegistry registry;
   late MessageBus bus;
   late AppDatabase db;
   late AppRepository repo;
+  late int _tid;
 
-  setUp(() {
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     repo = AppRepository(db);
+    _tid = await _createThread(db);
     queue = TaskQueue();
     registry = LayerRegistry();
     bus = MessageBus();
@@ -38,20 +47,16 @@ void main() {
 
   group('runThread', () {
     test('returns empty when thread has no layers', () async {
-      const thread = ThreadDefinition(
-        id: 0,
-        name: 'empty',
-        path: '/tmp',
-        layerIds: [],
-      );
+      const thread = ThreadDefinition(id: 0, name: 'empty', path: '/tmp');
       final results = await scheduler.runThread(thread);
       expect(results, isEmpty);
     });
 
     test('executes layers in sequence and returns results', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -59,8 +64,9 @@ void main() {
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L2',
           inputTypes: ['parsed'],
           outputTypes: ['done'],
@@ -107,10 +113,9 @@ void main() {
       );
 
       final thread = ThreadDefinition(
-        id: 0,
+        id: _tid,
         name: 'test_thread',
         path: '/tmp/nonexistent_test_path',
-        layerIds: [l1.id, l2.id],
       );
 
       final results = await scheduler.runThread(thread);
@@ -120,8 +125,9 @@ void main() {
 
     test('skips disabled layers', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -130,8 +136,9 @@ void main() {
         ),
       );
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L2',
           inputTypes: ['raw'],
           outputTypes: ['done'],
@@ -170,10 +177,9 @@ void main() {
       );
 
       final thread = ThreadDefinition(
-        id: 0,
+        id: _tid,
         name: 'skip_test',
         path: '/tmp',
-        layerIds: [l1.id, l2.id],
       );
 
       final results = await scheduler.runThread(thread);
@@ -182,8 +188,9 @@ void main() {
 
     test('logs failure when layer has no workers', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -196,10 +203,9 @@ void main() {
       registry.register(l1);
 
       final thread = ThreadDefinition(
-        id: 0,
+        id: _tid,
         name: 'no_worker_thread',
         path: '/tmp',
-        layerIds: [l1.id],
       );
 
       final results = await scheduler.runThread(thread);
@@ -213,8 +219,9 @@ void main() {
 
     test('includes path context in task payload', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['parsed'],
@@ -250,10 +257,9 @@ void main() {
       );
 
       final thread = ThreadDefinition(
-        id: 0,
+        id: _tid,
         name: 'path_test',
         path: '/custom/workspace',
-        layerIds: [l1.id],
       );
 
       await scheduler.runThread(thread);
@@ -271,8 +277,9 @@ void main() {
 
     test('executes multiple threads sequentially', () async {
       await repo.layers.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'L1',
           inputTypes: ['raw'],
           outputTypes: ['done'],
@@ -308,18 +315,8 @@ void main() {
       );
 
       final threads = [
-        ThreadDefinition(
-          id: 0,
-          name: 'thread1',
-          path: '/path/a',
-          layerIds: [l1.id],
-        ),
-        ThreadDefinition(
-          id: 0,
-          name: 'thread2',
-          path: '/path/b',
-          layerIds: [l1.id],
-        ),
+        ThreadDefinition(id: 0, name: 'thread1', path: '/path/a'),
+        ThreadDefinition(id: 0, name: 'thread2', path: '/path/b'),
       ];
 
       final results = await scheduler.runAllThreads(threads);

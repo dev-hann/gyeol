@@ -6,11 +6,20 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
 
 void main() {
+
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    return (await database.getThread('default'))!.id;
+  }
+
   late AppDatabase db;
   late ProviderContainer container;
 
-  setUp(() {
+  late int _tid;
+
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    _tid = await _createThread(db);
     container = ProviderContainer(
       overrides: [databaseProvider.overrideWithValue(db)],
     );
@@ -50,8 +59,9 @@ void main() {
     test('saveLayer adds layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'parse',
           inputTypes: ['text'],
           outputTypes: ['analysis'],
@@ -68,8 +78,9 @@ void main() {
     test('deleteLayer removes layer and refreshes list', () async {
       final notifier = container.read(layersProvider.notifier);
       await notifier.saveLayer(
-        const LayerDefinition(
+        LayerDefinition(
           id: 0,
+          threadId: _tid,
           name: 'temp',
           inputTypes: [],
           outputTypes: [],
@@ -97,8 +108,9 @@ void main() {
       await container
           .read(layersProvider.notifier)
           .saveLayer(
-            const LayerDefinition(
+            LayerDefinition(
               id: 0,
+              threadId: _tid,
               name: 'parse',
               inputTypes: ['text'],
               outputTypes: ['analysis'],
@@ -127,8 +139,9 @@ void main() {
       await container
           .read(layersProvider.notifier)
           .saveLayer(
-            const LayerDefinition(
+            LayerDefinition(
               id: 0,
+              threadId: _tid,
               name: 'tmp',
               inputTypes: [],
               outputTypes: [],

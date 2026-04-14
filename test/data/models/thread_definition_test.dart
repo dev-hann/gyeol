@@ -8,7 +8,6 @@ void main() {
         id: 1,
         name: 'review',
         path: '/home/user/project',
-        layerIds: [1, 2],
       );
       expect(thread.id, 1);
       expect(thread.enabled, true);
@@ -21,7 +20,6 @@ void main() {
         id: 2,
         name: 'analysis',
         path: '/data/src',
-        layerIds: [1, 2],
         contextPrompt: 'Legal document analysis pipeline',
         enabled: false,
         status: ThreadStatus.completed,
@@ -29,7 +27,6 @@ void main() {
       expect(thread.id, 2);
       expect(thread.name, 'analysis');
       expect(thread.path, '/data/src');
-      expect(thread.layerIds, [1, 2]);
       expect(thread.contextPrompt, 'Legal document analysis pipeline');
       expect(thread.enabled, false);
       expect(thread.status, ThreadStatus.completed);
@@ -40,19 +37,16 @@ void main() {
         id: 3,
         name: 't1',
         path: '/old',
-        layerIds: [1],
         contextPrompt: 'old context',
       );
       final copied = thread.copyWith(
         path: '/new',
-        layerIds: [1, 2],
         status: ThreadStatus.running,
       );
 
       expect(copied.id, 3);
       expect(copied.name, 't1');
       expect(copied.path, '/new');
-      expect(copied.layerIds, [1, 2]);
       expect(copied.enabled, true);
       expect(copied.status, ThreadStatus.running);
       expect(copied.contextPrompt, 'old context');
@@ -63,7 +57,6 @@ void main() {
         id: 4,
         name: 't1',
         path: '/old',
-        layerIds: [1],
         contextPrompt: 'old context',
       );
       final copied = thread.copyWith(contextPrompt: 'new context');
@@ -82,7 +75,6 @@ void main() {
             id: 5,
             name: 't',
             path: '/x',
-            layerIds: [],
             status: entry.key,
           ).statusLabel,
           entry.value,

@@ -12,6 +12,7 @@ class LayerRepository {
     return _db.saveLayer(
       LayersCompanion(
         id: layer.id == 0 ? const Value.absent() : Value(layer.id),
+        threadId: Value(layer.threadId),
         name: Value(layer.name),
         inputTypes: Value(jsonEncode(layer.inputTypes)),
         outputTypes: Value(jsonEncode(layer.outputTypes)),
@@ -24,40 +25,38 @@ class LayerRepository {
 
   Future<List<LayerDefinition>> listLayers() async {
     final rows = await _db.listLayers();
-    return rows
-        .map(
-          (r) => LayerDefinition(
-            id: r.id,
-            name: r.name,
-            inputTypes: _decodeStringList(r.inputTypes),
-            outputTypes: _decodeStringList(r.outputTypes),
-            layerPrompt: r.layerPrompt,
-            order: r.sortOrder,
-            enabled: r.enabled,
-          ),
-        )
-        .toList();
+    return rows.map(_fromRow).toList();
+  }
+
+  Future<List<LayerDefinition>> listLayersByThread(int threadId) async {
+    final rows = await _db.listLayersByThread(threadId);
+    return rows.map(_fromRow).toList();
   }
 
   Stream<List<LayerDefinition>> watchLayers() {
-    return _db.watchLayers().map(
-      (rows) => rows
-          .map(
-            (r) => LayerDefinition(
-              id: r.id,
-              name: r.name,
-              inputTypes: _decodeStringList(r.inputTypes),
-              outputTypes: _decodeStringList(r.outputTypes),
-              layerPrompt: r.layerPrompt,
-              order: r.sortOrder,
-              enabled: r.enabled,
-            ),
-          )
-          .toList(),
-    );
+    return _db.watchLayers().map((rows) => rows.map(_fromRow).toList());
+  }
+
+  Stream<List<LayerDefinition>> watchLayersByThread(int threadId) {
+    return _db
+        .watchLayersByThread(threadId)
+        .map((rows) => rows.map(_fromRow).toList());
   }
 
   Future<void> deleteLayer(int id) => _db.deleteLayer(id);
+
+  LayerDefinition _fromRow(Layer r) {
+    return LayerDefinition(
+      id: r.id,
+      threadId: r.threadId,
+      name: r.name,
+      inputTypes: _decodeStringList(r.inputTypes),
+      outputTypes: _decodeStringList(r.outputTypes),
+      layerPrompt: r.layerPrompt,
+      order: r.sortOrder,
+      enabled: r.enabled,
+    );
+  }
 
   List<String> _decodeStringList(String json) {
     try {

@@ -11,6 +11,7 @@ NodeFlowController<LayerGraphData, void> createTestController() {
     [
       const LayerDefinition(
         id: 1,
+        threadId: 1,
         name: 'TestLayer',
         inputTypes: ['text'],
         outputTypes: ['json'],
@@ -81,6 +82,7 @@ void main() {
         [
           const LayerDefinition(
             id: 1,
+            threadId: 1,
             name: 'DisabledLayer',
             inputTypes: [],
             outputTypes: [],

@@ -68,6 +68,11 @@ class ToolRegistry {
         'error': 'create_layer: "name" must be a non-null String',
       });
     }
+    if (args['threadName'] is! String) {
+      return jsonEncode({
+        'error': 'create_layer: "threadName" must be a non-null String',
+      });
+    }
     if (args['inputTypes'] is! List) {
       return jsonEncode({'error': 'create_layer: "inputTypes" must be a List'});
     }
@@ -77,6 +82,7 @@ class ToolRegistry {
       });
     }
     final name = args['name'] as String;
+    final threadName = args['threadName'] as String;
     final inputTypes = (args['inputTypes'] as List)
         .map((e) => e as String)
         .toList();
@@ -84,8 +90,14 @@ class ToolRegistry {
         .map((e) => e as String)
         .toList();
 
+    final thread = await repo.threads.getThread(threadName);
+    if (thread == null) {
+      return jsonEncode({'error': 'Thread "$threadName" not found'});
+    }
+
     final layer = LayerDefinition(
       id: 0,
+      threadId: thread.id,
       name: name,
       inputTypes: inputTypes,
       outputTypes: outputTypes,
@@ -304,20 +316,18 @@ class ToolRegistry {
 
   static Future<String> _listThreads(AppRepository repo) async {
     final threads = await repo.threads.listThreads();
-    final layers = await repo.layers.listLayers();
-    final idToName = <int, String>{for (final l in layers) l.id: l.name};
-    final result = threads
-        .map(
-          (t) => {
-            'name': t.name,
-            'path': t.path,
-            'layerNames': t.layerIds.map((id) => idToName[id] ?? '').toList(),
-            'contextPrompt': t.contextPrompt,
-            'status': t.status.name,
-            'enabled': t.enabled,
-          },
-        )
-        .toList();
+    final result = <Map<String, dynamic>>[];
+    for (final t in threads) {
+      final threadLayers = await repo.layers.listLayersByThread(t.id);
+      result.add({
+        'name': t.name,
+        'path': t.path,
+        'layerNames': threadLayers.map((l) => l.name).toList(),
+        'contextPrompt': t.contextPrompt,
+        'status': t.status.name,
+        'enabled': t.enabled,
+      });
+    }
     return jsonEncode({'threads': result});
   }
 
@@ -353,14 +363,22 @@ class ToolRegistry {
         .whereType<int>()
         .toList();
 
-    final thread = ThreadDefinition(
-      id: 0,
-      name: name,
-      path: path,
-      layerIds: layerIds,
-    );
+    final thread = ThreadDefinition(id: 0, name: name, path: path);
 
     await repo.threads.saveThread(thread);
+
+    if (layerIds.isNotEmpty) {
+      final saved = await repo.threads.getThread(name);
+      if (saved != null) {
+        final allLayers = await repo.layers.listLayers();
+        for (final layerId in layerIds) {
+          final layer = allLayers.where((l) => l.id == layerId).firstOrNull;
+          if (layer != null) {
+            await repo.layers.saveLayer(layer.copyWith(threadId: saved.id));
+          }
+        }
+      }
+    }
     return jsonEncode({'success': true, 'message': 'Thread "$name" created'});
   }
 
@@ -379,13 +397,12 @@ class ToolRegistry {
       return jsonEncode({'error': 'Thread "$name" not found'});
     }
 
-    final layers = await repo.layers.listLayers();
-    final idToName = <int, String>{for (final l in layers) l.id: l.name};
+    final threadLayers = await repo.layers.listLayersByThread(thread.id);
 
     return jsonEncode({
       'status': 'queued',
       'thread': thread.name,
-      'layerNames': thread.layerIds.map((id) => idToName[id] ?? '').toList(),
+      'layerNames': threadLayers.map((l) => l.name).toList(),
     });
   }
 
@@ -419,12 +436,27 @@ class ToolRegistry {
 
     final updated = existing.copyWith(
       path: args['path'] as String?,
-      layerIds: newLayerIds,
       contextPrompt: args['contextPrompt'] as String?,
       enabled: args['enabled'] as bool?,
     );
 
     await repo.threads.saveThread(updated);
+
+    if (newLayerIds != null) {
+      final allLayers = await repo.layers.listLayers();
+      final currentLayers = await repo.layers.listLayersByThread(existing.id);
+      for (final layer in currentLayers) {
+        if (!newLayerIds.contains(layer.id)) {
+          await repo.layers.deleteLayer(layer.id);
+        }
+      }
+      for (final layerId in newLayerIds) {
+        final layer = allLayers.where((l) => l.id == layerId).firstOrNull;
+        if (layer != null && layer.threadId != existing.id) {
+          await repo.layers.saveLayer(layer.copyWith(threadId: existing.id));
+        }
+      }
+    }
     return jsonEncode({'success': true, 'message': 'Thread "$name" updated'});
   }
 
@@ -654,12 +686,11 @@ class ToolRegistry {
       if (thread == null) {
         return jsonEncode({'error': 'Thread "$name" not found'});
       }
-      final layers = await repo.layers.listLayers();
-      final idToName = <int, String>{for (final l in layers) l.id: l.name};
+      final threadLayers = await repo.layers.listLayersByThread(thread.id);
       return jsonEncode({
         'thread': thread.name,
         'status': thread.status.name,
-        'layerNames': thread.layerIds.map((id) => idToName[id] ?? '').toList(),
+        'layerNames': threadLayers.map((l) => l.name).toList(),
       });
     }
 
@@ -685,6 +716,10 @@ class ToolRegistry {
             'type': 'string',
             'description': 'Unique name for the layer',
           },
+          'threadName': {
+            'type': 'string',
+            'description': 'Name of the thread this layer belongs to',
+          },
           'inputTypes': {
             'type': 'array',
             'items': {'type': 'string'},
@@ -696,7 +731,7 @@ class ToolRegistry {
             'description': 'List of output data types this layer produces',
           },
         },
-        'required': ['name', 'inputTypes', 'outputTypes'],
+        'required': ['name', 'threadName', 'inputTypes', 'outputTypes'],
       },
     ),
     const ToolDefinition(

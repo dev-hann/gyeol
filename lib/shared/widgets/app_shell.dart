@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gyeol/core/theme/app_theme.dart';
 import 'package:gyeol/features/chat/chat_panel.dart';
 import 'package:gyeol/features/dashboard/pages/dashboard_page.dart';
-import 'package:gyeol/features/layers/pages/layers_page.dart';
 import 'package:gyeol/features/monitoring/pages/monitoring_page.dart';
 import 'package:gyeol/features/settings/pages/settings_page.dart';
 import 'package:gyeol/features/threads/pages/threads_page.dart';
@@ -21,7 +20,6 @@ class _AppShellState extends State<AppShell> {
     const DashboardPage(),
     const MonitoringPage(),
     const ThreadsPage(),
-    const LayersPage(),
     const ChatPanel(),
     const SettingsPage(),
   ];
@@ -30,7 +28,6 @@ class _AppShellState extends State<AppShell> {
     const _NavItem(Icons.dashboard_outlined, 'Dashboard'),
     const _NavItem(Icons.show_chart, 'Monitoring'),
     const _NavItem(Icons.account_tree_outlined, 'Threads'),
-    const _NavItem(Icons.layers_outlined, 'Layers'),
     const _NavItem(Icons.chat_outlined, 'Chat'),
     const _NavItem(Icons.settings_outlined, 'Settings'),
   ];

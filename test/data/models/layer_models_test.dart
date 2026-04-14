@@ -6,6 +6,7 @@ void main() {
     test('constructor sets all fields', () {
       const layer = LayerDefinition(
         id: 1,
+        threadId: 1,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -25,6 +26,7 @@ void main() {
     test('constructor defaults optional fields', () {
       const layer = LayerDefinition(
         id: 2,
+        threadId: 1,
         name: 'eval',
         inputTypes: [],
         outputTypes: [],
@@ -38,6 +40,7 @@ void main() {
     test('is a const-constructible class', () {
       const layer = LayerDefinition(
         id: 3,
+        threadId: 1,
         name: 'x',
         inputTypes: ['a'],
         outputTypes: ['b'],
@@ -49,6 +52,7 @@ void main() {
     test('copyWith overrides specified fields', () {
       const original = LayerDefinition(
         id: 4,
+        threadId: 1,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -76,6 +80,7 @@ void main() {
     test('copyWith preserves fields when not specified', () {
       const original = LayerDefinition(
         id: 5,
+        threadId: 1,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -98,6 +103,7 @@ void main() {
     test('copyWith layerPrompt keeps original when not specified', () {
       const original = LayerDefinition(
         id: 6,
+        threadId: 1,
         name: 'parse',
         inputTypes: ['raw'],
         outputTypes: ['structured'],
@@ -114,6 +120,7 @@ void main() {
     test('inputTypes and outputTypes are independent lists', () {
       const layer = LayerDefinition(
         id: 7,
+        threadId: 1,
         name: 'test',
         inputTypes: ['a', 'b'],
         outputTypes: ['c', 'd', 'e'],
@@ -130,12 +137,14 @@ void main() {
       () {
         const a = LayerDefinition(
           id: 8,
+          threadId: 1,
           name: 'parse',
           inputTypes: ['raw'],
           outputTypes: ['structured'],
         );
         const b = LayerDefinition(
           id: 8,
+          threadId: 1,
           name: 'parse',
           inputTypes: ['raw'],
           outputTypes: ['structured'],
@@ -148,6 +157,7 @@ void main() {
     test('order can be negative', () {
       const layer = LayerDefinition(
         id: 9,
+        threadId: 1,
         name: 'pre',
         inputTypes: [],
         outputTypes: [],
@@ -160,6 +170,7 @@ void main() {
     test('enabled can be false', () {
       const layer = LayerDefinition(
         id: 10,
+        threadId: 1,
         name: 'disabled',
         inputTypes: [],
         outputTypes: [],

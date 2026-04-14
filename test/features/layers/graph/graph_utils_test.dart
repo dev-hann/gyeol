@@ -59,12 +59,14 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+          threadId: 1,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
         ),
         const LayerDefinition(
           id: 2,
+          threadId: 1,
           name: 'L2',
           inputTypes: ['json'],
           outputTypes: ['result'],
@@ -79,6 +81,7 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 42,
+          threadId: 1,
           name: 'Alpha',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -92,6 +95,7 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+threadId: 1,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -108,12 +112,14 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+threadId: 1,
           name: 'L0',
           inputTypes: ['text'],
           outputTypes: ['json'],
         ),
         const LayerDefinition(
           id: 2,
+threadId: 1,
           name: 'L1',
           inputTypes: ['json'],
           outputTypes: ['result'],
@@ -134,6 +140,7 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+threadId: 1,
           name: 'L1',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -171,6 +178,7 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+threadId: 1,
           name: 'L1',
           inputTypes: ['a', 'b'],
           outputTypes: ['c'],
@@ -247,6 +255,7 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+threadId: 1,
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
@@ -262,12 +271,14 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+threadId: 1,
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],
         ),
         const LayerDefinition(
           id: 2,
+threadId: 1,
           name: 'B',
           inputTypes: ['json'],
           outputTypes: ['result'],
@@ -285,6 +296,7 @@ void main() {
       final layers = [
         const LayerDefinition(
           id: 1,
+threadId: 1,
           name: 'A',
           inputTypes: ['text'],
           outputTypes: ['json'],

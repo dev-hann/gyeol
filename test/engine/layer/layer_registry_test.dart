@@ -19,6 +19,7 @@ void main() {
     }) {
       return LayerDefinition(
         id: 0,
+        threadId: 1,
         name: name,
         inputTypes: inputTypes,
         outputTypes: outputTypes,

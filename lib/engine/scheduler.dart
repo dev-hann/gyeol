@@ -125,24 +125,17 @@ class Scheduler {
   }
 
   Future<List<WorkerResult>> runThread(ThreadDefinition thread) async {
-    if (thread.layerIds.isEmpty) return [];
+    final threadLayers = await _repo.layers.listLayersByThread(thread.id);
+    if (threadLayers.isEmpty) return [];
 
     final allResults = <WorkerResult>[];
     final files = await collectFilesFromPath(thread.path);
 
     var currentType = 'raw';
 
-    final allLayers = await _repo.layers.listLayers();
-    final layerById = <int, LayerDefinition>{
-      for (final l in allLayers) l.id: l,
-    };
-
-    for (final layerId in thread.layerIds) {
-      final layer = layerById[layerId];
-      if (layer == null) continue;
-
+    for (final layer in threadLayers) {
       final matchingLayers = _layerRegistry.findByInputType(currentType);
-      if (!matchingLayers.any((l) => l.id == layerId)) continue;
+      if (!matchingLayers.any((l) => l.id == layer.id)) continue;
       if (!layer.enabled) continue;
 
       final payload = <String, dynamic>{

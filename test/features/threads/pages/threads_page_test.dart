@@ -7,57 +7,57 @@ import 'package:gyeol/features/threads/pages/threads_page.dart';
 
 void main() {
   final fakeThreads = [
-    const ThreadDefinition(
-      id: 1,
-      name: 'review',
-      path: '/home/user/project',
-      layerIds: [1, 2],
-    ),
+    const ThreadDefinition(id: 1, name: 'review', path: '/home/user/project'),
     const ThreadDefinition(
       id: 2,
       name: 'analysis',
       path: '/data/src',
-      layerIds: [],
       enabled: false,
       status: ThreadStatus.completed,
     ),
   ];
 
-  final fakeLayers = [
-    const LayerDefinition(
-      id: 1,
-      name: 'L1',
-      inputTypes: ['txt'],
-      outputTypes: ['json'],
-    ),
-    const LayerDefinition(
-      id: 2,
-      name: 'L2',
-      inputTypes: ['json'],
-      outputTypes: ['md'],
-    ),
-  ];
+  final fakeLayersByThread = <int, List<LayerDefinition>>{
+    1: [
+      const LayerDefinition(
+        id: 1,
+        threadId: 1,
+        name: 'L1',
+        inputTypes: ['txt'],
+        outputTypes: ['json'],
+      ),
+      const LayerDefinition(
+        id: 2,
+        threadId: 1,
+        name: 'L2',
+        inputTypes: ['json'],
+        outputTypes: ['md'],
+      ),
+    ],
+    2: <LayerDefinition>[],
+  };
 
   Future<void> pumpThreadsPage(
     WidgetTester tester, {
     List<ThreadDefinition>? threads,
-    List<LayerDefinition>? layers,
     bool threadsError = false,
   }) async {
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1.0;
+    final effectiveThreads = threads ?? fakeThreads;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           threadsProvider.overrideWith(
             () => _FakeThreadsNotifier(
-              threads: threads ?? fakeThreads,
+              threads: effectiveThreads,
               throwError: threadsError,
             ),
           ),
-          layersProvider.overrideWith(
-            () => _FakeLayersNotifier(layers ?? fakeLayers),
-          ),
+          for (final entry in fakeLayersByThread.entries)
+            threadLayersProvider(
+              entry.key,
+            ).overrideWith((ref) => Stream.value(entry.value)),
         ],
         child: const MaterialApp(home: ThreadsPage()),
       ),
@@ -168,12 +168,4 @@ class _FakeThreadsNotifier extends ThreadsNotifier {
   Future<void> deleteThread(int id) async {
     state = AsyncData(threads.where((t) => t.id != id).toList());
   }
-}
-
-class _FakeLayersNotifier extends LayersNotifier {
-  _FakeLayersNotifier(this.layers);
-  final List<LayerDefinition> layers;
-
-  @override
-  Future<List<LayerDefinition>> build() async => layers;
 }

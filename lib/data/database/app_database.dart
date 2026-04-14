@@ -25,7 +25,10 @@ class Tasks extends Table {
 
 class Layers extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text().customConstraint('UNIQUE NOT NULL')();
+  IntColumn get threadId => integer().customConstraint(
+    'NOT NULL REFERENCES threads(id) ON DELETE CASCADE',
+  )();
+  TextColumn get name => text()();
   TextColumn get inputTypes => text()();
   TextColumn get outputTypes => text()();
   TextColumn get layerPrompt => text().nullable()();
@@ -33,6 +36,11 @@ class Layers extends Table {
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
   IntColumn get createdAt => integer().withDefault(const Constant(0))();
   IntColumn get updatedAt => integer().withDefault(const Constant(0))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {name, threadId},
+  ];
 }
 
 class Workers extends Table {
@@ -67,20 +75,6 @@ class Threads extends Table {
   TextColumn get status => text().withDefault(const Constant('idle'))();
   IntColumn get createdAt => integer().withDefault(const Constant(0))();
   IntColumn get updatedAt => integer().withDefault(const Constant(0))();
-}
-
-@DataClassName('ThreadLayer')
-class ThreadLayers extends Table {
-  IntColumn get threadId => integer().customConstraint(
-    'NOT NULL REFERENCES threads(id) ON DELETE CASCADE',
-  )();
-  IntColumn get layerId => integer().customConstraint(
-    'NOT NULL REFERENCES layers(id) ON DELETE CASCADE',
-  )();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-
-  @override
-  Set<Column> get primaryKey => {threadId, layerId};
 }
 
 class LayerConnections extends Table {

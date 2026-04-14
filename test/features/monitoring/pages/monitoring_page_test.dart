@@ -9,6 +9,7 @@ import 'package:gyeol/features/monitoring/pages/monitoring_page.dart';
 List<LayerDefinition> fakeLayers() => [
   const LayerDefinition(
     id: 1,
+    threadId: 1,
     name: 'Draft',
     inputTypes: ['text'],
     outputTypes: ['draft'],

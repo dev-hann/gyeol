@@ -4,12 +4,19 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/layer_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
-void main() {
+void main() {  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    return (await database.getThread('default'))!.id;
+  }
+
   late AppDatabase db;
   late AppRepository repo;
 
-  setUp(() {
+  late int _tid;
+
+  setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    _tid = await _createThread(db);
     repo = AppRepository(db);
   });
 
@@ -19,8 +26,9 @@ void main() {
 
   group('LayerRepository saveLayer + listLayers', () {
     test('round-trips a layer with required fields only', () async {
-      const layer = LayerDefinition(
+      final layer = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'parse',
         inputTypes: ['text'],
         outputTypes: ['structured'],
@@ -38,8 +46,9 @@ void main() {
     });
 
     test('round-trips a layer with all optional fields', () async {
-      const layer = LayerDefinition(
+      final layer = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'analyze',
         inputTypes: ['structured'],
         outputTypes: ['analysis'],
@@ -61,22 +70,25 @@ void main() {
     });
 
     test('returns layers ordered by sortOrder ascending', () async {
-      const third = LayerDefinition(
+      final third = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'c',
         inputTypes: [],
         outputTypes: [],
         order: 30,
       );
-      const first = LayerDefinition(
+      final first = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'a',
         inputTypes: [],
         outputTypes: [],
         order: 10,
       );
-      const second = LayerDefinition(
+      final second = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'b',
         inputTypes: [],
         outputTypes: [],
@@ -98,8 +110,9 @@ void main() {
 
   group('LayerRepository upsert', () {
     test('replaces existing layer with same name', () async {
-      const original = LayerDefinition(
+      final original = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'layer-x',
         inputTypes: ['raw'],
         outputTypes: ['parsed'],
@@ -112,6 +125,7 @@ void main() {
 
       final updated = LayerDefinition(
         id: savedId,
+        threadId: _tid,
         name: 'layer-x',
         inputTypes: ['raw', 'semi'],
         outputTypes: ['parsed', 'enriched'],
@@ -133,8 +147,9 @@ void main() {
 
   group('LayerRepository deleteLayer', () {
     test('removes a saved layer', () async {
-      const layer = LayerDefinition(
+      final layer = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'to_delete',
         inputTypes: [],
         outputTypes: [],
@@ -162,8 +177,9 @@ void main() {
       final firstEmission = await stream.first;
       expect(firstEmission, isEmpty);
 
-      const layer = LayerDefinition(
+      final layer = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'watched',
         inputTypes: ['text'],
         outputTypes: ['tokens'],
@@ -178,22 +194,25 @@ void main() {
 
   group('LayerRepository multiple layers', () {
     test('saves and lists multiple layers', () async {
-      const l1 = LayerDefinition(
+      final l1 = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'parse',
         inputTypes: ['text'],
         outputTypes: ['structured'],
         order: 1,
       );
-      const l2 = LayerDefinition(
+      final l2 = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'analyze',
         inputTypes: ['structured'],
         outputTypes: ['analysis'],
         order: 2,
       );
-      const l3 = LayerDefinition(
+      final l3 = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'generate',
         inputTypes: ['analysis'],
         outputTypes: ['text'],
@@ -209,14 +228,16 @@ void main() {
     });
 
     test('delete one layer preserves others', () async {
-      const keep = LayerDefinition(
+      final keep = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'keep',
         inputTypes: [],
         outputTypes: [],
       );
-      const remove = LayerDefinition(
+      final remove = LayerDefinition(
         id: 0,
+threadId: _tid,
         name: 'remove',
         inputTypes: [],
         outputTypes: [],
@@ -237,6 +258,7 @@ void main() {
     test('returns empty inputTypes when stored JSON is malformed', () async {
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _tid,
           name: 'bad-input',
           inputTypes: 'not-valid-json{{{',
           outputTypes: '["ok"]',
@@ -253,6 +275,7 @@ void main() {
     test('returns empty outputTypes when stored JSON is malformed', () async {
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _tid,
           name: 'bad-output',
           inputTypes: '["text"]',
           outputTypes: '{"broken":true}',
@@ -268,6 +291,7 @@ void main() {
     test('returns empty list when stored value is not a JSON array', () async {
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _tid,
           name: 'not-array',
           inputTypes: '"a_string"',
           outputTypes: '42',
@@ -283,6 +307,7 @@ void main() {
     test('filters non-string elements from stored list', () async {
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _tid,
           name: 'mixed-types',
           inputTypes: '["text", 42, true, "json"]',
           outputTypes: '[null, "analysis"]',
@@ -298,6 +323,7 @@ void main() {
     test('handles both fields corrupted gracefully', () async {
       await db.saveLayer(
         LayersCompanion.insert(
+          threadId: _tid,
           name: 'both-bad',
           inputTypes: 'broken',
           outputTypes: '{invalid',
