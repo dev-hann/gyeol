@@ -19,6 +19,9 @@ class Tasks extends Table {
   IntColumn get workerId => integer().nullable().customConstraint(
     'REFERENCES workers(id) ON DELETE SET NULL',
   )();
+  IntColumn get threadId => integer().nullable().customConstraint(
+    'REFERENCES threads(id) ON DELETE SET NULL',
+  )();
   IntColumn get createdAt => integer().withDefault(const Constant(0))();
   IntColumn get updatedAt => integer().withDefault(const Constant(0))();
 }

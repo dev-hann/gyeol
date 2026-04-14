@@ -256,7 +256,7 @@ void main() {
   group('MonitoringPage filter tabs', () {
     testWidgets('shows All filter tab', (tester) async {
       await pumpMonitoringPage(tester);
-      expect(find.text('All'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'All'), findsNWidgets(2));
     });
 
     testWidgets('shows Success filter tab', (tester) async {
@@ -306,7 +306,8 @@ void main() {
       await tester.tap(find.text('Failed'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      await tester.tap(find.text('All'));
+      final allChips = find.widgetWithText(ChoiceChip, 'All');
+      await tester.tap(allChips.last);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('writer-1'), findsAtLeast(1));

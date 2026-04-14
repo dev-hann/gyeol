@@ -22,6 +22,7 @@ class MonitoringPage extends ConsumerStatefulWidget {
 class _MonitoringPageState extends ConsumerState<MonitoringPage> {
   LogFilter _logFilter = LogFilter.all;
   int? _expandedTaskId;
+  int? _selectedThreadId;
   Timer? _refreshTimer;
 
   @override
@@ -57,9 +58,13 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tasksAsync = ref.watch(tasksProvider);
+    final threadsAsync = ref.watch(threadsProvider);
     final layersAsync = ref.watch(layersProvider);
+    final tasksAsync = _selectedThreadId != null
+        ? ref.watch(threadTasksProvider(_selectedThreadId!))
+        : ref.watch(tasksProvider);
     final logsAsync = ref.watch(logsProvider);
+    final filteredTasks = tasksAsync.valueOrNull ?? [];
 
     return Scaffold(
       body: Padding(
@@ -72,14 +77,24 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
               title: 'Real-time Monitoring',
               description: 'Live view of task execution and worker activity',
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            _buildThreadFilter(threadsAsync),
+            const SizedBox(height: 16),
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _buildActiveTasks(tasksAsync, layersAsync)),
+                  Expanded(
+                    child: _buildActiveTasks(
+                      tasksAsync,
+                      layersAsync,
+                      threadsAsync,
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: _buildExecutionLogs(logsAsync)),
+                  Expanded(
+                    child: _buildExecutionLogs(logsAsync, filteredTasks),
+                  ),
                 ],
               ),
             ),
@@ -89,9 +104,75 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
     );
   }
 
+  Widget _buildThreadFilter(AsyncValue<List<ThreadDefinition>> threadsAsync) {
+    final threads = threadsAsync.valueOrNull ?? [];
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: ChoiceChip(
+              label: const Text('All'),
+              selected: _selectedThreadId == null,
+              onSelected: (_) {
+                setState(() {
+                  _selectedThreadId = null;
+                });
+              },
+              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+              backgroundColor: AppColors.tertiary,
+              labelStyle: TextStyle(
+                fontSize: 11,
+                color: _selectedThreadId == null
+                    ? AppColors.primaryBright
+                    : AppColors.textSecondary,
+              ),
+              side: BorderSide(
+                color: _selectedThreadId == null
+                    ? AppColors.primary
+                    : AppColors.border,
+              ),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          ...threads.map((thread) {
+            final selected = _selectedThreadId == thread.id;
+            return Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: ChoiceChip(
+                label: Text(thread.name),
+                selected: selected,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedThreadId = selected ? null : thread.id;
+                  });
+                },
+                selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                backgroundColor: AppColors.tertiary,
+                labelStyle: TextStyle(
+                  fontSize: 11,
+                  color: selected
+                      ? AppColors.primaryBright
+                      : AppColors.textSecondary,
+                ),
+                side: BorderSide(
+                  color: selected ? AppColors.primary : AppColors.border,
+                ),
+                visualDensity: VisualDensity.compact,
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActiveTasks(
     AsyncValue<List<AppTask>> async,
     AsyncValue<List<LayerDefinition>> layersAsync,
+    AsyncValue<List<ThreadDefinition>> threadsAsync,
   ) {
     final layers = layersAsync.valueOrNull ?? [];
     final workersAsync = ref.watch(workersProvider);
@@ -311,7 +392,10 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
     );
   }
 
-  Widget _buildExecutionLogs(AsyncValue<List<ExecutionLog>> async) {
+  Widget _buildExecutionLogs(
+    AsyncValue<List<ExecutionLog>> async,
+    List<AppTask> filteredTasks,
+  ) {
     final workersAsync = ref.watch(workersProvider);
     final workers = workersAsync.valueOrNull ?? [];
     String workerName(int? id) => id != null

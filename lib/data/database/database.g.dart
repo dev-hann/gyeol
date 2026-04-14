@@ -1855,6 +1855,18 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     requiredDuringInsert: false,
     $customConstraints: 'REFERENCES workers(id) ON DELETE SET NULL',
   );
+  static const VerificationMeta _threadIdMeta = const VerificationMeta(
+    'threadId',
+  );
+  @override
+  late final GeneratedColumn<int> threadId = GeneratedColumn<int>(
+    'thread_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'REFERENCES threads(id) ON DELETE SET NULL',
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1893,6 +1905,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     parentTaskId,
     layerId,
     workerId,
+    threadId,
     createdAt,
     updatedAt,
   ];
@@ -1990,6 +2003,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         workerId.isAcceptableOrUnknown(data['worker_id']!, _workerIdMeta),
       );
     }
+    if (data.containsKey('thread_id')) {
+      context.handle(
+        _threadIdMeta,
+        threadId.isAcceptableOrUnknown(data['thread_id']!, _threadIdMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2059,6 +2078,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.int,
         data['${effectivePrefix}worker_id'],
       ),
+      threadId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}thread_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -2089,6 +2112,7 @@ class Task extends DataClass implements Insertable<Task> {
   final int? parentTaskId;
   final int? layerId;
   final int? workerId;
+  final int? threadId;
   final int createdAt;
   final int updatedAt;
   const Task({
@@ -2104,6 +2128,7 @@ class Task extends DataClass implements Insertable<Task> {
     this.parentTaskId,
     this.layerId,
     this.workerId,
+    this.threadId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2127,6 +2152,9 @@ class Task extends DataClass implements Insertable<Task> {
     }
     if (!nullToAbsent || workerId != null) {
       map['worker_id'] = Variable<int>(workerId);
+    }
+    if (!nullToAbsent || threadId != null) {
+      map['thread_id'] = Variable<int>(threadId);
     }
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
@@ -2153,6 +2181,9 @@ class Task extends DataClass implements Insertable<Task> {
       workerId: workerId == null && nullToAbsent
           ? const Value.absent()
           : Value(workerId),
+      threadId: threadId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(threadId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2176,6 +2207,7 @@ class Task extends DataClass implements Insertable<Task> {
       parentTaskId: serializer.fromJson<int?>(json['parentTaskId']),
       layerId: serializer.fromJson<int?>(json['layerId']),
       workerId: serializer.fromJson<int?>(json['workerId']),
+      threadId: serializer.fromJson<int?>(json['threadId']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
@@ -2196,6 +2228,7 @@ class Task extends DataClass implements Insertable<Task> {
       'parentTaskId': serializer.toJson<int?>(parentTaskId),
       'layerId': serializer.toJson<int?>(layerId),
       'workerId': serializer.toJson<int?>(workerId),
+      'threadId': serializer.toJson<int?>(threadId),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
@@ -2214,6 +2247,7 @@ class Task extends DataClass implements Insertable<Task> {
     Value<int?> parentTaskId = const Value.absent(),
     Value<int?> layerId = const Value.absent(),
     Value<int?> workerId = const Value.absent(),
+    Value<int?> threadId = const Value.absent(),
     int? createdAt,
     int? updatedAt,
   }) => Task(
@@ -2229,6 +2263,7 @@ class Task extends DataClass implements Insertable<Task> {
     parentTaskId: parentTaskId.present ? parentTaskId.value : this.parentTaskId,
     layerId: layerId.present ? layerId.value : this.layerId,
     workerId: workerId.present ? workerId.value : this.workerId,
+    threadId: threadId.present ? threadId.value : this.threadId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -2252,6 +2287,7 @@ class Task extends DataClass implements Insertable<Task> {
           : this.parentTaskId,
       layerId: data.layerId.present ? data.layerId.value : this.layerId,
       workerId: data.workerId.present ? data.workerId.value : this.workerId,
+      threadId: data.threadId.present ? data.threadId.value : this.threadId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2272,6 +2308,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('parentTaskId: $parentTaskId, ')
           ..write('layerId: $layerId, ')
           ..write('workerId: $workerId, ')
+          ..write('threadId: $threadId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2292,6 +2329,7 @@ class Task extends DataClass implements Insertable<Task> {
     parentTaskId,
     layerId,
     workerId,
+    threadId,
     createdAt,
     updatedAt,
   );
@@ -2311,6 +2349,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.parentTaskId == this.parentTaskId &&
           other.layerId == this.layerId &&
           other.workerId == this.workerId &&
+          other.threadId == this.threadId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2328,6 +2367,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<int?> parentTaskId;
   final Value<int?> layerId;
   final Value<int?> workerId;
+  final Value<int?> threadId;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   const TasksCompanion({
@@ -2343,6 +2383,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.parentTaskId = const Value.absent(),
     this.layerId = const Value.absent(),
     this.workerId = const Value.absent(),
+    this.threadId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -2359,6 +2400,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.parentTaskId = const Value.absent(),
     this.layerId = const Value.absent(),
     this.workerId = const Value.absent(),
+    this.threadId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : uuid = Value(uuid),
@@ -2379,6 +2421,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<int>? parentTaskId,
     Expression<int>? layerId,
     Expression<int>? workerId,
+    Expression<int>? threadId,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
   }) {
@@ -2395,6 +2438,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (parentTaskId != null) 'parent_task_id': parentTaskId,
       if (layerId != null) 'layer_id': layerId,
       if (workerId != null) 'worker_id': workerId,
+      if (threadId != null) 'thread_id': threadId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -2413,6 +2457,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<int?>? parentTaskId,
     Value<int?>? layerId,
     Value<int?>? workerId,
+    Value<int?>? threadId,
     Value<int>? createdAt,
     Value<int>? updatedAt,
   }) {
@@ -2429,6 +2474,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       parentTaskId: parentTaskId ?? this.parentTaskId,
       layerId: layerId ?? this.layerId,
       workerId: workerId ?? this.workerId,
+      threadId: threadId ?? this.threadId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -2473,6 +2519,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (workerId.present) {
       map['worker_id'] = Variable<int>(workerId.value);
     }
+    if (threadId.present) {
+      map['thread_id'] = Variable<int>(threadId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -2497,6 +2546,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('parentTaskId: $parentTaskId, ')
           ..write('layerId: $layerId, ')
           ..write('workerId: $workerId, ')
+          ..write('threadId: $threadId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -4424,6 +4474,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
+        'threads',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('tasks', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
         'tasks',
         limitUpdateKind: UpdateKind.delete,
       ),
@@ -4498,6 +4555,25 @@ final class $$ThreadsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$TasksTable, List<Task>> _tasksRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.tasks,
+    aliasName: $_aliasNameGenerator(db.threads.id, db.tasks.threadId),
+  );
+
+  $$TasksTableProcessedTableManager get tasksRefs {
+    final manager = $$TasksTableTableManager(
+      $_db,
+      $_db.tasks,
+    ).filter((f) => f.threadId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_tasksRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ThreadsTableFilterComposer
@@ -4565,6 +4641,31 @@ class $$ThreadsTableFilterComposer
           }) => $$LayersTableFilterComposer(
             $db: $db,
             $table: $db.layers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> tasksRefs(
+    Expression<bool> Function($$TasksTableFilterComposer f) f,
+  ) {
+    final $$TasksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.threadId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TasksTableFilterComposer(
+            $db: $db,
+            $table: $db.tasks,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4684,6 +4785,31 @@ class $$ThreadsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> tasksRefs<T extends Object>(
+    Expression<T> Function($$TasksTableAnnotationComposer a) f,
+  ) {
+    final $$TasksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.threadId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TasksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ThreadsTableTableManager
@@ -4699,7 +4825,7 @@ class $$ThreadsTableTableManager
           $$ThreadsTableUpdateCompanionBuilder,
           (Thread, $$ThreadsTableReferences),
           Thread,
-          PrefetchHooks Function({bool layersRefs})
+          PrefetchHooks Function({bool layersRefs, bool tasksRefs})
         > {
   $$ThreadsTableTableManager(_$AppDatabase db, $ThreadsTable table)
     : super(
@@ -4760,10 +4886,13 @@ class $$ThreadsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({layersRefs = false}) {
+          prefetchHooksCallback: ({layersRefs = false, tasksRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (layersRefs) db.layers],
+              explicitlyWatchedTables: [
+                if (layersRefs) db.layers,
+                if (tasksRefs) db.tasks,
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -4774,6 +4903,18 @@ class $$ThreadsTableTableManager
                           ._layersRefsTable(db),
                       managerFromTypedResult: (p0) =>
                           $$ThreadsTableReferences(db, table, p0).layersRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.threadId == item.id),
+                      typedResults: items,
+                    ),
+                  if (tasksRefs)
+                    await $_getPrefetchedData<Thread, $ThreadsTable, Task>(
+                      currentTable: table,
+                      referencedTable: $$ThreadsTableReferences._tasksRefsTable(
+                        db,
+                      ),
+                      managerFromTypedResult: (p0) =>
+                          $$ThreadsTableReferences(db, table, p0).tasksRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
                           referencedItems.where((e) => e.threadId == item.id),
                       typedResults: items,
@@ -4798,7 +4939,7 @@ typedef $$ThreadsTableProcessedTableManager =
       $$ThreadsTableUpdateCompanionBuilder,
       (Thread, $$ThreadsTableReferences),
       Thread,
-      PrefetchHooks Function({bool layersRefs})
+      PrefetchHooks Function({bool layersRefs, bool tasksRefs})
     >;
 typedef $$LayersTableCreateCompanionBuilder =
     LayersCompanion Function({
@@ -5894,6 +6035,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<int?> parentTaskId,
       Value<int?> layerId,
       Value<int?> workerId,
+      Value<int?> threadId,
       Value<int> createdAt,
       Value<int> updatedAt,
     });
@@ -5911,6 +6053,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<int?> parentTaskId,
       Value<int?> layerId,
       Value<int?> workerId,
+      Value<int?> threadId,
       Value<int> createdAt,
       Value<int> updatedAt,
     });
@@ -5948,6 +6091,23 @@ final class $$TasksTableReferences
       $_db.workers,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_workerIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ThreadsTable _threadIdTable(_$AppDatabase db) => db.threads
+      .createAlias($_aliasNameGenerator(db.tasks.threadId, db.threads.id));
+
+  $$ThreadsTableProcessedTableManager? get threadId {
+    final $_column = $_itemColumn<int>('thread_id');
+    if ($_column == null) return null;
+    final manager = $$ThreadsTableTableManager(
+      $_db,
+      $_db.threads,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_threadIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -6078,6 +6238,29 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
           }) => $$WorkersTableFilterComposer(
             $db: $db,
             $table: $db.workers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ThreadsTableFilterComposer get threadId {
+    final $$ThreadsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.threadId,
+      referencedTable: $db.threads,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ThreadsTableFilterComposer(
+            $db: $db,
+            $table: $db.threads,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6227,6 +6410,29 @@ class $$TasksTableOrderingComposer
     );
     return composer;
   }
+
+  $$ThreadsTableOrderingComposer get threadId {
+    final $$ThreadsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.threadId,
+      referencedTable: $db.threads,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ThreadsTableOrderingComposer(
+            $db: $db,
+            $table: $db.threads,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TasksTableAnnotationComposer
@@ -6326,6 +6532,29 @@ class $$TasksTableAnnotationComposer
     return composer;
   }
 
+  $$ThreadsTableAnnotationComposer get threadId {
+    final $$ThreadsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.threadId,
+      referencedTable: $db.threads,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ThreadsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.threads,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> executionLogsRefs<T extends Object>(
     Expression<T> Function($$ExecutionLogsTableAnnotationComposer a) f,
   ) {
@@ -6368,6 +6597,7 @@ class $$TasksTableTableManager
           PrefetchHooks Function({
             bool layerId,
             bool workerId,
+            bool threadId,
             bool executionLogsRefs,
           })
         > {
@@ -6396,6 +6626,7 @@ class $$TasksTableTableManager
                 Value<int?> parentTaskId = const Value.absent(),
                 Value<int?> layerId = const Value.absent(),
                 Value<int?> workerId = const Value.absent(),
+                Value<int?> threadId = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => TasksCompanion(
@@ -6411,6 +6642,7 @@ class $$TasksTableTableManager
                 parentTaskId: parentTaskId,
                 layerId: layerId,
                 workerId: workerId,
+                threadId: threadId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -6428,6 +6660,7 @@ class $$TasksTableTableManager
                 Value<int?> parentTaskId = const Value.absent(),
                 Value<int?> layerId = const Value.absent(),
                 Value<int?> workerId = const Value.absent(),
+                Value<int?> threadId = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => TasksCompanion.insert(
@@ -6443,6 +6676,7 @@ class $$TasksTableTableManager
                 parentTaskId: parentTaskId,
                 layerId: layerId,
                 workerId: workerId,
+                threadId: threadId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -6453,7 +6687,12 @@ class $$TasksTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({layerId = false, workerId = false, executionLogsRefs = false}) {
+              ({
+                layerId = false,
+                workerId = false,
+                threadId = false,
+                executionLogsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
@@ -6497,6 +6736,19 @@ class $$TasksTableTableManager
                                         ._workerIdTable(db),
                                     referencedColumn: $$TasksTableReferences
                                         ._workerIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (threadId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.threadId,
+                                    referencedTable: $$TasksTableReferences
+                                        ._threadIdTable(db),
+                                    referencedColumn: $$TasksTableReferences
+                                        ._threadIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -6550,6 +6802,7 @@ typedef $$TasksTableProcessedTableManager =
       PrefetchHooks Function({
         bool layerId,
         bool workerId,
+        bool threadId,
         bool executionLogsRefs,
       })
     >;

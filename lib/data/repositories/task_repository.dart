@@ -46,9 +46,23 @@ class TaskRepository {
     return rows.map(_taskFromRow).toList();
   }
 
+  Future<List<AppTask>> listTasksByThread(
+    int threadId, {
+    int limit = 200,
+  }) async {
+    final rows = await _db.listTasksByThread(threadId, limit: limit);
+    return rows.map(_taskFromRow).toList();
+  }
+
   Stream<List<AppTask>> watchTasks({int limit = 100, int offset = 0}) {
     return _db
         .watchTasks(limit: limit, offset: offset)
+        .map((rows) => rows.map(_taskFromRow).toList());
+  }
+
+  Stream<List<AppTask>> watchTasksByThread(int threadId, {int limit = 200}) {
+    return _db
+        .watchTasksByThread(threadId, limit: limit)
         .map((rows) => rows.map(_taskFromRow).toList());
   }
 
@@ -72,6 +86,7 @@ class TaskRepository {
       parentTaskId: Value(t.parentTaskId),
       layerId: Value(t.layerId),
       workerId: Value(t.workerId),
+      threadId: Value(t.threadId),
       createdAt: Value(t.createdAt),
       updatedAt: Value(t.updatedAt),
     );
@@ -105,6 +120,7 @@ class TaskRepository {
       parentTaskId: r.parentTaskId,
       layerId: r.layerId,
       workerId: r.workerId,
+      threadId: r.threadId,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     );

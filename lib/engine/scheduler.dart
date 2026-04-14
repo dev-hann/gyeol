@@ -149,10 +149,11 @@ class Scheduler {
         currentType,
         payload,
         TaskPriority.high,
-      ).copyWith(layerId: layer.id);
+      ).copyWith(layerId: layer.id, threadId: thread.id);
 
       final updatedTask = task.copyWith(
         status: TaskStatus.running,
+        threadId: thread.id,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
       await _repo.tasks.saveTask(updatedTask);
@@ -245,10 +246,15 @@ class Scheduler {
         userMessage,
       );
 
-      final outputTask = AppTask.create('analysis_result', {
-        'worker': worker.name,
-        'response': response,
-      }, task.priority).copyWith(depth: task.depth + 1, parentTaskId: task.id);
+      final outputTask =
+          AppTask.create('analysis_result', {
+            'worker': worker.name,
+            'response': response,
+          }, task.priority).copyWith(
+            depth: task.depth + 1,
+            parentTaskId: task.id,
+            threadId: task.threadId,
+          );
 
       await _repo.logs.logExecution(
         taskId: task.id,

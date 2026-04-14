@@ -22,6 +22,7 @@ class AppTask {
     this.parentTaskId,
     this.layerId,
     this.workerId,
+    this.threadId,
   });
 
   factory AppTask.create(
@@ -54,6 +55,7 @@ class AppTask {
   final int? parentTaskId;
   final int? layerId;
   final int? workerId;
+  final int? threadId;
   final int createdAt;
   final int updatedAt;
 
@@ -70,6 +72,7 @@ class AppTask {
     TaskStatus? status,
     int? layerId,
     int? workerId,
+    int? threadId,
     int? retryCount,
     int? depth,
     int? parentTaskId,
@@ -88,6 +91,7 @@ class AppTask {
       parentTaskId: parentTaskId ?? this.parentTaskId,
       layerId: layerId ?? this.layerId,
       workerId: workerId ?? this.workerId,
+      threadId: threadId ?? this.threadId,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

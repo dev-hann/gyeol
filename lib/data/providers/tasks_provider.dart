@@ -35,3 +35,9 @@ class TasksNotifier extends AsyncNotifier<List<AppTask>> {
     return id;
   }
 }
+
+final threadTasksProvider = StreamProvider.family
+    .autoDispose<List<AppTask>, int>((ref, threadId) {
+      final repo = ref.watch(repositoryProvider);
+      return repo.tasks.watchTasksByThread(threadId);
+    });

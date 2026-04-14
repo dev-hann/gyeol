@@ -16,13 +16,19 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardPageState extends ConsumerState<DashboardPage> {
+  int? _selectedThreadId;
+
   @override
   Widget build(BuildContext context) {
-    final tasksAsync = ref.watch(tasksProvider);
+    final threadsAsync = ref.watch(threadsProvider);
     final layersAsync = ref.watch(layersProvider);
     final queueSizeAsync = ref.watch(queueSizeProvider);
     final workersAsync = ref.watch(workersProvider);
     final settingsAsync = ref.watch(settingsProvider);
+
+    final tasksAsync = _selectedThreadId != null
+        ? ref.watch(threadTasksProvider(_selectedThreadId!))
+        : ref.watch(tasksProvider);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -35,6 +41,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               title: 'Dashboard',
               description: 'Overview of your AI worker system',
             ),
+            const SizedBox(height: 16),
+            _buildThreadFilter(threadsAsync),
             const SizedBox(height: 24),
             tasksAsync.when(
               data: (tasks) {
@@ -104,7 +112,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    _buildWorkersSection(workersAsync),
+                    _buildWorkersSection(
+                      workersAsync,
+                      layersAsync,
+                      threadsAsync,
+                    ),
                     const SizedBox(height: 16),
                     _buildProvidersSection(settingsAsync),
                     const SizedBox(height: 16),
@@ -162,6 +174,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                                                 layersAsync.valueOrNull ?? [],
                                             workers:
                                                 workersAsync.valueOrNull ?? [],
+                                            threads:
+                                                threadsAsync.valueOrNull ?? [],
+                                            showThreadName:
+                                                _selectedThreadId == null,
                                           ),
                                     ),
                             ),
@@ -181,14 +197,66 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
     );
   }
 
-  Widget _buildWorkersSection(AsyncValue<List<WorkerDefinition>> async) {
+  Widget _buildThreadFilter(AsyncValue<List<ThreadDefinition>> threadsAsync) {
+    return threadsAsync.when(
+      data: (threads) {
+        if (threads.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          width: double.infinity,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: const Text('All'),
+                    selected: _selectedThreadId == null,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedThreadId = null;
+                      });
+                    },
+                  ),
+                ),
+                ...threads.map((thread) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(thread.name),
+                      selected: _selectedThreadId == thread.id,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedThreadId = _selectedThreadId == thread.id
+                              ? null
+                              : thread.id;
+                        });
+                      },
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildWorkersSection(
+    AsyncValue<List<WorkerDefinition>> workersAsync,
+    AsyncValue<List<LayerDefinition>> layersAsync,
+    AsyncValue<List<ThreadDefinition>> threadsAsync,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            async.when(
+            workersAsync.when(
               data: (workers) => Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -227,7 +295,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
               ),
             ),
             const SizedBox(height: 12),
-            async.when(
+            workersAsync.when(
               data: (workers) {
                 if (workers.isEmpty) {
                   return const Text(
@@ -238,102 +306,105 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                     ),
                   );
                 }
-                final allLayers = ref.read(layersProvider).valueOrNull ?? [];
-                final byLayer = <String, List<WorkerDefinition>>{};
-                for (final w in workers) {
-                  final lName =
-                      allLayers
-                          .where((l) => l.id == w.layerId)
-                          .firstOrNull
-                          ?.name ??
-                      '';
-                  byLayer.putIfAbsent(lName, () => []).add(w);
+
+                final allLayers = layersAsync.valueOrNull ?? [];
+                final allThreads = threadsAsync.valueOrNull ?? [];
+
+                if (_selectedThreadId != null) {
+                  final threadLayersAsync = ref.watch(
+                    threadLayersProvider(_selectedThreadId!),
+                  );
+                  final threadLayers = threadLayersAsync.valueOrNull ?? [];
+                  final threadLayerIds = threadLayers.map((l) => l.id).toSet();
+                  final filteredWorkers = workers
+                      .where((w) => threadLayerIds.contains(w.layerId))
+                      .toList();
+
+                  if (filteredWorkers.isEmpty) {
+                    return const Text(
+                      'No workers for this thread',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    );
+                  }
+
+                  final byLayer = <String, List<WorkerDefinition>>{};
+                  for (final w in filteredWorkers) {
+                    final lName =
+                        threadLayers
+                            .where((l) => l.id == w.layerId)
+                            .firstOrNull
+                            ?.name ??
+                        '';
+                    byLayer.putIfAbsent(lName, () => []).add(w);
+                  }
+                  return _buildWorkerGroups(byLayer);
                 }
+
+                final byThread = <String, List<WorkerDefinition>>{};
+                for (final w in workers) {
+                  final layer = allLayers
+                      .where((l) => l.id == w.layerId)
+                      .firstOrNull;
+                  final threadId = layer?.threadId;
+                  final threadName = threadId != null
+                      ? allThreads
+                                .where((t) => t.id == threadId)
+                                .firstOrNull
+                                ?.name ??
+                            'Unknown'
+                      : 'Unknown';
+                  byThread.putIfAbsent(threadName, () => []).add(w);
+                }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: byLayer.entries.map((entry) {
+                  children: byThread.entries.map((threadEntry) {
+                    final threadWorkers = threadEntry.value;
+                    final byLayer = <String, List<WorkerDefinition>>{};
+                    for (final w in threadWorkers) {
+                      final lName =
+                          allLayers
+                              .where((l) => l.id == w.layerId)
+                              .firstOrNull
+                              ?.name ??
+                          '';
+                      byLayer.putIfAbsent(lName, () => []).add(w);
+                    }
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            entry.key,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textMuted,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: entry.value.map((w) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.account_tree,
+                                size: 12,
+                                color: AppColors.primary.withValues(alpha: 0.7),
                               ),
-                              decoration: BoxDecoration(
-                                color: w.enabled
-                                    ? AppColors.success.withValues(alpha: 0.1)
-                                    : AppColors.tertiary,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: w.enabled
-                                      ? AppColors.success.withValues(alpha: 0.3)
-                                      : AppColors.border,
+                              const SizedBox(width: 6),
+                              Text(
+                                threadEntry.key,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.9,
+                                  ),
+                                  letterSpacing: 0.5,
                                 ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    w.enabled
-                                        ? Icons.check_circle
-                                        : Icons.cancel,
-                                    size: 12,
-                                    color: w.enabled
-                                        ? AppColors.success
-                                        : AppColors.textMuted,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    w.name,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: w.enabled
-                                          ? AppColors.foreground
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    w.model ?? 'default',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    w.enabled ? 'Enabled' : 'Disabled',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: w.enabled
-                                          ? AppColors.success
-                                          : AppColors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 18),
+                          child: _buildWorkerGroups(byLayer),
+                        ),
+                        const SizedBox(height: 12),
                       ],
                     );
                   }).toList(),
@@ -345,6 +416,96 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWorkerGroups(Map<String, List<WorkerDefinition>> byLayer) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: byLayer.entries.map((entry) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                entry.key,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: entry.value.map((w) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: w.enabled
+                        ? AppColors.success.withValues(alpha: 0.1)
+                        : AppColors.tertiary,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: w.enabled
+                          ? AppColors.success.withValues(alpha: 0.3)
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        w.enabled ? Icons.check_circle : Icons.cancel,
+                        size: 12,
+                        color: w.enabled
+                            ? AppColors.success
+                            : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        w.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: w.enabled
+                              ? AppColors.foreground
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        w.model ?? 'default',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        w.enabled ? 'Enabled' : 'Disabled',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: w.enabled
+                              ? AppColors.success
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -464,10 +625,15 @@ class _TaskTile extends StatelessWidget {
     required this.task,
     required this.layers,
     required this.workers,
+    required this.threads,
+    this.showThreadName = false,
   });
+
   final AppTask task;
   final List<LayerDefinition> layers;
   final List<WorkerDefinition> workers;
+  final List<ThreadDefinition> threads;
+  final bool showThreadName;
 
   @override
   Widget build(BuildContext context) {
@@ -476,6 +642,9 @@ class _TaskTile extends StatelessWidget {
         : null;
     final workerName = task.workerId != null
         ? workers.where((w) => w.id == task.workerId).firstOrNull?.name
+        : null;
+    final threadName = task.threadId != null && showThreadName
+        ? threads.where((t) => t.id == task.threadId).firstOrNull?.name
         : null;
     return InkWell(
       onTap: () {},
@@ -501,6 +670,40 @@ class _TaskTile extends StatelessWidget {
                       StatusBadge(status: task.statusLabel),
                       const SizedBox(width: 6),
                       StatusBadge(status: task.priorityLabel),
+                      if (threadName != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.account_tree,
+                                size: 10,
+                                color: AppColors.primary.withValues(alpha: 0.8),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                threadName,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.9,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),

@@ -31,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -69,6 +69,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 9) {
         await _migrateToV9();
+      }
+      if (from < 10) {
+        await _migrateToV10();
       }
     },
     beforeOpen: (details) async {
@@ -1033,6 +1036,19 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  Future<void> _migrateToV10() async {
+    if (!await _hasColumn('tasks', 'thread_id')) {
+      await customStatement(
+        'ALTER TABLE tasks ADD COLUMN thread_id INTEGER '
+        'REFERENCES threads(id) ON DELETE SET NULL',
+      );
+    }
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_tasks_thread
+      ON tasks(thread_id)
+    ''');
+  }
+
   Future<void> saveTask(TasksCompanion task) {
     return into(tasks).insertOnConflictUpdate(task);
   }
@@ -1056,6 +1072,22 @@ class AppDatabase extends _$AppDatabase {
     return (select(tasks)
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
           ..limit(limit, offset: offset))
+        .watch();
+  }
+
+  Future<List<Task>> listTasksByThread(int threadId, {int limit = 200}) {
+    return (select(tasks)
+          ..where((t) => t.threadId.equals(threadId))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
+        .get();
+  }
+
+  Stream<List<Task>> watchTasksByThread(int threadId, {int limit = 200}) {
+    return (select(tasks)
+          ..where((t) => t.threadId.equals(threadId))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
         .watch();
   }
 
