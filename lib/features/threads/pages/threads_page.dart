@@ -159,8 +159,12 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
               if (results.isNotEmpty) const SizedBox(height: 12),
               ...results.map((r) {
                 final icon = r.success
-                    ? Icon(Icons.check, size: 14, color: AppColors.success)
-                    : Icon(Icons.close, size: 14, color: AppColors.error);
+                    ? const Icon(
+                        Icons.check,
+                        size: 14,
+                        color: AppColors.success,
+                      )
+                    : const Icon(Icons.close, size: 14, color: AppColors.error);
                 final label = [
                   if (r.layerName != null) r.layerName!,
                   if (r.workerName != null) r.workerName!,
