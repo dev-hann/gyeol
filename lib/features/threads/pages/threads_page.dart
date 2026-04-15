@@ -75,6 +75,7 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
         final thread = threads[index];
         return _ThreadCard(
           thread: thread,
+          isRunning: _runningThreadId == thread.id,
           onTap: () {
             Navigator.push<void>(
               context,
@@ -86,7 +87,11 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
               ),
             );
           },
-          onRun: () => _runThread(thread),
+          onRun: _runningThreadId == thread.id
+              ? null
+              : _runningThreadId != null
+              ? null
+              : () => _runThread(thread),
           onDelete: () => _deleteThread(thread),
           onEdit: () => _showEditThreadDialog(context, thread),
         );
@@ -94,26 +99,117 @@ class _ThreadsPageState extends ConsumerState<ThreadsPage> {
     );
   }
 
+  int? _runningThreadId;
+
   Future<void> _runThread(ThreadDefinition thread) async {
-    final scheduler = ref.read(schedulerProvider);
-    await scheduler.runThread(thread);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
+    setState(() => _runningThreadId = thread.id);
+    try {
+      final scheduler = ref.read(schedulerProvider);
+      final results = await scheduler.runThread(thread);
+
+      ref.invalidate(tasksProvider);
+
+      if (!mounted) return;
+      _showResultDialog(context, thread, results);
+    } finally {
+      if (mounted) setState(() => _runningThreadId = null);
+    }
+  }
+
+  void _showResultDialog(
+    BuildContext context,
+    ThreadDefinition thread,
+    List<WorkerResult> results,
+  ) {
+    final successCount = results.where((r) => r.success).length;
+    final failCount = results.where((r) => !r.success).length;
+    final hasError = failCount > 0 || results.isEmpty;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Row(
+          children: [
+            Icon(
+              hasError ? Icons.error_outline : Icons.check_circle,
+              size: 20,
+              color: hasError ? AppColors.error : AppColors.success,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '"${thread.name}" 실행 결과',
+              style: const TextStyle(color: AppColors.foreground, fontSize: 16),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 480,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.check_circle,
-                size: 16,
-                color: AppColors.success,
+              Text(
+                '성공: $successCount  실패: $failCount',
+                style: TextStyle(
+                  color: hasError ? AppColors.error : AppColors.success,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              const SizedBox(width: 8),
-              Text('Thread "${thread.name}" completed'),
+              if (results.isNotEmpty) const SizedBox(height: 12),
+              ...results.map((r) {
+                final icon = r.success
+                    ? Icon(Icons.check, size: 14, color: AppColors.success)
+                    : Icon(Icons.close, size: 14, color: AppColors.error);
+                final label = [
+                  if (r.layerName != null) r.layerName!,
+                  if (r.workerName != null) r.workerName!,
+                ].join(' / ');
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      icon,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label.isEmpty ? (r.success ? 'OK' : '실패') : label,
+                              style: const TextStyle(
+                                color: AppColors.foreground,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (r.error != null)
+                              Text(
+                                r.error!,
+                                style: TextStyle(
+                                  color: AppColors.error.withValues(alpha: 0.9),
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ),
         ),
-      );
-    }
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _deleteThread(ThreadDefinition thread) async {
@@ -290,13 +386,15 @@ class _ThreadCard extends ConsumerWidget {
     required this.onRun,
     required this.onDelete,
     required this.onEdit,
+    this.isRunning = false,
   });
 
   final ThreadDefinition thread;
   final VoidCallback onTap;
-  final VoidCallback onRun;
+  final VoidCallback? onRun;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final bool isRunning;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -416,7 +514,13 @@ class _ThreadCard extends ConsumerWidget {
               children: [
                 IconButton(
                   onPressed: onRun,
-                  icon: const Icon(Icons.play_arrow, size: 18),
+                  icon: onRun == null
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.play_arrow, size: 18),
                   tooltip: 'Run Thread',
                   style: IconButton.styleFrom(
                     foregroundColor: AppColors.success,

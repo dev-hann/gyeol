@@ -46,10 +46,25 @@ void main() {
   });
 
   group('runThread', () {
-    test('returns empty when thread has no layers', () async {
+    test('returns error when thread has no layers', () async {
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          activeProvider: ProviderType.ollama,
+          configs: {
+            ProviderType.openAI: OpenAIConfig(),
+            ProviderType.anthropic: AnthropicConfig(),
+            ProviderType.ollama: OllamaConfig(
+              baseUrl: 'http://localhost:11434',
+            ),
+            ProviderType.custom: CustomConfig(),
+          },
+        ),
+      );
       const thread = ThreadDefinition(id: 0, name: 'empty', path: '/tmp');
       final results = await scheduler.runThread(thread);
-      expect(results, isEmpty);
+      expect(results, isNotEmpty);
+      expect(results.first.success, isFalse);
+      expect(results.first.error, contains('레이어'));
     });
 
     test('executes layers in sequence and returns results', () async {
@@ -187,6 +202,20 @@ void main() {
     });
 
     test('logs failure when layer has no workers', () async {
+      await repo.settings.saveSettings(
+        const ProviderSettings(
+          activeProvider: ProviderType.ollama,
+          configs: {
+            ProviderType.openAI: OpenAIConfig(),
+            ProviderType.anthropic: AnthropicConfig(),
+            ProviderType.ollama: OllamaConfig(
+              baseUrl: 'http://localhost:11434',
+            ),
+            ProviderType.custom: CustomConfig(),
+          },
+        ),
+      );
+
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
@@ -209,12 +238,9 @@ void main() {
       );
 
       final results = await scheduler.runThread(thread);
-      expect(results, isEmpty);
-
-      final logs = await repo.logs.listExecutionLogs();
-      expect(logs, isNotEmpty);
-      expect(logs.first.status, 'failed');
-      expect(logs.first.message, contains('no workers'));
+      expect(results, isNotEmpty);
+      expect(results.first.success, isFalse);
+      expect(results.first.error, contains('워커'));
     });
 
     test('includes path context in task payload', () async {

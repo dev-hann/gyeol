@@ -128,11 +128,15 @@ class WorkerResult {
     this.outputTasks = const [],
     this.error,
     this.metadata,
+    this.layerName,
+    this.workerName,
   });
   final bool success;
   final List<AppTask> outputTasks;
   final String? error;
   final Map<String, dynamic>? metadata;
+  final String? layerName;
+  final String? workerName;
 }
 
 class EvaluationResult {

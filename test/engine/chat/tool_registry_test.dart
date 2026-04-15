@@ -571,10 +571,7 @@ void main() {
         final thread = await repo.threads.getThread('T1');
         expect(thread, isNotNull);
         expect(thread!.path, '/home/user/project');
-        final savedLayers = await repo.layers.listLayers();
-        final l1Id = savedLayers.firstWhere((l) => l.name == 'L1').id;
-        final l2Id = savedLayers.firstWhere((l) => l.name == 'L2').id;
-        final threadLayers = await repo.layers.listLayersByThread(thread!.id);
+        final threadLayers = await repo.layers.listLayersByThread(thread.id);
         expect(threadLayers.map((l) => l.name), containsAll(['L1', 'L2']));
       });
     });
@@ -642,9 +639,11 @@ void main() {
           'name': 'T1',
         }, repo);
         final decoded = jsonDecode(result) as Map<String, dynamic>;
-        expect(decoded['status'], 'queued');
+        expect(decoded['status'], 'ready');
         expect(decoded['thread'], 'T1');
         expect(decoded['layerNames'], ['L1', 'L2']);
+        expect(decoded['layerCount'], 2);
+        expect(decoded['enabled'], 2);
       });
     });
 

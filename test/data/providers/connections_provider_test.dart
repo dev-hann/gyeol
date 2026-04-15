@@ -18,8 +18,11 @@ class _ErrorInjectDb extends AppDatabase {
   Stream<List<LayerConnection>> watchConnections() => controller.stream;
 }
 
-void main() {  Future<int> _createThread(AppDatabase database) async {
-    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+void main() {
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
     return (await database.getThread('default'))!.id;
   }
 
@@ -44,8 +47,8 @@ void main() {  Future<int> _createThread(AppDatabase database) async {
   Future<int> insertLayer(String name) async {
     final layer = LayerDefinition(
       id: 0,
-threadId: _tid,
-        name: '',
+      threadId: _tid,
+      name: '',
       inputTypes: [],
       outputTypes: [],
     );

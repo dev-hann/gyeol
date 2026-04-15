@@ -18,9 +18,10 @@ class _ErrorInjectDb extends AppDatabase {
 }
 
 void main() {
-
   Future<int> _createThread(AppDatabase database) async {
-    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
     return (await database.getThread('default'))!.id;
   }
 

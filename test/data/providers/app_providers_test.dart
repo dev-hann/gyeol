@@ -6,9 +6,10 @@ import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/providers/app_providers.dart';
 
 void main() {
-
   Future<int> _createThread(AppDatabase database) async {
-    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
     return (await database.getThread('default'))!.id;
   }
 

@@ -38,6 +38,9 @@ class Scheduler {
   }
 
   Future<List<WorkerResult>> runOnce() async {
+    final allLayers = await _repo.layers.listLayers();
+    _layerRegistry.setAll(allLayers);
+
     final results = <WorkerResult>[];
     final futures = <Future<WorkerResult>>[];
     var taken = 0;
@@ -125,8 +128,33 @@ class Scheduler {
   }
 
   Future<List<WorkerResult>> runThread(ThreadDefinition thread) async {
+    final settings = await _repo.settings.getSettings();
+    if (!settings.active.isConfigured) {
+      return [
+        WorkerResult(
+          success: false,
+          error:
+              'Provider(${settings.activeProvider.name})가 설정되지 않았습니다. '
+              '설정에서 ${settings.activeProvider.name}을(를) 먼저 설정하세요.',
+        ),
+      ];
+    }
+
     final threadLayers = await _repo.layers.listLayersByThread(thread.id);
-    if (threadLayers.isEmpty) return [];
+    if (threadLayers.isEmpty) {
+      return [
+        WorkerResult(success: false, error: '스레드에 레이어가 없습니다. 레이어를 먼저 추가하세요.'),
+      ];
+    }
+
+    final enabledLayers = threadLayers.where((l) => l.enabled).toList();
+    if (enabledLayers.isEmpty) {
+      return [
+        WorkerResult(success: false, error: '활성화된 레이어가 없습니다. 레이어를 활성화하세요.'),
+      ];
+    }
+
+    final allWorkers = await _repo.workers.listWorkers();
 
     final allResults = <WorkerResult>[];
     final files = await collectFilesFromPath(thread.path);
@@ -134,9 +162,20 @@ class Scheduler {
     var currentType = 'raw';
 
     for (final layer in threadLayers) {
-      final matchingLayers = _layerRegistry.findByInputType(currentType);
-      if (!matchingLayers.any((l) => l.id == layer.id)) continue;
       if (!layer.enabled) continue;
+
+      final layerWorkers = allWorkers.where((w) => w.layerId == layer.id);
+
+      if (layerWorkers.isEmpty) {
+        allResults.add(
+          WorkerResult(
+            success: false,
+            error: 'Layer "${layer.name}"에 워커가 없습니다.',
+            layerName: layer.name,
+          ),
+        );
+        continue;
+      }
 
       final payload = <String, dynamic>{
         'thread': thread.name,
@@ -160,25 +199,6 @@ class Scheduler {
       final savedTask = await _repo.tasks.getTask(updatedTask.uuid);
       final resolvedThreadTask = savedTask ?? updatedTask;
 
-      final layerWorkers = (await _repo.workers.listWorkers()).where(
-        (w) => w.layerId == layer.id,
-      );
-
-      if (layerWorkers.isEmpty) {
-        await _repo.tasks.saveTask(
-          resolvedThreadTask.copyWith(
-            status: TaskStatus.failed,
-            updatedAt: DateTime.now().millisecondsSinceEpoch,
-          ),
-        );
-        await _repo.logs.logExecution(
-          taskId: resolvedThreadTask.id,
-          status: 'failed',
-          message: 'Layer "${layer.name}" has no workers',
-        );
-        continue;
-      }
-
       final layerFutures = <Future<WorkerResult>>[];
       for (final worker in layerWorkers) {
         layerFutures.add(
@@ -192,13 +212,25 @@ class Scheduler {
       }
 
       final layerResults = await Future.wait(layerFutures);
-      allResults.addAll(layerResults);
+      final labeledResults = layerResults
+          .map(
+            (r) => WorkerResult(
+              success: r.success,
+              outputTasks: r.outputTasks,
+              error: r.error,
+              metadata: r.metadata,
+              layerName: layer.name,
+              workerName: r.workerName ?? r.metadata?['worker'] as String?,
+            ),
+          )
+          .toList();
+      allResults.addAll(labeledResults);
 
       if (layer.outputTypes.isNotEmpty) {
         currentType = layer.outputTypes.first;
       }
 
-      for (final result in layerResults) {
+      for (final result in labeledResults) {
         if (result.success) {
           for (final outputTask in result.outputTasks) {
             _messageBus.publish(outputTask);
@@ -266,6 +298,7 @@ class Scheduler {
         success: true,
         outputTasks: [outputTask],
         metadata: {'worker': worker.name},
+        workerName: worker.name,
       );
     } on Object catch (e) {
       await _repo.logs.logExecution(
@@ -275,7 +308,11 @@ class Scheduler {
         message: e.toString(),
       );
 
-      return WorkerResult(success: false, error: e.toString());
+      return WorkerResult(
+        success: false,
+        error: e.toString(),
+        workerName: worker.name,
+      );
     } finally {
       provider?.close();
     }

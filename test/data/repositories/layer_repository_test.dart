@@ -4,8 +4,11 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/layer_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
-void main() {  Future<int> _createThread(AppDatabase database) async {
-    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+void main() {
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
     return (await database.getThread('default'))!.id;
   }
 
@@ -28,7 +31,7 @@ void main() {  Future<int> _createThread(AppDatabase database) async {
     test('round-trips a layer with required fields only', () async {
       final layer = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'parse',
         inputTypes: ['text'],
         outputTypes: ['structured'],
@@ -48,7 +51,7 @@ threadId: _tid,
     test('round-trips a layer with all optional fields', () async {
       final layer = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'analyze',
         inputTypes: ['structured'],
         outputTypes: ['analysis'],
@@ -72,7 +75,7 @@ threadId: _tid,
     test('returns layers ordered by sortOrder ascending', () async {
       final third = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'c',
         inputTypes: [],
         outputTypes: [],
@@ -80,7 +83,7 @@ threadId: _tid,
       );
       final first = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'a',
         inputTypes: [],
         outputTypes: [],
@@ -88,7 +91,7 @@ threadId: _tid,
       );
       final second = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'b',
         inputTypes: [],
         outputTypes: [],
@@ -112,7 +115,7 @@ threadId: _tid,
     test('replaces existing layer with same name', () async {
       final original = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'layer-x',
         inputTypes: ['raw'],
         outputTypes: ['parsed'],
@@ -149,7 +152,7 @@ threadId: _tid,
     test('removes a saved layer', () async {
       final layer = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'to_delete',
         inputTypes: [],
         outputTypes: [],
@@ -179,7 +182,7 @@ threadId: _tid,
 
       final layer = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'watched',
         inputTypes: ['text'],
         outputTypes: ['tokens'],
@@ -196,7 +199,7 @@ threadId: _tid,
     test('saves and lists multiple layers', () async {
       final l1 = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'parse',
         inputTypes: ['text'],
         outputTypes: ['structured'],
@@ -204,7 +207,7 @@ threadId: _tid,
       );
       final l2 = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'analyze',
         inputTypes: ['structured'],
         outputTypes: ['analysis'],
@@ -212,7 +215,7 @@ threadId: _tid,
       );
       final l3 = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'generate',
         inputTypes: ['analysis'],
         outputTypes: ['text'],
@@ -230,14 +233,14 @@ threadId: _tid,
     test('delete one layer preserves others', () async {
       final keep = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'keep',
         inputTypes: [],
         outputTypes: [],
       );
       final remove = LayerDefinition(
         id: 0,
-threadId: _tid,
+        threadId: _tid,
         name: 'remove',
         inputTypes: [],
         outputTypes: [],

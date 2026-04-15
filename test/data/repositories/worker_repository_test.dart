@@ -4,8 +4,11 @@ import 'package:gyeol/data/database/database.dart';
 import 'package:gyeol/data/models/app_models.dart';
 import 'package:gyeol/data/repositories/app_repository.dart';
 
-void main() {  Future<int> _createThread(AppDatabase database) async {
-    await database.saveThread(ThreadsCompanion.insert(name: 'default', path: '/tmp'));
+void main() {
+  Future<int> _createThread(AppDatabase database) async {
+    await database.saveThread(
+      ThreadsCompanion.insert(name: 'default', path: '/tmp'),
+    );
     return (await database.getThread('default'))!.id;
   }
 
@@ -29,8 +32,8 @@ void main() {  Future<int> _createThread(AppDatabase database) async {
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'parse',
+          threadId: _tid,
+          name: 'parse',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -60,8 +63,8 @@ threadId: _tid,
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'analyze',
+          threadId: _tid,
+          name: 'analyze',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -107,8 +110,8 @@ threadId: _tid,
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'L1',
+          threadId: _tid,
+          name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -116,8 +119,8 @@ threadId: _tid,
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'L2',
+          threadId: _tid,
+          name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -152,8 +155,8 @@ threadId: _tid,
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'L1',
+          threadId: _tid,
+          name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -187,8 +190,8 @@ threadId: _tid,
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'L1',
+          threadId: _tid,
+          name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -196,8 +199,8 @@ threadId: _tid,
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'L2',
+          threadId: _tid,
+          name: 'L2',
           inputTypes: ['text'],
           outputTypes: [],
         ),
@@ -251,8 +254,8 @@ threadId: _tid,
       await repo.layers.saveLayer(
         LayerDefinition(
           id: 0,
-threadId: _tid,
-        name: 'L1',
+          threadId: _tid,
+          name: 'L1',
           inputTypes: ['text'],
           outputTypes: [],
         ),

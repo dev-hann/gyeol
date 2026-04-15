@@ -382,7 +382,7 @@ class _LayersPageState extends ConsumerState<LayersPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<int>(
-                  value: threads.isNotEmpty ? selectedThreadId : null,
+                  initialValue: threads.isNotEmpty ? selectedThreadId : null,
                   decoration: const InputDecoration(labelText: 'Thread'),
                   items: threads
                       .map(

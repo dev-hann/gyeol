@@ -400,9 +400,12 @@ class ToolRegistry {
     final threadLayers = await repo.layers.listLayersByThread(thread.id);
 
     return jsonEncode({
-      'status': 'queued',
+      'status': 'ready',
       'thread': thread.name,
+      'path': thread.path,
       'layerNames': threadLayers.map((l) => l.name).toList(),
+      'layerCount': threadLayers.length,
+      'enabled': threadLayers.where((l) => l.enabled).length,
     });
   }
 
