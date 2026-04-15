@@ -972,7 +972,8 @@ class AppDatabase extends _$AppDatabase {
       for (final row in oldLogRows) {
         final oldTaskUuid = row.read<int>('task_id');
         await customStatement(
-          'INSERT INTO execution_logs (task_id, worker_id, status, message, created_at) '
+          'INSERT INTO execution_logs '
+          '(task_id, worker_id, status, message, created_at) '
           'VALUES (?, ?, ?, ?, ?)',
           [
             oldTaskUuid,
